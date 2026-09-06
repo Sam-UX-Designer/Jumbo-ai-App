@@ -1,0 +1,80 @@
+.cap-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+@media (min-width: 720px) { .cap-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.cap-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-5) var(--s-4); min-height: 128px; cursor: pointer; text-align: left;
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1);
+  transition: transform var(--d-fast) var(--ease-out), border-color var(--d-fast);
+}
+.cap-tile:hover { border-color: var(--hairline-firm); }
+.cap-tile:active { transform: scale(0.985); }
+.cap-tile__icon {
+  width: 40px; height: 40px; border-radius: var(--r-md); display: grid; place-items: center;
+}
+
+/* --- Camera ------------------------------------------------------------ */
+.camera {
+  position: relative; width: 100%; aspect-ratio: 4 / 3;
+  border-radius: var(--r-lg); overflow: hidden;
+  background: #101215; display: grid; place-items: center;
+}
+.camera video, .camera canvas, .camera img { width: 100%; height: 100%; object-fit: cover; }
+.camera__frame {
+  position: absolute; inset: 12%; border-radius: var(--r-lg);
+  border: 1.5px solid rgba(255,255,255,.5); pointer-events: none;
+}
+.camera__frame::before, .camera__frame::after {
+  content: ''; position: absolute; width: 22px; height: 22px;
+  border: 2.5px solid #fff; border-radius: 5px;
+}
+.camera__frame::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.camera__frame::after  { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+
+.camera__hint {
+  position: absolute; bottom: var(--s-3); left: 50%; transform: translateX(-50%);
+  padding: 6px var(--s-3); border-radius: var(--r-pill);
+  background: rgba(0,0,0,.55); color: #fff; font-size: var(--t-caption);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+
+.camera__flash {
+  position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .camera__flash.is-on { animation: flash 320ms var(--ease-out); }
+}
+@keyframes flash { 0% { opacity: .85 } 100% { opacity: 0 } }
+
+.shutter {
+  width: 70px; height: 70px; border-radius: 50%; cursor: pointer;
+  border: 4px solid var(--ink); background: var(--surface);
+  display: grid; place-items: center;
+  transition: transform var(--d-fast) var(--ease-spring);
+}
+.shutter:active { transform: scale(0.92); }
+.shutter__core { width: 52px; height: 52px; border-radius: 50%; background: var(--ink); }
+
+/* A stand-in plate when no camera is available — clearly a placeholder,
+   never dressed up as a real photograph. */
+.plate-sim { width: 100%; height: 100%; display: block; }
+
+/* --- Meal review ------------------------------------------------------- */
+.item-row {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-3) 0; border-bottom: 1px solid var(--hairline);
+}
+.item-row:last-of-type { border-bottom: 0; }
+
+.conf-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: var(--r-pill);
+  font-size: var(--t-micro); font-weight: 650; letter-spacing: 0.02em;
+}
+.conf-pill--high { background: var(--accent-soft); color: var(--positive); }
+.conf-pill--medium { background: var(--nutrition-soft); color: var(--caution); }
+.conf-pill--low { background: var(--heart-soft); color: var(--critical); }
+
+.macro-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.macro-bar > span { display: block; height: 100%; }

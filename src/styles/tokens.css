@@ -1,0 +1,128 @@
+/* ============================================================
+   Jumbo — Design tokens
+   8-point spatial foundation, semantic color, deliberate type scale.
+   Sans-serif only. Light + dark. WCAG-checked contrast.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* --- Surfaces & ink (light) --- */
+  --bg:            #FBFBF9;   /* warm paper */
+  --bg-sunken:     #F2F2EE;
+  --surface:       #FFFFFF;
+  --surface-2:     #F7F7F4;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+
+  --ink:      #0B0B0C;  /* 18.9:1 on --bg */
+  --ink-2:    #55565B;  /* 7.4:1  on --bg  — body secondary */
+  --ink-3:    #717278;  /* 4.6:1 on --bg, 4.8:1 on white — the lightest text allowed */
+  --ink-4:    #A9AAAF;  /* decorative / disabled only, never body text */
+
+  --hairline:      rgba(11, 11, 12, 0.09);
+  --hairline-firm: rgba(11, 11, 12, 0.16);
+
+  /* --- Brand & domain accents ---
+     Text-safe values (>=4.5:1 on --bg). Graphic fills may go lighter (>=3:1). */
+  --accent:        #0E6E60;  /* Jumbo teal — 5.9:1 on paper */
+  --accent-press:  #0A5449;
+  --accent-soft:   #E3F1EE;
+  --accent-line:   #14907E;
+
+  --sleep:         #4B57C9;  /* indigo   */
+  --sleep-soft:    #E7E9FB;
+  --movement:      #0E6E60;  /* teal     */
+  --movement-soft: #E3F1EE;
+  --nutrition:     #9A5610;  /* amber    */
+  --nutrition-soft:#F7EBDC;
+  --recovery:      #7245B8;  /* violet   */
+  --recovery-soft: #EFE8FA;
+  --heart:         #B03A4B;  /* crimson  */
+  --heart-soft:    #FAE7E9;
+
+  --positive:      #1D7A45;
+  --caution:       #9A5610;
+  --critical:      #A5333F;
+
+  /* --- Elevation --- */
+  --shadow-1: 0 1px 2px rgba(11,11,12,.05), 0 1px 1px rgba(11,11,12,.03);
+  --shadow-2: 0 4px 16px rgba(11,11,12,.07), 0 1px 3px rgba(11,11,12,.04);
+  --shadow-3: 0 18px 48px rgba(11,11,12,.16), 0 4px 12px rgba(11,11,12,.06);
+
+  /* --- Radius --- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* --- 8-point spacing --- */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px;  --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
+  --s-14: 56px; --s-18: 72px; --s-24: 96px;
+
+  /* --- Type --- */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable",
+          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --t-display: 2.75rem;  /* 44 */
+  --t-title1:  2rem;     /* 32 */
+  --t-title2:  1.5rem;   /* 24 */
+  --t-title3:  1.25rem;  /* 20 */
+  --t-body:    1.0625rem;/* 17 — mobile default per HIG */
+  --t-callout: 0.9375rem;/* 15 */
+  --t-caption: 0.8125rem;/* 13 */
+  --t-micro:   0.6875rem;/* 11 — HIG minimum, never body copy */
+
+  /* --- Motion (restrained, spring-like) --- */
+  --ease-out:    cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.5, 1);
+  --d-fast: 140ms;
+  --d-base: 240ms;
+  --d-slow: 420ms;
+
+  --tab-h: 60px;
+  --maxw: 1120px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:            #0B0C0E;
+  --bg-sunken:     #060708;
+  --surface:       #16181C;
+  --surface-2:     #1E2126;
+  --surface-glass: rgba(22, 24, 28, 0.74);
+
+  --ink:      #F5F5F3;
+  --ink-2:    #B0B2B8;  /* 8.0:1 on --surface */
+  --ink-3:    #8A8C93;  /* 4.9:1 on --surface */
+  --ink-4:    #5E6066;
+
+  --hairline:      rgba(255, 255, 255, 0.10);
+  --hairline-firm: rgba(255, 255, 255, 0.20);
+
+  --accent:        #3ECDB0;
+  --accent-press:  #2FA891;
+  --accent-soft:   #10322D;
+  --accent-line:   #3ECDB0;
+
+  --sleep:         #8E97F5;  --sleep-soft:    #1B1E38;
+  --movement:      #3ECDB0;  --movement-soft: #10322D;
+  --nutrition:     #E5A45C;  --nutrition-soft:#33240F;
+  --recovery:      #B491F0;  --recovery-soft: #241A38;
+  --heart:         #F08A97;  --heart-soft:    #3A1B21;
+
+  --positive:      #4FC97F;
+  --caution:       #E5A45C;
+  --critical:      #F08A97;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.5);
+  --shadow-2: 0 6px 20px rgba(0,0,0,.45);
+  --shadow-3: 0 22px 56px rgba(0,0,0,.62);
+}
+
+/* Tablet & desktop: slightly tighter body size, roomier rhythm */
+@media (min-width: 768px) {
+  :root { --t-body: 1rem; --t-callout: 0.9375rem; }
+}
