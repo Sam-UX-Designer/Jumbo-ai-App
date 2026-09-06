@@ -1,19 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon, type IconName } from '../components/Icon'
 import {
-  Empty, ScreenHead, SectionHead, Segmented, Switch, useConfirm, useToast,
+  DemoBadge, Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice,
+  Switch, useConfirm, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
-import { SOURCES, METRIC_LABEL, METRIC_DETAIL, ALL_METRICS } from '../data/sources'
-import type { GoalKey, MetricKey } from '../data/types'
-import { haptic, hapticsSupported } from '../lib/haptics'
-import { relativeTime } from '../lib/util'
+import type { GoalKey } from '../data/types'
+import { api, type ProviderInfo } from '../lib/api'
+import { guessPlatform, nativeBridge } from '../lib/native'
+import { celebrate, haptic, hapticsSupported, playSound } from '../lib/feedback'
+import {
+  REMINDER_LABELS, nextReminderLabel, notificationPermission, notificationsSupported,
+  requestNotificationPermission, type ReminderKind,
+} from '../lib/reminders'
 import { consistencyStreak } from '../lib/analytics'
-
-const SOURCE_ICON: Record<string, IconName> = {
-  health: 'phone', ring: 'ring', watch: 'watch', scale: 'scale', lab: 'lab',
-}
+import { relativeTime } from '../lib/util'
 
 const GOALS: Array<{ key: GoalKey; label: string }> = [
   { key: 'energy', label: 'More energy' },
@@ -24,251 +26,209 @@ const GOALS: Array<{ key: GoalKey; label: string }> = [
   { key: 'consistency', label: 'Be consistent' },
 ]
 
+const SOURCE_ICON: Record<string, IconName> = {
+  apple_health: 'phone', health_connect: 'phone',
+  whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
+}
+
 export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
-  const { state, dispatch } = useStore()
+  const { state, dispatch, sync, refreshProviders } = useStore()
   const toast = useToast()
   const { confirm, node: confirmNode } = useConfirm()
-  const [detail, setDetail] = useState<string | null>(null)
-
-  const connectedIds = Object.keys(state.connections)
-  const covered = new Set<MetricKey>()
-  connectedIds.forEach((id) => SOURCES.find((s) => s.id === id)?.provides.forEach((m) => covered.add(m)))
-  const gaps = ALL_METRICS.filter((m) => !covered.has(m))
   const streak = consistencyStreak(state.days, state.baseline)
+  const [permission, setPermission] = useState(notificationPermission())
 
-  const set = (key: keyof typeof state.settings, value: boolean) => {
+  const set = (key: keyof typeof state.settings, value: boolean) =>
     dispatch({ type: 'setSetting', key, value })
-  }
 
   return (
-    <div className="stack stack-10">
-      <ScreenHead eyebrow="Profile" title="You & your data" />
+    <div className="stack stack-14">
+      <ScreenHead eyebrow="Profile" title="You and your data" />
 
-      {state.sampleMode && (
-        <div className="card card--quiet row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
-          <Icon name="info" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
-          <p className="t-caption dim">
-            You’re exploring Jumbo with a realistic sample history. Everything works — it just isn’t
-            your data.
-          </p>
-        </div>
-      )}
+      {state.dataMode === 'demo' && <DemoBadge />}
 
-      {/* ------------------------------------------------------- Snapshot */}
-      <section className="card row" style={{ gap: 'var(--s-4)' }}>
-        <span className="mark" style={{ width: 48, height: 48, borderRadius: 16, fontSize: 19 }} aria-hidden="true">J</span>
-        <div className="grow stack" style={{ gap: 2 }}>
-          <span className="t-title3">Your Jumbo</span>
-          <span className="t-caption dim">
-            {state.baseline.daysOfHistory} days of history · {connectedIds.length} {connectedIds.length === 1 ? 'source' : 'sources'} · {streak}-day streak
+      {/* ------------------------------------------------------ identity */}
+      <section className="card stack stack-5">
+        <div className="row" style={{ gap: 'var(--s-4)' }}>
+          <span className="mark" style={{ width: 52, height: 52, borderRadius: 17, fontSize: 21 }} aria-hidden="true">
+            {(state.profile.name.trim()[0] ?? 'J').toUpperCase()}
           </span>
+          <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
+            <span className="t-title3">{state.profile.name || 'Add your name'}</span>
+            <span className="t-caption dim">
+              {state.baseline.daysOfHistory} days · {state.providers.filter((p) => p.connection).length} connected · {streak}-day streak
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid--2">
+          <div className="field">
+            <label className="field__label" htmlFor="p-name">Name</label>
+            <input
+              id="p-name" className="input" value={state.profile.name} maxLength={48}
+              placeholder="What should Jumbo call you?"
+              onChange={(e) => dispatch({ type: 'setProfile', profile: { name: e.target.value } })}
+            />
+          </div>
+          <div className="field">
+            <label className="field__label" htmlFor="p-phone">Phone</label>
+            <input
+              id="p-phone" className="input" type="tel" inputMode="tel" value={state.profile.phone}
+              placeholder="+44 7700 900123"
+              onChange={(e) => dispatch({ type: 'setProfile', profile: { phone: e.target.value } })}
+            />
+            <span className="field__hint">Your account is keyed to this number.</span>
+          </div>
         </div>
       </section>
 
-      {/* ----------------------------------------------------------- Goal */}
+      {/* --------------------------------------------------------- goals */}
       <section className="section">
-        <SectionHead title="Your goal" sub="Shapes what Jumbo shows first. Nothing is hidden because of it." />
-        <div className="card stack stack-4">
+        <SectionHead title="Your goals" sub="Pick as many as fit. They shape what Jumbo shows first, and nothing is hidden because of them." />
+        <div className="card">
           <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
             {GOALS.map((g) => (
               <button
-                key={g.key} className="chip" aria-pressed={state.goal === g.key}
-                onClick={() => { haptic('select'); dispatch({ type: 'setGoal', goal: g.key, custom: state.customGoal }) }}
+                key={g.key} className="chip" aria-pressed={state.goals.includes(g.key)}
+                onClick={() => { haptic('selection'); dispatch({ type: 'toggleGoal', goal: g.key }) }}
               >
                 {g.label}
               </button>
             ))}
           </div>
-          <div className="field">
-            <label className="field__label" htmlFor="you-custom">In your own words</label>
-            <input
-              id="you-custom" className="input" value={state.customGoal} maxLength={80}
-              placeholder="e.g. keep up with my kids on a hike"
-              onChange={(e) => dispatch({ type: 'setGoal', goal: state.goal ?? 'custom', custom: e.target.value })}
-            />
-          </div>
         </div>
       </section>
 
-      {/* -------------------------------------------------------- Sources */}
+      {/* ------------------------------------------------------- sources */}
+      <Sources onNavigate={onNavigate} onSync={sync} onRefresh={refreshProviders} />
+
+      {/* ----------------------------------------------------- reminders */}
       <section className="section">
-        <SectionHead
-          title="Connected sources"
-          sub="Connect, disconnect and check freshness. Jumbo only ever reads."
-        />
-
-        <ul className="stack stack-3">
-          {SOURCES.map((s) => {
-            const conn = state.connections[s.id]
-            return (
-              <li key={s.id} className="card stack stack-3">
-                <div className="row" style={{ gap: 'var(--s-3)' }}>
-                  <span
-                    style={{
-                      width: 42, height: 42, borderRadius: 'var(--r-md)', flex: 'none',
-                      display: 'grid', placeItems: 'center',
-                      background: conn ? 'var(--accent-soft)' : 'var(--surface-2)',
-                      color: conn ? 'var(--accent)' : 'var(--ink-3)',
-                    }}
-                    aria-hidden="true"
-                  >
-                    <Icon name={SOURCE_ICON[s.id]} size={20} />
-                  </span>
-                  <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
-                    <span className="t-callout strong">{s.name}</span>
-                    <span className="t-caption dim2">
-                      {conn
-                        ? <><span className="dot" style={{ background: 'var(--positive)', display: 'inline-block', marginRight: 6 }} />
-                            Synced {relativeTime(conn.lastSyncMinutesAgo)}</>
-                        : s.vendor}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="row row--between" style={{ gap: 'var(--s-2)' }}>
-                  <button
-                    className="btn btn--ghost btn--sm" style={{ paddingLeft: 0 }}
-                    aria-expanded={detail === s.id}
-                    onClick={() => setDetail(detail === s.id ? null : s.id)}
-                  >
-                    <Icon name="chevron" size={13} style={{ transform: detail === s.id ? 'rotate(90deg)' : 'none', transition: 'transform var(--d-fast)' }} />
-                    What it shares
-                  </button>
-
-                  {conn ? (
-                    <div className="row" style={{ gap: 'var(--s-1)', flex: 'none' }}>
-                      <button
-                        className="icon-btn" aria-label={`Sync ${s.name} now`}
-                        onClick={() => { haptic('success'); dispatch({ type: 'sync', sourceId: s.id }); toast({ text: `${s.name} synced`, icon: 'sync' }) }}
-                      >
-                        <Icon name="sync" size={17} />
-                      </button>
-                      <button
-                        className="btn btn--secondary btn--sm"
-                        onClick={() => confirm({
-                          title: `Disconnect ${s.name}?`,
-                          body: 'Jumbo stops reading from it. History already imported stays until you clear all data.',
-                          confirmLabel: 'Disconnect',
-                          onConfirm: () => {
-                            dispatch({ type: 'disconnect', sourceId: s.id })
-                            haptic('warning')
-                            toast({ text: `${s.name} disconnected`, icon: 'unlink', tone: 'warning' })
-                          },
-                        })}
-                      >
-                        Disconnect
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="btn btn--primary btn--sm" style={{ flex: 'none' }}
-                      onClick={() => { haptic('success'); dispatch({ type: 'connect', sourceId: s.id }); toast({ text: `${s.name} connected`, icon: 'link' }) }}
-                    >
-                      Connect
-                    </button>
-                  )}
-                </div>
-
-                {detail === s.id && (
-                  <ul className="stack stack-2">
-                    {s.provides.map((m) => (
-                      <li key={m} className="row" style={{ gap: 'var(--s-2)', alignItems: 'flex-start' }}>
-                        <Icon name="check" size={14} style={{ color: 'var(--accent)', marginTop: 3, flex: 'none' }} />
-                        <span className="t-caption">
-                          <span className="strong">{METRIC_LABEL[m]}</span>
-                          <span className="dim2"> — {METRIC_DETAIL[m]}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-
-        {gaps.length > 0 && (
-          <div className="card card--quiet stack stack-3">
-            <span className="eyebrow">Not covered by your sources</span>
-            <ul className="stack stack-2">
-              {gaps.map((g) => (
-                <li key={g} className="row row--between">
-                  <span className="t-callout">{METRIC_LABEL[g]}</span>
-                  <button className="btn btn--secondary btn--sm" onClick={() => onNavigate('capture')}>
-                    Add by hand
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <p className="t-caption dim2">
-              Jumbo still works without these — it widens the uncertainty on anything that depends
-              on them rather than blocking you.
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* -------------------------------------------------------- Privacy */}
-      <section className="section">
-        <SectionHead title="Privacy & control" sub="Each switch changes what the app actually does." />
+        <SectionHead title="Reminders" sub="Jumbo nudges at the times you actually eat and train." />
         <div className="card stack stack-5">
-          <SettingRow
-            label="Pattern analysis"
-            hint="Lets Jumbo look for relationships across your data and write insights. Turning it off leaves your data visible but uninterpreted."
-            checked={state.settings.aiPatterns}
-            onChange={(v) => { set('aiPatterns', v); toast({ text: v ? 'Pattern analysis on' : 'Pattern analysis off', icon: v ? 'sparkle' : 'lock' }) }}
-          />
-          <SettingRow
-            label="Cloud processing"
-            hint="Off means everything is computed on this device. This build never sends data anywhere either way."
-            checked={state.settings.cloudProcessing}
-            onChange={(v) => set('cloudProcessing', v)}
-          />
-          <SettingRow
-            label="Personalised creator suggestions"
-            hint="Uses your goal to order Explore. Your health data is never shared with creators."
-            checked={state.settings.creatorPersonalisation}
-            onChange={(v) => set('creatorPersonalisation', v)}
-          />
-          {hapticsSupported() && (
-            <SettingRow
-              label="Haptics"
-              hint="Short vibrations on capture, completion and milestones only."
-              checked={state.settings.haptics}
-              onChange={(v) => { set('haptics', v); if (v) haptic('success') }}
+          <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+            <div className="stack stack-1" style={{ minWidth: 0 }}>
+              <span className="t-callout strong">Meal and workout reminders</span>
+              <span className="t-caption dim" id="rem-hint">
+                {notificationsSupported()
+                  ? 'A browser can only raise a notification while Jumbo is open. For alerts when it is closed, use the Jumbo app.'
+                  : 'This browser does not support notifications, so reminders cannot fire here.'}
+              </span>
+            </div>
+            <Switch
+              checked={state.reminders.enabled}
+              label="Reminders"
+              describedBy="rem-hint"
+              onChange={async (v) => {
+                if (v) {
+                  const p = await requestNotificationPermission()
+                  setPermission(p)
+                  if (p !== 'granted') {
+                    toast({ text: 'Notifications were not allowed', icon: 'info', tone: 'warning' })
+                    return
+                  }
+                }
+                dispatch({ type: 'setReminders', patch: { enabled: v } })
+                haptic('selection')
+              }}
+            />
+          </div>
+
+          {state.reminders.enabled && permission === 'granted' && (
+            <>
+              <div className="grid grid--2">
+                {(Object.keys(REMINDER_LABELS) as ReminderKind[]).map((k) => (
+                  <div className="field" key={k}>
+                    <label className="field__label" htmlFor={`rem-${k}`}>{REMINDER_LABELS[k]}</label>
+                    <input
+                      id={`rem-${k}`} className="input" type="time" value={state.reminders[k]}
+                      onChange={(e) => dispatch({ type: 'setReminders', patch: { [k]: e.target.value } })}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="t-caption dim2">{nextReminderLabel(state.reminders) ?? 'No reminder scheduled.'}</p>
+            </>
+          )}
+
+          {state.reminders.enabled && permission !== 'granted' && (
+            <ErrorNotice
+              title="Notifications are blocked"
+              message="Jumbo cannot raise a reminder until notifications are allowed for this site in your browser settings."
             />
           )}
         </div>
       </section>
 
-      {/* ----------------------------------------------------- Appearance */}
+      {/* ------------------------------------------------ feel & privacy */}
+      <section className="section">
+        <SectionHead title="Feel" sub="Reserved for real moments: a capture, a completion, a milestone." />
+        <div className="card stack stack-5">
+          {hapticsSupported() ? (
+            <SettingRow
+              label="Haptics"
+              hint="Short, patterned vibrations on capture, confirmation and milestones. Never on ordinary taps."
+              checked={state.settings.haptics}
+              onChange={(v) => { set('haptics', v); if (v) haptic('success') }}
+            />
+          ) : (
+            <p className="t-caption dim2">This device does not expose haptics to the browser.</p>
+          )}
+          <SettingRow
+            label="Sound"
+            hint="A short tone on a completed meal, workout or milestone. Browsers cannot read your phone’s silent switch, so this is the switch."
+            checked={state.settings.sound}
+            onChange={(v) => { set('sound', v); if (v) playSound('confirm') }}
+          />
+        </div>
+      </section>
+
+      <section className="section">
+        <SectionHead title="Privacy and control" sub="Each switch changes what the app actually does." />
+        <div className="card stack stack-5">
+          <SettingRow
+            label="Pattern analysis"
+            hint="Lets Jumbo look for relationships across your data and write insights. Off leaves the data visible and uninterpreted."
+            checked={state.settings.aiPatterns}
+            onChange={(v) => { set('aiPatterns', v); toast({ text: v ? 'Pattern analysis on' : 'Pattern analysis off', icon: v ? 'ai' : 'lock' }) }}
+          />
+          <SettingRow
+            label="Personalised video suggestions"
+            hint="Uses your goals to search YouTube. Your health data is never sent to YouTube or to any creator."
+            checked={state.settings.creatorPersonalisation}
+            onChange={(v) => set('creatorPersonalisation', v)}
+          />
+          <hr className="hairline" />
+          <div className="stack stack-2">
+            <span className="t-callout strong">Where your data goes</span>
+            <p className="t-caption dim">
+              Records, meals and notes are stored on this device. When Jumbo’s AI is turned on, a
+              statistical summary of your data, never your name, phone number, notes or photos,
+              is sent to the Claude API to write insights. Meal photos are sent for analysis at the
+              moment you take them and are not stored afterwards.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------- appearance */}
       <section className="section">
         <SectionHead title="Appearance" />
         <div className="card row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
           <span className="t-callout">Theme</span>
           <Segmented
-            ariaLabel="Theme"
-            value={state.theme}
+            ariaLabel="Theme" value={state.theme}
             onChange={(v) => dispatch({ type: 'setTheme', theme: v as typeof state.theme })}
             options={[
-              { value: 'system', label: 'System' },
-              { value: 'light', label: 'Light' },
               { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'System' },
             ]}
           />
         </div>
       </section>
 
-      {/* ---------------------------------------------------- Other areas */}
-      <section className="section">
-        <SectionHead title="More" />
-        <div className="stack stack-3">
-          <LinkRow icon="measure" label="Measurements" sub={`${state.measurements.length} records`} onClick={() => onNavigate('measurements')} />
-          <LinkRow icon="explore" label="Explore" sub={`${state.following.length} creators followed`} onClick={() => onNavigate('explore')} />
-        </div>
-      </section>
-
-      {/* ----------------------------------------------------- Your data */}
+      {/* ----------------------------------------------------- your data */}
       <section className="section">
         <SectionHead title="Your data" />
         <div className="card stack stack-4">
@@ -280,12 +240,13 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
             <button
               className="btn btn--secondary btn--sm"
               onClick={() => {
-                const blob = new Blob([JSON.stringify({ days: state.days, measurements: state.measurements, baseline: state.baseline }, null, 2)], { type: 'application/json' })
+                const blob = new Blob([JSON.stringify({
+                  profile: state.profile, goals: state.goals, dataMode: state.dataMode,
+                  days: state.days, measurements: state.measurements, baseline: state.baseline,
+                }, null, 2)], { type: 'application/json' })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
-                a.href = url
-                a.download = 'jumbo-export.json'
-                a.click()
+                a.href = url; a.download = 'jumbo-export.json'; a.click()
                 URL.revokeObjectURL(url)
                 toast({ text: 'Export downloaded', icon: 'check' })
               }}
@@ -299,15 +260,15 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
           <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
             <div className="stack stack-1" style={{ minWidth: 0 }}>
               <span className="t-callout strong">Clear everything</span>
-              <span className="t-caption dim2">Disconnects all sources and deletes imported and entered data.</span>
+              <span className="t-caption dim2">Deletes your profile, goals and entered data from this device.</span>
             </div>
             <button
               className="btn btn--danger btn--sm"
               onClick={() => confirm({
                 title: 'Clear all Jumbo data?',
-                body: 'Every connection, imported day, meal, workout and measurement is deleted from this device. This cannot be undone.',
+                body: 'Your profile, goals, meals, workouts, measurements and notes are deleted from this device. Connected sources stay connected on the server until you disconnect them. This cannot be undone.',
                 confirmLabel: 'Delete everything',
-                onConfirm: () => { dispatch({ type: 'resetAll' }); haptic('warning') },
+                onConfirm: () => { dispatch({ type: 'resetAll' }); haptic('impactHeavy') },
               })}
             >
               Clear
@@ -316,9 +277,9 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
         </div>
 
         <p className="t-caption dim2">
-          Jumbo is a wellness and longevity companion. It does not diagnose, treat or monitor
-          medical conditions, and its projections are not clinical predictions. If something in your
-          data worries you, speak to a clinician.
+          Jumbo is a wellness and longevity companion. It does not diagnose, treat or monitor medical
+          conditions, and its projections are not clinical predictions. If something in your data
+          worries you, speak to a clinician.
         </p>
       </section>
 
@@ -327,12 +288,246 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
   )
 }
 
+/* ---------------------------------------------------------------- sources */
+function Sources({
+  onNavigate, onSync, onRefresh,
+}: { onNavigate: (r: Route) => void; onSync: () => Promise<void>; onRefresh: () => Promise<void> }) {
+  const { state } = useStore()
+  const toast = useToast()
+  const { confirm, node } = useConfirm()
+  const [busy, setBusy] = useState<string | null>(null)
+  const [detail, setDetail] = useState<string | null>(null)
+  const [why, setWhy] = useState<string | null>(null)
+  const [failure, setFailure] = useState<{ id: string; kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string } | null>(null)
+  const bridge = nativeBridge()
+  const platform = guessPlatform()
+
+  // Surface the result of an OAuth round trip when the provider redirects back.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('connect')
+    if (!id) return
+    const status = params.get('status')
+    if (status === 'connected') {
+      celebrate('confirm', false)
+      toast({ text: `${id} connected`, icon: 'link' })
+      void onSync()
+    } else {
+      toast({ text: `Could not connect ${id}: ${params.get('reason') ?? 'unknown error'}`, icon: 'info', tone: 'warning' })
+    }
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [onSync, toast])
+
+  const connect = async (p: ProviderInfo) => {
+    setFailure(null)
+    if (p.transport === 'native') {
+      if (!bridge) return
+      setBusy(p.id)
+      try {
+        const granted = await bridge.requestPermissions(['sleep', 'steps', 'workouts', 'restingHeartRate', 'hrv', 'weight'])
+        if (granted.granted.length === 0) {
+          setFailure({ id: p.id, kind: 'error', message: 'No permissions were granted, so there is nothing to read.' })
+        } else {
+          celebrate('confirm', false)
+          toast({ text: `${p.name} connected`, icon: 'link' })
+          await onSync()
+        }
+      } catch (err) {
+        setFailure({ id: p.id, kind: 'error', message: (err as Error).message })
+      }
+      setBusy(null)
+      return
+    }
+
+    setBusy(p.id)
+    const r = await api.connect(p.id)
+    setBusy(null)
+    if (r.ok) {
+      window.location.href = r.data.authorizeUrl   // the real provider consent screen
+    } else if (r.kind === 'setup') {
+      setFailure({ id: p.id, kind: 'setup', message: r.message, missing: r.missing, docs: r.docs })
+    } else {
+      setFailure({ id: p.id, kind: 'error', message: r.message })
+    }
+  }
+
+  if (state.serverReachable === false) {
+    return (
+      <section className="section">
+        <SectionHead title="Connected sources" />
+        <SetupNotice
+          title="Jumbo’s API is not running"
+          message="Connections, AI and YouTube all run through Jumbo’s server. Start it with npm run dev:api, or deploy it, and this list fills in. Until then the app runs on clearly labelled sample data."
+        />
+      </section>
+    )
+  }
+
+  return (
+    <section className="section">
+      <SectionHead
+        title="Connected sources"
+        sub="Jumbo only ever reads. Disconnect any source and it stops immediately."
+        action={
+          <button className="btn btn--ghost btn--sm" onClick={() => { haptic('selection'); void onSync() }} disabled={state.syncing}>
+            <Icon name="sync" size={14} /> {state.syncing ? 'Syncing' : 'Sync'}
+          </button>
+        }
+      />
+
+      {state.syncErrors.length > 0 && (
+        <ErrorNotice
+          title="Some sources did not sync"
+          message={state.syncErrors.map((e) => `${e.provider}: ${e.message}`).join(' · ')}
+          onRetry={() => void onSync()}
+        />
+      )}
+
+      {state.providers.length === 0 ? (
+        <Empty icon="link" title="Loading sources" body="Asking Jumbo’s server what it can connect to." />
+      ) : (
+        <ul className="stack stack-3">
+          {state.providers.map((p) => {
+            const connected = Boolean(p.connection)
+            const nativeReady = p.transport === 'native' && Boolean(bridge)
+            const canConnect = p.transport === 'oauth' ? p.ready : nativeReady
+
+            return (
+              <li key={p.id} className="card stack stack-3">
+                <div className="row" style={{ gap: 'var(--s-3)' }}>
+                  <span style={{
+                    width: 44, height: 44, borderRadius: 'var(--r-tile)', flex: 'none',
+                    display: 'grid', placeItems: 'center',
+                    background: connected ? 'var(--brand-dim)' : 'var(--surface-2)',
+                    color: connected ? 'var(--brand)' : 'var(--ink-3)',
+                  }} aria-hidden="true">
+                    <Icon name={SOURCE_ICON[p.id] ?? 'link'} size={21} />
+                  </span>
+                  <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
+                    <span className="t-callout strong">{p.name}</span>
+                    <span className="t-caption dim2">
+                      {connected
+                        ? <><span className="dot" style={{ background: 'var(--brand)', display: 'inline-block', marginRight: 6 }} />
+                            {p.connection!.lastSyncAt
+                              ? `Synced ${relativeTime((Date.now() - p.connection!.lastSyncAt) / 60_000)}`
+                              : 'Connected, not yet synced'}</>
+                        : p.vendor}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="row row--between" style={{ gap: 'var(--s-2)' }}>
+                  <button
+                    className="btn btn--ghost btn--sm" style={{ paddingLeft: 0 }}
+                    aria-expanded={detail === p.id}
+                    onClick={() => setDetail(detail === p.id ? null : p.id)}
+                  >
+                    <Icon name="chevron" size={13} style={{ transform: detail === p.id ? 'rotate(90deg)' : 'none', transition: 'transform var(--d-fast)' }} />
+                    What it shares
+                  </button>
+
+                  {connected ? (
+                    <button
+                      className="btn btn--secondary btn--sm none"
+                      onClick={() => confirm({
+                        title: `Disconnect ${p.name}?`,
+                        body: 'Jumbo stops reading from it straight away. History already imported stays until you clear your data.',
+                        confirmLabel: 'Disconnect',
+                        onConfirm: async () => {
+                          await api.disconnect(p.id)
+                          await onRefresh()
+                          await onSync()
+                          haptic('warning')
+                          toast({ text: `${p.name} disconnected`, icon: 'unlink', tone: 'warning' })
+                        },
+                      })}
+                    >
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button
+                      className={`btn btn--sm none ${canConnect ? 'btn--primary' : 'btn--secondary'}`}
+                      disabled={busy === p.id}
+                      aria-expanded={canConnect ? undefined : why === p.id}
+                      onClick={() => (canConnect ? void connect(p) : setWhy(why === p.id ? null : p.id))}
+                    >
+                      {busy === p.id ? <span className="spinner" /> : canConnect ? 'Connect' : why === p.id ? 'Hide' : 'Why not?'}
+                    </button>
+                  )}
+                </div>
+
+                {detail === p.id && (
+                  <ul className="stack stack-2">
+                    {p.provides.map((m) => (
+                      <li key={m} className="row row--top" style={{ gap: 'var(--s-2)' }}>
+                        <Icon name="check" size={14} style={{ color: 'var(--brand)', marginTop: 3, flex: 'none' }} />
+                        <span className="t-caption">{METRIC_COPY[m] ?? m}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Why a source cannot connect — always specific, never a dead end. */}
+                {why === p.id && !connected && p.transport === 'native' && !bridge && (
+                  <SetupNotice
+                    title={`${p.name} needs the Jumbo app`}
+                    message={`${p.reason ?? ''} ${platform === (p.platform ?? '') ? 'You are on the right platform. Install the Jumbo app to connect it.' : ''}`.trim()}
+                    docs={p.docs}
+                    compact
+                  />
+                )}
+                {why === p.id && !connected && p.transport === 'oauth' && !p.ready && (
+                  <SetupNotice
+                    title={`${p.name} is not configured on the server`}
+                    message={p.note ?? `Add this provider’s credentials to Jumbo’s server and the connect button starts a real OAuth flow.`}
+                    missing={p.missing}
+                    docs={p.docs}
+                    compact
+                  />
+                )}
+                {failure?.id === p.id && failure.kind === 'error' && (
+                  <ErrorNotice title="That did not work" message={failure.message} />
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <div className="card card--quiet stack stack-3">
+        <span className="eyebrow">Not covered by any source</span>
+        <div className="row row--between">
+          <span className="t-callout">Meals</span>
+          <button className="btn btn--secondary btn--sm" onClick={() => onNavigate('capture')}>
+            <Icon name="camera" size={14} /> Photograph one
+          </button>
+        </div>
+        <p className="t-caption dim2">
+          No wearable can see a plate of food. Jumbo works without it. It simply widens the
+          uncertainty on anything that depends on nutrition.
+        </p>
+      </div>
+
+      {node}
+    </section>
+  )
+}
+
+const METRIC_COPY: Record<string, string> = {
+  sleep: 'Sleep: duration, efficiency and bedtime consistency',
+  steps: 'Steps and walking: daily count and active minutes',
+  workouts: 'Workouts: type, duration and intensity',
+  heart: 'Heart and fitness: resting heart rate, HRV, VO₂ max',
+  body: 'Body composition: weight, body fat, lean mass',
+  nutrition: 'Nutrition: meals, energy and protein',
+}
+
 function SettingRow({
   label, hint, checked, onChange,
 }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   const id = `set-${label.replace(/\s+/g, '-').toLowerCase()}`
   return (
-    <div className="row row--between" style={{ alignItems: 'flex-start', gap: 'var(--s-4)' }}>
+    <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
       <div className="stack stack-1" style={{ minWidth: 0 }}>
         <span className="t-callout strong">{label}</span>
         <span className="t-caption dim" id={id}>{hint}</span>
@@ -341,25 +536,3 @@ function SettingRow({
     </div>
   )
 }
-
-function LinkRow({
-  icon, label, sub, onClick,
-}: { icon: IconName; label: string; sub: string; onClick: () => void }) {
-  return (
-    <button className="card row" style={{ gap: 'var(--s-3)', width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={onClick}>
-      <span style={{
-        width: 38, height: 38, borderRadius: 'var(--r-md)', flex: 'none',
-        display: 'grid', placeItems: 'center', background: 'var(--surface-2)', color: 'var(--accent)',
-      }}>
-        <Icon name={icon} size={18} />
-      </span>
-      <div className="grow stack" style={{ gap: 1 }}>
-        <span className="t-callout strong">{label}</span>
-        <span className="t-caption dim2">{sub}</span>
-      </div>
-      <Icon name="chevron" size={16} style={{ color: 'var(--ink-3)' }} />
-    </button>
-  )
-}
-
-export { Empty }

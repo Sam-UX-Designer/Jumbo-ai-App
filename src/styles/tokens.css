@@ -1,128 +1,145 @@
 /* ============================================================
-   Jumbo — Design tokens
-   8-point spatial foundation, semantic color, deliberate type scale.
-   Sans-serif only. Light + dark. WCAG-checked contrast.
+   Jumbo — design tokens
+
+   Dark-first by intent, not by fashion: the brand colour is a
+   fluorescent green that reads at 13:1 on near-black and 1.5:1 on white.
+   Light mode exists and is fully supported, but it swaps the green for a
+   darker ink-green wherever the green would carry text.
+
+   One accent. One radius system. 8-point spacing.
    ============================================================ */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* --- Surfaces & ink (light) --- */
-  --bg:            #FBFBF9;   /* warm paper */
-  --bg-sunken:     #F2F2EE;
-  --surface:       #FFFFFF;
-  --surface-2:     #F7F7F4;
-  --surface-glass: rgba(255, 255, 255, 0.72);
+  /* ── Brand ───────────────────────────────────────────────── */
+  --brand:        #92E82A;   /* the one accent, everywhere */
+  --brand-press:  #7FCE1F;
+  --brand-ink:    #0B1500;   /* text that sits ON the brand colour */
+  --brand-dim:    rgba(146, 232, 42, 0.14);
+  --brand-line:   rgba(146, 232, 42, 0.34);
+  --brand-glow:   rgba(146, 232, 42, 0.22);
+  --on-brand:     var(--brand-ink);
+  --accent-text:  var(--brand);   /* brand used as text colour */
 
-  --ink:      #0B0B0C;  /* 18.9:1 on --bg */
-  --ink-2:    #55565B;  /* 7.4:1  on --bg  — body secondary */
-  --ink-3:    #717278;  /* 4.6:1 on --bg, 4.8:1 on white — the lightest text allowed */
-  --ink-4:    #A9AAAF;  /* decorative / disabled only, never body text */
+  /* ── Surfaces ────────────────────────────────────────────── */
+  --bg:         #08090A;
+  --bg-deep:    #050506;
+  --surface:    #101214;
+  --surface-2:  #17191C;
+  --surface-3:  #1E2124;
+  --glass:      rgba(16, 18, 20, 0.72);
 
-  --hairline:      rgba(11, 11, 12, 0.09);
-  --hairline-firm: rgba(11, 11, 12, 0.16);
+  /* ── Ink ─────────────────────────────────────────────────── */
+  --ink:    #F2F4F1;   /* 17.7:1 on --surface */
+  --ink-2:  #A8ADA6;   /*  8.3:1 on --surface */
+  --ink-3:  #7C817B;   /*  4.8:1 on --surface — lightest text allowed */
+  --ink-4:  #4A4E48;   /* decorative only, never text */
 
-  /* --- Brand & domain accents ---
-     Text-safe values (>=4.5:1 on --bg). Graphic fills may go lighter (>=3:1). */
-  --accent:        #0E6E60;  /* Jumbo teal — 5.9:1 on paper */
-  --accent-press:  #0A5449;
-  --accent-soft:   #E3F1EE;
-  --accent-line:   #14907E;
+  --hairline:      rgba(255, 255, 255, 0.075);
+  --hairline-firm: rgba(255, 255, 255, 0.16);
 
-  --sleep:         #4B57C9;  /* indigo   */
-  --sleep-soft:    #E7E9FB;
-  --movement:      #0E6E60;  /* teal     */
-  --movement-soft: #E3F1EE;
-  --nutrition:     #9A5610;  /* amber    */
-  --nutrition-soft:#F7EBDC;
-  --recovery:      #7245B8;  /* violet   */
-  --recovery-soft: #EFE8FA;
-  --heart:         #B03A4B;  /* crimson  */
-  --heart-soft:    #FAE7E9;
+  /* ── Health dimensions ───────────────────────────────────── */
+  --sleep:      #6E7BFF;  --sleep-dim:      rgba(110, 123, 255, 0.16);
+  --movement:   #2ED8A7;  --movement-dim:   rgba(46, 216, 167, 0.16);
+  --nutrition:  #FFA53D;  --nutrition-dim:  rgba(255, 165, 61, 0.16);
+  --recovery:   #B57BFF;  --recovery-dim:   rgba(181, 123, 255, 0.16);
+  --training:   #FF5C7A;  --training-dim:   rgba(255, 92, 122, 0.16);
+  --measure:    #46C8F5;  --measure-dim:    rgba(70, 200, 245, 0.16);
 
-  --positive:      #1D7A45;
-  --caution:       #9A5610;
-  --critical:      #A5333F;
+  --positive: #92E82A;
+  --caution:  #FFA53D;
+  --critical: #FF5C7A;
 
-  /* --- Elevation --- */
-  --shadow-1: 0 1px 2px rgba(11,11,12,.05), 0 1px 1px rgba(11,11,12,.03);
-  --shadow-2: 0 4px 16px rgba(11,11,12,.07), 0 1px 3px rgba(11,11,12,.04);
-  --shadow-3: 0 18px 48px rgba(11,11,12,.16), 0 4px 12px rgba(11,11,12,.06);
+  /* ── Elevation ───────────────────────────────────────────── */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .48);
+  --shadow-2: 0 8px 28px rgba(0, 0, 0, .46);
+  --shadow-3: 0 28px 64px rgba(0, 0, 0, .62);
+  --shadow-brand: 0 10px 34px -12px var(--brand-glow);
 
-  /* --- Radius --- */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 28px;
-  --r-pill: 999px;
+  /* ── Radius: one system, documented ──────────────────────
+     interactive controls are pills · cards are 20 · inputs are 12  */
+  --r-input: 12px;
+  --r-card:  20px;
+  --r-sheet: 26px;
+  --r-pill:  999px;
+  --r-tile:  14px;
 
-  /* --- 8-point spacing --- */
-  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
-  --s-5: 20px;  --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
+  /* ── 8-point spacing ─────────────────────────────────────── */
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px; --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
   --s-14: 56px; --s-18: 72px; --s-24: 96px;
 
-  /* --- Type --- */
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable",
-          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* ── Type ────────────────────────────────────────────────── */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --t-display: 2.75rem;  /* 44 */
-  --t-title1:  2rem;     /* 32 */
-  --t-title2:  1.5rem;   /* 24 */
-  --t-title3:  1.25rem;  /* 20 */
-  --t-body:    1.0625rem;/* 17 — mobile default per HIG */
-  --t-callout: 0.9375rem;/* 15 */
-  --t-caption: 0.8125rem;/* 13 */
-  --t-micro:   0.6875rem;/* 11 — HIG minimum, never body copy */
+  --t-hero:    3.25rem;   /* 52 */
+  --t-display: 2.5rem;    /* 40 */
+  --t-title1:  1.9375rem; /* 31 */
+  --t-title2:  1.5rem;    /* 24 */
+  --t-title3:  1.1875rem; /* 19 */
+  --t-body:    1.0625rem; /* 17 — platform default */
+  --t-callout: 0.9375rem; /* 15 */
+  --t-caption: 0.8125rem; /* 13 */
+  --t-micro:   0.6875rem; /* 11 — platform minimum, labels only */
 
-  /* --- Motion (restrained, spring-like) --- */
-  --ease-out:    cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.32, 0.5, 1);
+  /* ── Motion ──────────────────────────────────────────────── */
+  --ease:        cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.48, 1);
   --d-fast: 140ms;
   --d-base: 240ms;
   --d-slow: 420ms;
+  --d-story: 720ms;
 
-  --tab-h: 60px;
+  --tab-h: 62px;
   --maxw: 1120px;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
+/* Light mode: the green stays as a fill, never as text. */
+:root[data-theme="light"] {
+  color-scheme: light;
 
-  --bg:            #0B0C0E;
-  --bg-sunken:     #060708;
-  --surface:       #16181C;
-  --surface-2:     #1E2126;
-  --surface-glass: rgba(22, 24, 28, 0.74);
+  --brand:        #92E82A;
+  --brand-press:  #7FCE1F;
+  --brand-ink:    #0B1500;
+  --brand-dim:    rgba(146, 232, 42, 0.18);
+  --brand-line:   rgba(88, 150, 10, 0.42);
+  --brand-glow:   rgba(146, 232, 42, 0.34);
+  --accent-text:  #3F7A00;   /* 5.3:1 on white — the text-safe green */
 
-  --ink:      #F5F5F3;
-  --ink-2:    #B0B2B8;  /* 8.0:1 on --surface */
-  --ink-3:    #8A8C93;  /* 4.9:1 on --surface */
-  --ink-4:    #5E6066;
+  --bg:        #FAFBF8;
+  --bg-deep:   #F1F3EE;
+  --surface:   #FFFFFF;
+  --surface-2: #F5F7F2;
+  --surface-3: #EDEFE9;
+  --glass:     rgba(255, 255, 255, 0.76);
 
-  --hairline:      rgba(255, 255, 255, 0.10);
-  --hairline-firm: rgba(255, 255, 255, 0.20);
+  --ink:   #0B0D0A;
+  --ink-2: #4E524C;
+  --ink-3: #6E7269;   /* 4.9:1 on white */
+  --ink-4: #A7ABA3;
 
-  --accent:        #3ECDB0;
-  --accent-press:  #2FA891;
-  --accent-soft:   #10322D;
-  --accent-line:   #3ECDB0;
+  --hairline:      rgba(11, 13, 10, 0.09);
+  --hairline-firm: rgba(11, 13, 10, 0.18);
 
-  --sleep:         #8E97F5;  --sleep-soft:    #1B1E38;
-  --movement:      #3ECDB0;  --movement-soft: #10322D;
-  --nutrition:     #E5A45C;  --nutrition-soft:#33240F;
-  --recovery:      #B491F0;  --recovery-soft: #241A38;
-  --heart:         #F08A97;  --heart-soft:    #3A1B21;
+  --sleep:     #4550D6;  --sleep-dim:     rgba(69, 80, 214, 0.11);
+  --movement:  #0E8A68;  --movement-dim:  rgba(14, 138, 104, 0.11);
+  --nutrition: #A45B00;  --nutrition-dim: rgba(164, 91, 0, 0.11);
+  --recovery:  #7639C9;  --recovery-dim:  rgba(118, 57, 201, 0.11);
+  --training:  #C1304C;  --training-dim:  rgba(193, 48, 76, 0.11);
+  --measure:   #0A6F92;  --measure-dim:   rgba(10, 111, 146, 0.11);
 
-  --positive:      #4FC97F;
-  --caution:       #E5A45C;
-  --critical:      #F08A97;
+  --positive: #2E7A00;
+  --caution:  #A45B00;
+  --critical: #C1304C;
 
-  --shadow-1: 0 1px 2px rgba(0,0,0,.5);
-  --shadow-2: 0 6px 20px rgba(0,0,0,.45);
-  --shadow-3: 0 22px 56px rgba(0,0,0,.62);
+  --shadow-1: 0 1px 2px rgba(11, 13, 10, .06);
+  --shadow-2: 0 8px 26px rgba(11, 13, 10, .09);
+  --shadow-3: 0 26px 60px rgba(11, 13, 10, .16);
+  --shadow-brand: 0 10px 30px -14px rgba(88, 150, 10, .5);
 }
 
-/* Tablet & desktop: slightly tighter body size, roomier rhythm */
 @media (min-width: 768px) {
-  :root { --t-body: 1rem; --t-callout: 0.9375rem; }
+  :root { --t-body: 1rem; --t-hero: 3.75rem; }
 }

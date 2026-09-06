@@ -114,7 +114,21 @@ export interface Goal {
   key: GoalKey
   label: string
   detail: string
-  custom?: string
+}
+
+/** The only identity Jumbo asks for. Phone is the account key. */
+export interface Profile {
+  name: string
+  phone: string
+}
+
+/** Times Jumbo will nudge, in 24h "HH:MM". Empty string means off. */
+export interface Reminders {
+  enabled: boolean
+  breakfast: string
+  lunch: string
+  dinner: string
+  workout: string
 }
 
 export interface Insight {

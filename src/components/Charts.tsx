@@ -33,8 +33,8 @@ function path(points: Array<{ x: number; y: number }>) {
    Sparkline — a trend at a glance, never the only source of a number
    ============================================================ */
 export function Sparkline({
-  values, color = 'var(--accent)', width = 88, height = 30, label,
-}: { values: number[]; color?: string; width?: number; height?: number; label: string }) {
+  values, colour = 'var(--brand)', width = 88, height = 30, label,
+}: { values: number[]; colour?: string; width?: number; height?: number; label: string }) {
   if (values.length < 2) return <div style={{ width, height }} aria-hidden="true" />
   const [lo, hi] = extent(values)
   const pad = 3
@@ -45,8 +45,8 @@ export function Sparkline({
   const last = pts[pts.length - 1]
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} style={{ overflow: 'visible' }}>
-      <path d={path(pts)} fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" opacity={0.9} />
-      <circle cx={last.x} cy={last.y} r={2.6} fill={color} />
+      <path d={path(pts)} fill="none" stroke={colour} strokeWidth={2} strokeLinecap="round" opacity={0.92} />
+      <circle cx={last.x} cy={last.y} r={2.7} fill={colour} />
     </svg>
   )
 }
@@ -119,7 +119,7 @@ export function BarChart({
    Line chart — observed history, scrubbable
    ============================================================ */
 export function LineChart({
-  values, labels, color = 'var(--accent)', height = 150, unit = '', dp = 1,
+  values, labels, color = 'var(--brand)', height = 150, unit = '', dp = 1,
 }: {
   values: number[]
   labels: string[]
@@ -278,5 +278,73 @@ export function ProjectionChart({
         +{maxM} months
       </text>
     </svg>
+  )
+}
+
+/* ============================================================
+   Day curve — the Future screen's signature visual.
+
+   Two shapes of one ordinary day: how energy tends to run now, and how it
+   could run under the chosen scenario. It is an illustration built from the
+   model, and the screen says so directly next to it.
+   ============================================================ */
+export function DayCurve({
+  now, projected, height = 180, accent = 'var(--brand)',
+}: { now: number[]; projected: number[]; height?: number; accent?: string }) {
+  const gid = useId()
+  const W = 340
+  const H = height
+  const pad = 4
+
+  const toPts = (vals: number[]) =>
+    vals.map((v, i) => ({
+      x: pad + (i / (vals.length - 1)) * (W - pad * 2),
+      y: H - 10 - v * (H - 30),
+    }))
+
+  const nowPts = toPts(now)
+  const projPts = toPts(projected)
+  const HOURS = ['6am', '9am', 'noon', '3pm', '6pm', '9pm']  // guides and axis labels
+
+  return (
+    <div>
+    <svg
+      viewBox={`0 0 ${W} ${H}`} width="100%" height={H}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="An illustration of how energy could run across an ordinary day now, compared with the chosen scenario."
+      style={{ overflow: 'visible' }}
+    >
+      <defs>
+        <linearGradient id={`dc-${gid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={accent} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={accent} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* hour guides */}
+      {HOURS.map((label, i) => {
+        const x = pad + (i / (HOURS.length - 1)) * (W - pad * 2)
+        return (
+          <g key={label}>
+            <line x1={x} y1={8} x2={x} y2={H - 10} stroke="var(--hairline)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+
+          </g>
+        )
+      })}
+
+      {/* the scenario, filled */}
+      <path d={`${path(projPts)} L ${W - pad} ${H - 10} L ${pad} ${H - 10} Z`} fill={`url(#dc-${gid})`} />
+      <path d={path(projPts)} fill="none" stroke={accent} strokeWidth={2.6} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+
+      {/* today, as a quiet reference */}
+      <path d={path(nowPts)} fill="none" stroke="var(--ink-3)" strokeWidth={1.8}
+        strokeDasharray="3 4" strokeLinecap="round" opacity={0.85} vectorEffect="non-scaling-stroke" />
+    </svg>
+
+      <div className="row row--between" style={{ marginTop: 2 }}>
+        {HOURS.map((h) => <span key={h} className="t-caption dim2">{h}</span>)}
+      </div>
+    </div>
   )
 }

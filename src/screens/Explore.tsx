@@ -1,49 +1,95 @@
-import { useMemo, useState } from 'react'
-import { Icon } from '../components/Icon'
-import { Empty, ScreenHead, Segmented, SectionHead, Sheet, useToast } from '../components/UI'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AiOrb, Icon } from '../components/Icon'
+import {
+  Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice, Sheet, useToast,
+} from '../components/UI'
 import { useStore } from '../state/store'
-import { CREATORS, VIDEOS } from '../data/creators'
-import type { Creator, Video } from '../data/types'
-import { haptic } from '../lib/haptics'
+import { api, compactCount, isoDurationMinutes, type YoutubeVideo } from '../lib/api'
+import type { GoalKey } from '../data/types'
+import { haptic } from '../lib/feedback'
 
-type Tab = 'for-you' | 'following' | 'discover'
+type Tab = 'for-you' | 'saved' | 'following'
+
+const GOAL_LABEL: Record<GoalKey, string> = {
+  energy: 'More energy', fitness: 'Get fitter', sleep: 'Sleep better',
+  nutrition: 'Eat better', aging: 'Healthy ageing', consistency: 'Be consistent', custom: 'Your goal',
+}
+
+const TOPICS = [
+  'zone 2 training', 'strength after 40', 'sleep and HRV', 'protein and lean mass',
+  'VO2 max and healthspan', 'deload weeks', 'hip mobility', 'reading a lipid panel',
+]
 
 export function Explore() {
   const { state, dispatch } = useStore()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('for-you')
-  const [openVideo, setOpenVideo] = useState<Video | null>(null)
+  const [query, setQuery] = useState('')
+  const [videos, setVideos] = useState<YoutubeVideo[]>([])
+  const [loading, setLoading] = useState(false)
+  const [problem, setProblem] = useState<{ kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string } | null>(null)
+  const [open, setOpen] = useState<YoutubeVideo | null>(null)
+  const [resolvedQuery, setResolvedQuery] = useState('')
 
-  const goal = state.goal ?? 'energy'
+  const goals = state.goals.length ? state.goals : (['fitness'] as GoalKey[])
   const personalise = state.settings.creatorPersonalisation
 
-  const forYou = useMemo(() => {
-    if (!personalise) return VIDEOS
-    return [...VIDEOS].sort((a, b) => {
-      const score = (v: Video) =>
-        (v.topics.includes(goal) ? 2 : 0) + (state.following.includes(v.creatorId) ? 1 : 0)
-      return score(b) - score(a)
+  const load = useCallback(async (q?: string) => {
+    setLoading(true)
+    setProblem(null)
+    const r = await api.youtube({
+      q: q || undefined,
+      goals: personalise && !q ? goals : undefined,
+      limit: 14,
     })
-  }, [goal, state.following, personalise])
+    setLoading(false)
+    if (r.ok) {
+      setVideos(r.data.videos)
+      setResolvedQuery(r.data.query)
+    } else {
+      setVideos([])
+      setProblem(
+        r.kind === 'setup'
+          ? { kind: 'setup', message: r.message, missing: r.missing, docs: r.docs }
+          : { kind: 'error', message: r.kind === 'offline' ? 'Jumbo’s API is not reachable, so nothing can be fetched from YouTube.' : r.message },
+      )
+    }
+  }, [goals, personalise])
 
-  const followingVideos = VIDEOS.filter((v) => state.following.includes(v.creatorId))
+  useEffect(() => { void load() }, [load])
 
-  const toggle = (c: Creator) => {
-    haptic('select')
-    dispatch({ type: 'toggleFollow', creatorId: c.id })
-    toast({
-      text: state.following.includes(c.id) ? `Unfollowed ${c.name}` : `Following ${c.name}`,
-      icon: state.following.includes(c.id) ? 'unlink' : 'check',
-    })
-  }
+  const followed = state.followedChannels
+  const followedVideos = useMemo(() => videos.filter((v) => followed.includes(v.channelId)), [videos, followed])
+  const savedVideos = useMemo(() => videos.filter((v) => state.savedVideos.includes(v.id)), [videos, state.savedVideos])
+
+  const shown = tab === 'for-you' ? videos : tab === 'saved' ? savedVideos : followedVideos
 
   return (
-    <div className="stack stack-8">
+    <div className="stack stack-10">
       <ScreenHead
         eyebrow="Explore"
         title="Learn from people, not from Jumbo"
-        sub="Creators you choose to follow. Their views are their own — Jumbo does not endorse them or treat them as evidence."
+        sub="Real videos from YouTube, chosen against your goals. Their views are their own. Jumbo does not endorse them and does not treat them as evidence."
       />
+
+      <form
+        className="row" style={{ gap: 'var(--s-2)' }}
+        onSubmit={(e) => { e.preventDefault(); haptic('selection'); void load(query.trim()) }}
+      >
+        <input
+          className="input grow" value={query} placeholder="Search health and fitness videos"
+          aria-label="Search videos" onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="btn btn--primary none" type="submit">Search</button>
+      </form>
+
+      <div className="rail" role="group" aria-label="Suggested topics">
+        {TOPICS.map((t) => (
+          <button key={t} className="chip" onClick={() => { setQuery(t); haptic('selection'); void load(t) }}>
+            {t}
+          </button>
+        ))}
+      </div>
 
       <Segmented
         ariaLabel="Explore section"
@@ -51,180 +97,211 @@ export function Explore() {
         onChange={(v) => setTab(v as Tab)}
         options={[
           { value: 'for-you', label: 'For you' },
-          { value: 'following', label: `Following ${state.following.length}` },
-          { value: 'discover', label: 'Creators' },
+          { value: 'saved', label: `Saved ${state.savedVideos.length}` },
+          { value: 'following', label: `Following ${followed.length}` },
         ]}
       />
 
-      {/* A standing separation between creator content and Jumbo's own guidance. */}
-      <div className="card card--quiet row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+      <div className="notice" role="note">
         <Icon name="info" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
         <p className="t-caption dim">
-          Everything in Explore is third-party content. Popularity is not evidence, and a large
-          audience is not a qualification. Nothing here feeds your insights or your trajectory.
+          Everything here is third-party content. A large audience is not a qualification and
+          popularity is not evidence. Nothing in Explore feeds your insights or your Future.
         </p>
       </div>
 
-      {tab === 'for-you' && (
-        <section className="section">
-          <SectionHead
-            title="Picked for your goal"
-            sub={personalise
-              ? `Matched to “${goalLabel(goal)}” and the creators you follow.`
-              : 'Personalisation is off — showing everything, newest first.'}
-          />
+      {problem?.kind === 'setup' && (
+        <SetupNotice
+          title="Explore is not connected to YouTube"
+          message={problem.message}
+          missing={problem.missing}
+          docs={problem.docs}
+        />
+      )}
+      {problem?.kind === 'error' && (
+        <ErrorNotice title="Could not reach YouTube" message={problem.message} onRetry={() => void load(query.trim())} />
+      )}
+
+      {tab === 'for-you' && !problem && (
+        <div className="row row--top card card--brand" style={{ gap: 'var(--s-3)' }}>
+          <AiOrb size="sm" />
+          <p className="t-callout">
+            {personalise
+              ? <>Searched for <span className="strong">“{resolvedQuery || query}”</span> because your goals are {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}.</>
+              : <>Personalisation is off, so this is a general search. Turn it on in Profile to match your goals.</>}
+          </p>
+        </div>
+      )}
+
+      <section className="section">
+        <SectionHead
+          title={tab === 'for-you' ? 'Videos' : tab === 'saved' ? 'Saved' : 'From people you follow'}
+          sub={tab === 'for-you' && shown.length ? `${shown.length} results` : undefined}
+        />
+
+        {loading ? (
           <ul className="stack stack-3">
-            {forYou.slice(0, 8).map((v) => (
-              <VideoRow key={v.id} video={v} onOpen={() => setOpenVideo(v)} highlight={personalise && v.topics.includes(goal)} />
+            {[0, 1, 2, 3].map((i) => <li key={i} className="skeleton" style={{ height: 92 }} />)}
+          </ul>
+        ) : shown.length === 0 ? (
+          <Empty
+            icon="explore"
+            title={
+              problem ? 'Nothing to show yet'
+                : tab === 'saved' ? 'Nothing saved yet'
+                : tab === 'following' ? 'Not following anyone yet'
+                : 'No results'
+            }
+            body={
+              problem ? 'Once YouTube is connected, real videos appear here. Jumbo will not invent them.'
+                : tab === 'saved' ? 'Save a video and it collects here.'
+                : tab === 'following' ? 'Follow a channel and its videos appear here.'
+                : 'Try a different search.'
+            }
+          />
+        ) : (
+          <ul className="stack stack-3 stagger">
+            {shown.map((v) => (
+              <VideoRow
+                key={v.id}
+                video={v}
+                saved={state.savedVideos.includes(v.id)}
+                following={followed.includes(v.channelId)}
+                onOpen={() => setOpen(v)}
+                onSave={() => {
+                  haptic('impactLight')
+                  dispatch({ type: 'toggleSavedVideo', videoId: v.id })
+                  toast({
+                    text: state.savedVideos.includes(v.id) ? 'Removed from saved' : 'Saved',
+                    icon: 'check',
+                  })
+                }}
+              />
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
-      {tab === 'following' && (
-        <section className="section">
-          {state.following.length === 0 ? (
-            <Empty
-              icon="explore" title="Not following anyone yet"
-              body="Follow a few creators and their videos collect here."
-              action={<button className="btn btn--primary" onClick={() => setTab('discover')}>Browse creators</button>}
-            />
-          ) : (
-            <>
-              <SectionHead title="From the people you follow" sub={`${followingVideos.length} videos`} />
-              <ul className="stack stack-3">
-                {followingVideos.map((v) => (
-                  <VideoRow key={v.id} video={v} onOpen={() => setOpenVideo(v)} />
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-      )}
-
-      {tab === 'discover' && (
-        <section className="section">
-          <SectionHead title="Creators" sub="Follow to see their videos in For you." />
-          <ul className="stack stack-3">
-            {CREATORS.map((c) => {
-              const following = state.following.includes(c.id)
-              return (
-                <li key={c.id} className="card row" style={{ gap: 'var(--s-3)' }}>
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      width: 46, height: 46, borderRadius: '50%', flex: 'none',
-                      display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 650,
-                      background: `linear-gradient(150deg, hsl(${c.hue} 32% 38%), hsl(${(c.hue + 36) % 360} 36% 50%))`,
-                    }}
-                  >
-                    {c.name.split(' ').slice(-1)[0][0]}
-                  </span>
-                  <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
-                    <span className="t-callout strong">{c.name}</span>
-                    <span className="t-caption dim2">{c.field} · {c.subscribers} subscribers</span>
-                    <span className="t-caption dim">{c.bio}</span>
-                  </div>
-                  <button
-                    className={`btn btn--sm ${following ? 'btn--secondary' : 'btn--primary'}`}
-                    onClick={() => toggle(c)}
-                    aria-pressed={following}
-                  >
-                    {following ? 'Following' : 'Follow'}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-
-      <VideoSheet video={openVideo} onClose={() => setOpenVideo(null)} />
+      <VideoSheet
+        video={open}
+        onClose={() => setOpen(null)}
+        following={open ? followed.includes(open.channelId) : false}
+        onFollow={() => {
+          if (!open) return
+          haptic('selection')
+          dispatch({ type: 'toggleChannel', channelId: open.channelId })
+          toast({
+            text: followed.includes(open.channelId) ? `Unfollowed ${open.channelTitle}` : `Following ${open.channelTitle}`,
+            icon: followed.includes(open.channelId) ? 'unlink' : 'check',
+          })
+        }}
+      />
     </div>
   )
 }
 
-function VideoRow({ video, onOpen, highlight }: { video: Video; onOpen: () => void; highlight?: boolean }) {
-  const creator = CREATORS.find((c) => c.id === video.creatorId)!
+function VideoRow({
+  video, saved, following, onOpen, onSave,
+}: {
+  video: YoutubeVideo
+  saved: boolean
+  following: boolean
+  onOpen: () => void
+  onSave: () => void
+}) {
+  const mins = isoDurationMinutes(video.durationIso)
+  const views = compactCount(video.viewCount)
   return (
-    <li>
-      <button className="card row" style={{ gap: 'var(--s-3)', width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={onOpen}>
-        <span
-          aria-hidden="true"
-          style={{
-            width: 76, height: 54, borderRadius: 'var(--r-md)', flex: 'none',
-            display: 'grid', placeItems: 'center', color: '#fff',
-            background: `linear-gradient(140deg, hsl(${creator.hue} 28% 32%), hsl(${(creator.hue + 30) % 360} 32% 46%))`,
-          }}
-        >
-          <Icon name="play" size={20} />
+    <li className="card row" style={{ gap: 'var(--s-3)', padding: 'var(--s-3)' }}>
+      <button
+        onClick={onOpen}
+        className="row grow"
+        style={{ gap: 'var(--s-3)', background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}
+      >
+        <span style={{ position: 'relative', flex: 'none' }}>
+          {video.thumbnail
+            ? <img src={video.thumbnail} alt="" width={100} height={72}
+                style={{ width: 100, height: 72, objectFit: 'cover', borderRadius: 'var(--r-input)' }} loading="lazy" />
+            : <span style={{ width: 100, height: 72, borderRadius: 'var(--r-input)', background: 'var(--surface-3)', display: 'block' }} />}
+          <span style={{
+            position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+            color: '#fff', background: 'rgba(0,0,0,.28)', borderRadius: 'var(--r-input)',
+          }}>
+            <Icon name="play" size={20} />
+          </span>
         </span>
-        <div className="grow stack" style={{ gap: 3, minWidth: 0 }}>
-          <span className="t-callout strong">{video.title}</span>
-          <span className="t-caption dim2">{creator.name} · {video.minutes} min</span>
-          {highlight && <span className="tag tag--positive" style={{ alignSelf: 'flex-start' }}>Matches your goal</span>}
-        </div>
-        <Icon name="chevron" size={16} style={{ color: 'var(--ink-3)', flex: 'none' }} />
+        <span className="stack grow" style={{ gap: 3, minWidth: 0 }}>
+          <span className="t-callout strong" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {video.title}
+          </span>
+          <span className="t-caption dim2">
+            {video.channelTitle}{mins ? ` · ${mins} min` : ''}{views ? ` · ${views} views` : ''}
+          </span>
+          {following && <span className="tag tag--live" style={{ alignSelf: 'flex-start' }}>Following</span>}
+        </span>
+      </button>
+      <button
+        className="icon-btn none"
+        aria-label={saved ? `Remove ${video.title} from saved` : `Save ${video.title}`}
+        aria-pressed={saved}
+        onClick={onSave}
+        style={{ color: saved ? 'var(--brand)' : undefined }}
+      >
+        <Icon name={saved ? 'check' : 'plus'} size={19} />
       </button>
     </li>
   )
 }
 
-function VideoSheet({ video, onClose }: { video: Video | null; onClose: () => void }) {
-  const toast = useToast()
+function VideoSheet({
+  video, onClose, following, onFollow,
+}: { video: YoutubeVideo | null; onClose: () => void; following: boolean; onFollow: () => void }) {
   if (!video) return null
-  const creator = CREATORS.find((c) => c.id === video.creatorId)!
+  const mins = isoDurationMinutes(video.durationIso)
 
   return (
     <Sheet
       open
       onClose={onClose}
       title={video.title}
-      subtitle={`${creator.name} · ${video.minutes} min`}
+      subtitle={`${video.channelTitle}${mins ? ` · ${mins} min` : ''}`}
       footer={
         <>
-          <button className="btn btn--secondary grow" onClick={onClose}>Close</button>
-          <button
-            className="btn btn--primary grow"
-            onClick={() => toast({ text: 'This build has no live video connection', icon: 'info', tone: 'warning' })}
-          >
-            <Icon name="play" size={15} /> Watch on YouTube
+          <button className="btn btn--secondary" onClick={onFollow} aria-pressed={following}>
+            {following ? 'Following' : 'Follow'}
           </button>
+          <a className="btn btn--primary grow" href={video.url} target="_blank" rel="noreferrer">
+            <Icon name="external" size={15} /> Open on YouTube
+          </a>
         </>
       }
     >
       <div className="stack stack-5">
-        <div
-          style={{
-            aspectRatio: '16 / 9', borderRadius: 'var(--r-lg)', display: 'grid', placeItems: 'center',
-            color: '#fff', background: `linear-gradient(140deg, hsl(${creator.hue} 28% 30%), hsl(${(creator.hue + 30) % 360} 32% 44%))`,
-          }}
-        >
-          <Icon name="play" size={40} />
+        <div style={{ aspectRatio: '16 / 9', borderRadius: 'var(--r-card)', overflow: 'hidden', background: '#000' }}>
+          <iframe
+            src={video.embedUrl}
+            title={video.title}
+            style={{ width: '100%', height: '100%', border: 0 }}
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
         </div>
 
-        <p className="t-body">{video.summary}</p>
+        {video.description && (
+          <p className="t-callout dim" style={{ whiteSpace: 'pre-line' }}>
+            {video.description.slice(0, 420)}{video.description.length > 420 ? '…' : ''}
+          </p>
+        )}
 
         <div className="card card--quiet stack stack-2">
           <span className="eyebrow">Creator content</span>
           <p className="t-caption dim">
-            This is {creator.name}’s view, not Jumbo’s. It is not checked against your data and does
-            not change your insights or your trajectory.
+            This is {video.channelTitle}’s view, not Jumbo’s. It is not checked against your data and it
+            does not change your insights or your Future.
           </p>
-        </div>
-
-        <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
-          {video.topics.map((t) => <span key={t} className="tag">{goalLabel(t)}</span>)}
         </div>
       </div>
     </Sheet>
   )
-}
-
-function goalLabel(k: string) {
-  const map: Record<string, string> = {
-    energy: 'More energy', fitness: 'Get fitter', sleep: 'Sleep better',
-    nutrition: 'Eat better', aging: 'Healthy ageing', consistency: 'Consistency', custom: 'Your goal',
-  }
-  return map[k] ?? k
 }

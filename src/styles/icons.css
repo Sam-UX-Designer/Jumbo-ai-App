@@ -1,0 +1,106 @@
+/* ============================================================
+   Icon motion.
+
+   Motion is opt-in per icon and tied to meaning:
+     idle      — a slow ambient pulse, only on the one icon representing a
+                 live state on screen (recovery on Today, AI while thinking)
+     active    — a short reaction to something the person just did
+     celebrate — a one-shot flourish on a real completion
+   Nothing loops by default, and everything stops under reduced motion.
+   ============================================================ */
+
+.ico { display: block; overflow: visible; }
+.ico * { transform-origin: 50% 50%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Sleep: a slow breath. */
+  .ico--sleep.is-idle    { animation: ico-breathe 5.2s var(--ease) infinite; }
+  /* Heart: a real double-beat at a resting cadence. */
+  .ico--heart.is-idle    { animation: ico-beat 1.65s ease-in-out infinite; }
+  /* Movement: a gentle stride. */
+  .ico--steps.is-idle    { animation: ico-stride 1.5s ease-in-out infinite; }
+  /* Training: a short lift when a session is running. */
+  .ico--training.is-idle { animation: ico-lift 1.9s ease-in-out infinite; }
+  /* AI: comes alive only while Jumbo is actually thinking. */
+  .ico--ai.is-idle       { animation: ico-think 2.1s ease-in-out infinite; }
+  .ico--ai.is-active     { animation: ico-spark 620ms var(--ease-spring); }
+  /* Camera: iris reaction the moment the shutter opens. */
+  .ico--camera.is-active { animation: ico-iris 520ms var(--ease-spring); }
+  /* Nutrition: reacts once when a meal lands. */
+  .ico--nutrition.is-active { animation: ico-plate 560ms var(--ease-spring); }
+  /* Measurement: ticks up when a new reading arrives. */
+  .ico--measure.is-active   { animation: ico-tick 620ms var(--ease-spring); }
+
+  .ico.is-celebrate { animation: ico-celebrate 720ms var(--ease-spring); }
+}
+
+@keyframes ico-breathe {
+  0%, 100% { transform: scale(1); opacity: 1 }
+  50%      { transform: scale(1.06); opacity: .82 }
+}
+@keyframes ico-beat {
+  0%, 62%, 100% { transform: scale(1) }
+  10%           { transform: scale(1.14) }
+  22%           { transform: scale(1.02) }
+  32%           { transform: scale(1.09) }
+}
+@keyframes ico-stride {
+  0%, 100% { transform: translateX(0) }
+  25%      { transform: translateX(1.1px) }
+  75%      { transform: translateX(-1.1px) }
+}
+@keyframes ico-lift {
+  0%, 100% { transform: translateY(0) }
+  50%      { transform: translateY(-1.6px) }
+}
+@keyframes ico-think {
+  0%, 100% { transform: rotate(0) scale(1); opacity: 1 }
+  40%      { transform: rotate(14deg) scale(1.08); opacity: .85 }
+  70%      { transform: rotate(-8deg) scale(1.02) }
+}
+@keyframes ico-spark {
+  0%   { transform: scale(.7) rotate(-25deg); opacity: .4 }
+  60%  { transform: scale(1.16) rotate(6deg); opacity: 1 }
+  100% { transform: scale(1) rotate(0) }
+}
+@keyframes ico-iris {
+  0%   { transform: scale(1) }
+  35%  { transform: scale(.82) }
+  100% { transform: scale(1) }
+}
+@keyframes ico-plate {
+  0%   { transform: scale(.82) rotate(-8deg) }
+  60%  { transform: scale(1.1) rotate(3deg) }
+  100% { transform: scale(1) rotate(0) }
+}
+@keyframes ico-tick {
+  0%   { transform: translateY(3px); opacity: .3 }
+  100% { transform: translateY(0); opacity: 1 }
+}
+@keyframes ico-celebrate {
+  0%   { transform: scale(.6) rotate(-16deg); opacity: 0 }
+  55%  { transform: scale(1.22) rotate(8deg); opacity: 1 }
+  100% { transform: scale(1) rotate(0) }
+}
+
+/* The AI ring: a live indicator that Jumbo is working, not decoration. */
+.ai-orb {
+  position: relative; display: grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 50%; flex: none;
+  background: var(--brand-dim); color: var(--brand);
+  border: 1px solid var(--brand-line);
+}
+.ai-orb--sm { width: 30px; height: 30px; }
+.ai-orb--lg { width: 60px; height: 60px; }
+@media (prefers-reduced-motion: no-preference) {
+  .ai-orb.is-working::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid var(--brand); opacity: .5;
+    animation: orb-ring 1.6s var(--ease) infinite;
+  }
+}
+@keyframes orb-ring {
+  0%   { transform: scale(.86); opacity: .55 }
+  70%  { transform: scale(1.18); opacity: 0 }
+  100% { transform: scale(1.18); opacity: 0 }
+}

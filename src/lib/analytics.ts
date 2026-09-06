@@ -156,7 +156,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
     out.push({
       id: 'i-bedtime-hrv',
       domain: 'sleep',
-      changed: `On the ${lateNights.length} nights you went to bed after 11:45pm, your overnight HRV averaged ${Math.round(lateHrv)} ms — about ${Math.round(earlyHrv - lateHrv)} ms below your other nights.`,
+      changed: `On the ${lateNights.length} nights you went to bed after 11:45pm, your overnight HRV averaged ${Math.round(lateHrv)} ms, about ${Math.round(earlyHrv - lateHrv)} ms below your other nights.`,
       why: 'HRV is one of the clearer overnight signals of how well your nervous system recovered. For you, bedtime tracks with it more closely than sleep length does.',
       evidence: [
         `${w.length} nights of your own data, last 4 weeks`,
@@ -168,7 +168,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
       options: [
         'Pick a bedtime you can hit five nights out of seven',
         'Keep the late nights, and treat the following day as an easy one',
-        'Nothing for now — watch it for another two weeks',
+        'Nothing for now. Watch it for another two weeks',
       ],
       window: 'Last 28 days',
       createdAt: now,
@@ -212,7 +212,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
       id: 'i-protein',
       domain: 'nutrition',
       changed: `Your typical day lands around ${Math.round(medProtein)} g of protein. For your body weight and current training, ${proteinTarget} g is a common reference range.`,
-      why: 'Protein intake is one of the levers that supports lean mass while training volume rises — and lean mass is one of the things your trajectory is most sensitive to.',
+      why: 'Protein intake is one of the levers that supports lean mass while training volume rises, and lean mass is one of the things your trajectory is most sensitive to.',
       evidence: [
         `Median of ${w.length} logged days: ${Math.round(medProtein)} g`,
         `Reference range used: 1.6 g per kg of body weight (${base.weightKg} kg)`,
@@ -247,7 +247,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
       ],
       confidence: 0.74,
       limitation: 'These are watch estimates from running heart-rate data, not a lab test. They track direction well and absolute values less well.',
-      options: ['Keep the current volume — it is working', 'See what it does over the next year in Trajectory', 'Nothing — just good to know'],
+      options: ['Keep the current volume, it is working', 'See what it does over the next year in Trajectory', 'Nothing, just good to know'],
       window: 'Last 6 months',
       createdAt: now,
     })
@@ -263,7 +263,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
       out.push({
         id: 'i-rest',
         domain: 'recovery',
-        changed: `The mornings after your rest days, HRV averages ${Math.round(hrvAfterRest)} ms — around ${Math.round(hrvAfterRest - hrvOther)} ms higher than after training days.`,
+        changed: `The mornings after your rest days, HRV averages ${Math.round(hrvAfterRest)} ms, around ${Math.round(hrvAfterRest - hrvOther)} ms higher than after training days.`,
         why: 'Your rest days are doing real work. Treating them as part of the plan rather than a lapse is what keeps the plan going.',
         evidence: [
           `${restDays.length} rest days in the last 4 weeks`,
@@ -302,4 +302,69 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
   }
 
   return out.sort((a, b) => b.confidence - a.confidence)
+}
+
+
+/**
+ * The statistical summary handed to Claude. It contains derived figures only —
+ * no meal photos, no notes, no name, no phone number — so the model sees the
+ * shape of the person's data and nothing that identifies them.
+ */
+export function buildSummary(days: DayRecord[], base: Baseline, measurements: Measurement[]) {
+  const w28 = lastN(days, 28)
+  const w7 = lastN(days, 7)
+  const prior7 = days.slice(Math.max(0, days.length - 14), days.length - 7)
+  const load = (d: DayRecord) => (d.workout ? d.workout.minutes * d.workout.intensity : 0)
+
+  const vo2 = measurements.filter((m) => m.kind === 'vo2max').sort((a, b) => (a.date < b.date ? -1 : 1))
+
+  return {
+    daysOfHistory: days.length,
+    baseline: {
+      sleepHours: base.sleepHours,
+      steps: base.steps,
+      restingHR: base.restingHR,
+      hrvMs: base.hrv,
+      vo2max: base.vo2max,
+      bodyFatPct: base.bodyFatPct,
+      weightKg: base.weightKg,
+      proteinG: base.proteinG,
+      strengthSessionsPerWeek: base.strengthPerWeek,
+      weeklyActiveMinutes: base.weeklyActiveMinutes,
+    },
+    last7Days: {
+      meanSleepHours: round(mean(w7.map((d) => d.sleepHours)), 2),
+      meanSteps: Math.round(mean(w7.map((d) => d.steps))),
+      meanRestingHR: round(mean(w7.map((d) => d.restingHR)), 1),
+      meanHrv: round(mean(w7.map((d) => d.hrv)), 1),
+      trainingLoad: Math.round(sum(w7.map(load))),
+      restDays: w7.filter((d) => d.restDay).length,
+      medianProteinG: Math.round(median(w7.map(dayProtein))),
+      loggedMeals: sum(w7.map((d) => d.meals.length)),
+    },
+    previous7Days: {
+      meanSleepHours: round(mean(prior7.map((d) => d.sleepHours)), 2),
+      meanRestingHR: round(mean(prior7.map((d) => d.restingHR)), 1),
+      meanHrv: round(mean(prior7.map((d) => d.hrv)), 1),
+      trainingLoad: Math.round(sum(prior7.map(load))),
+    },
+    last28Days: {
+      meanSleepHours: round(mean(w28.map((d) => d.sleepHours)), 2),
+      nightsAfter2345: w28.filter((d) => d.bedtimeHour > 23.75).length,
+      hrvOnLateNights: round(mean(w28.filter((d) => d.bedtimeHour > 23.75).map((d) => d.hrv)), 1),
+      hrvOnEarlyNights: round(mean(w28.filter((d) => d.bedtimeHour <= 23.75).map((d) => d.hrv)), 1),
+      bedtimeToHrvCorrelation: round(correlate(w28.map((d) => d.bedtimeHour), w28.map((d) => d.hrv)), 2),
+      stepTrendPerDay: Math.round(trendPerDay(w28.map((d) => d.steps))),
+      medianProteinG: Math.round(median(w28.map(dayProtein))),
+      restDays: w28.filter((d) => d.restDay).length,
+      hrvMorningAfterRest: round(mean(w28.filter((_, i) => i > 0 && w28[i - 1].restDay).map((d) => d.hrv)), 1),
+      hrvMorningAfterTraining: round(mean(w28.filter((_, i) => i > 0 && !w28[i - 1].restDay).map((d) => d.hrv)), 1),
+    },
+    measurements: {
+      vo2maxFirst: vo2[0] ? { value: vo2[0].value, date: vo2[0].date } : null,
+      vo2maxLatest: vo2.length ? { value: vo2[vo2.length - 1].value, date: vo2[vo2.length - 1].date } : null,
+      count: measurements.length,
+    },
+    notes: 'All figures are this person\'s own records. Do not invent any number that is not present here.',
+  }
 }

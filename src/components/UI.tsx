@@ -4,7 +4,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, type IconName } from './Icon'
-import { haptic } from '../lib/haptics'
+import { haptic } from '../lib/feedback'
 import { uid } from '../lib/util'
 
 /* ============================================================
@@ -133,7 +133,7 @@ export function Switch({
     <button
       type="button" role="switch" aria-checked={checked} aria-label={label}
       aria-describedby={describedBy} className="switch"
-      onClick={() => { haptic('select'); onChange(!checked) }}
+      onClick={() => { haptic('selection'); onChange(!checked) }}
     />
   )
 }
@@ -155,7 +155,7 @@ export function Segmented<T extends string | number>({
         <button
           key={String(o.value)} type="button" className="segmented__btn"
           aria-pressed={o.value === value}
-          onClick={() => { haptic('select'); onChange(o.value) }}
+          onClick={() => { haptic('selection'); onChange(o.value) }}
         >
           {o.label}
         </button>
@@ -172,7 +172,7 @@ export function Confidence({ value, compact = false }: { value: number; compact?
   const label = value >= 0.8 ? 'High confidence' : value >= 0.6 ? 'Moderate confidence' : 'Low confidence'
   const color = value >= 0.8 ? 'var(--positive)' : value >= 0.6 ? 'var(--caution)' : 'var(--critical)'
   return (
-    <div className="row" style={{ gap: 'var(--s-2)' }} title={`${label} — ${pct}%`}>
+    <div className="row" style={{ gap: 'var(--s-2)' }} title={`${label}: ${pct}%`}>
       <div
         aria-hidden="true"
         style={{ display: 'flex', gap: 3, alignItems: 'center' }}
@@ -195,16 +195,16 @@ export function Confidence({ value, compact = false }: { value: number; compact?
    ============================================================ */
 export type Provenance = 'observed' | 'evidence' | 'model'
 
-const PROVENANCE_COPY: Record<Provenance, { label: string; title: string }> = {
-  observed: { label: 'Measured', title: 'Recorded by a device or entered by you.' },
-  evidence: { label: 'Evidence-informed', title: 'A general relationship described in research, applied to your data.' },
-  model:    { label: 'Model estimate', title: 'A projection from Jumbo’s model. Not a prediction, and not medical advice.' },
+const PROVENANCE_COPY: Record<Provenance, { label: string; cls: string; title: string }> = {
+  observed: { label: 'Measured', cls: 'measured', title: 'Recorded by a connected device or entered by you.' },
+  evidence: { label: 'Evidence-informed', cls: 'evidence', title: 'A general relationship described in research, applied to your data.' },
+  model:    { label: 'Model estimate', cls: 'model', title: 'A projection from Jumbo’s model. Not a prediction, and not medical advice.' },
 }
 
 export function ProvenanceTag({ kind }: { kind: Provenance }) {
   const c = PROVENANCE_COPY[kind]
   return (
-    <span className={`tag tag--${kind}`} title={c.title}>
+    <span className={`tag tag--${c.cls}`} title={c.title}>
       <span className="dot" style={{ background: 'currentColor', width: 6, height: 6 }} />
       {c.label}
     </span>
@@ -308,7 +308,7 @@ export function Stepper({
 }) {
   const set = (v: number) => {
     const clamped = Math.min(max, Math.max(min, v))
-    haptic('tap')
+    haptic('impactLight')
     onChange(Number(clamped.toFixed(dp)))
   }
   return (
@@ -344,7 +344,7 @@ export function Loading({ label }: { label: string }) {
 }
 
 export function Empty({
-  icon = 'sparkle', title, body, action,
+  icon = 'ai', title, body, action,
 }: { icon?: IconName; title: string; body: string; action?: ReactNode }) {
   return (
     <div className="empty">
@@ -385,4 +385,86 @@ export function useConfirm() {
     </Sheet>
   ) : null
   return useMemo(() => ({ confirm, node }), [confirm, node])
+}
+
+/* ============================================================
+   Honesty surfaces.
+
+   These three components are the reason the app can be trusted: whenever a
+   capability is not actually available, one of them appears in its place
+   rather than a simulated success.
+   ============================================================ */
+
+/** A credential is missing on the server. Says exactly what, and links the docs. */
+export function SetupNotice({
+  title, message, missing, docs, compact = false,
+}: {
+  title: string
+  message: string
+  missing?: string[]
+  docs?: string
+  compact?: boolean
+}) {
+  return (
+    <div className="notice notice--setup" role="note">
+      <Icon name="lock" size={18} style={{ color: 'var(--nutrition)', flex: 'none', marginTop: 2 }} />
+      <div className="stack stack-2" style={{ minWidth: 0 }}>
+        <span className="t-callout strong">{title}</span>
+        <p className="t-caption dim">{message}</p>
+        {missing && missing.length > 0 && (
+          <p className="t-caption dim2">
+            Needs: {missing.map((m, i) => (
+              <span key={m}>{i > 0 && ', '}<code>{m}</code></span>
+            ))}
+          </p>
+        )}
+        {docs && !compact && (
+          <a className="t-caption strong" href={docs} target="_blank" rel="noreferrer">
+            Provider docs <Icon name="external" size={12} style={{ display: 'inline', verticalAlign: -1 }} />
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Something reached the server and failed. Never silent. */
+export function ErrorNotice({
+  title, message, onRetry,
+}: { title: string; message: string; onRetry?: () => void }) {
+  return (
+    <div className="notice notice--error" role="alert">
+      <Icon name="info" size={18} style={{ color: 'var(--critical)', flex: 'none', marginTop: 2 }} />
+      <div className="stack stack-2 grow" style={{ minWidth: 0 }}>
+        <span className="t-callout strong">{title}</span>
+        <p className="t-caption dim">{message}</p>
+        {onRetry && (
+          <button className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={onRetry}>
+            <Icon name="sync" size={14} /> Try again
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The label that must appear anywhere sample data is shown as if it were real. */
+export function DemoBadge({ inline = false }: { inline?: boolean }) {
+  if (inline) return <span className="tag tag--demo">Sample data</span>
+  return (
+    <div className="demo-bar" role="note">
+      <Icon name="flag" size={14} />
+      Sample data, not your health record
+    </div>
+  )
+}
+
+/** A live-data marker, only ever rendered when a real source supplied the number. */
+export function LiveBadge({ source }: { source?: string }) {
+  return (
+    <span className="tag tag--live">
+      <span className="dot" style={{ background: 'currentColor', width: 6, height: 6 }} />
+      {source ? `From ${source}` : 'Live'}
+    </span>
+  )
 }

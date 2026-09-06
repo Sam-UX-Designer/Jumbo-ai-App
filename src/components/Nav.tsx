@@ -1,43 +1,42 @@
 import { Icon, type IconName } from './Icon'
-import { haptic } from '../lib/haptics'
+import { haptic } from '../lib/feedback'
 
-export type Route =
-  | 'today' | 'trajectory' | 'capture' | 'insights' | 'you'
-  | 'measurements' | 'explore'
+export type Route = 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements'
 
 interface NavItem { route: Route; label: string; icon: IconName }
 
-/** Five primary destinations on mobile — the platform limit for a tab bar. */
+/**
+ * Five destinations, and only five. Trajectory and Insights were one idea
+ * split across two tabs; they are now a single place called Future.
+ */
 export const PRIMARY: NavItem[] = [
-  { route: 'today',      label: 'Today',      icon: 'today' },
-  { route: 'trajectory', label: 'Trajectory', icon: 'trajectory' },
-  { route: 'capture',    label: 'Capture',    icon: 'capture' },
-  { route: 'insights',   label: 'Insights',   icon: 'insights' },
-  { route: 'you',        label: 'You',        icon: 'profile' },
+  { route: 'today',   label: 'Today',   icon: 'today' },
+  { route: 'future',  label: 'Future',  icon: 'future' },
+  { route: 'capture', label: 'Capture', icon: 'capture' },
+  { route: 'explore', label: 'Explore', icon: 'explore' },
+  { route: 'you',     label: 'You',     icon: 'profile' },
 ]
 
-/** On a wide window there is room to show everything at once. */
-export const SECONDARY: NavItem[] = [
+const SIDEBAR: NavItem[] = [
+  ...PRIMARY.slice(0, 3),
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
-  { route: 'explore',      label: 'Explore',      icon: 'explore' },
+  ...PRIMARY.slice(3),
 ]
 
 export function TabBar({ route, onNavigate }: { route: Route; onNavigate: (r: Route) => void }) {
   return (
     <nav className="tabbar" aria-label="Primary">
       {PRIMARY.map((item) => {
-        const current = route === item.route ||
-          (item.route === 'you' && (route === 'measurements' || route === 'explore'))
+        const current = route === item.route || (item.route === 'you' && route === 'measurements')
         return (
           <button
             key={item.route}
             className="tabbar__item"
             aria-current={current ? 'page' : undefined}
-            onClick={() => { haptic('select'); onNavigate(item.route) }}
+            onClick={() => { haptic('selection'); onNavigate(item.route) }}
           >
-            <Icon name={item.icon} size={22} strokeWidth={current ? 2 : 1.7} />
+            <Icon name={item.icon} size={23} strokeWidth={current ? 2.1 : 1.75} />
             <span>{item.label}</span>
-            <span className="tabbar__dot" aria-hidden="true" />
           </button>
         )
       })}
@@ -48,27 +47,24 @@ export function TabBar({ route, onNavigate }: { route: Route; onNavigate: (r: Ro
 export function Sidebar({
   route, onNavigate, name, streak,
 }: { route: Route; onNavigate: (r: Route) => void; name: string; streak: number }) {
-  const items = [...PRIMARY.filter((i) => i.route !== 'you'), ...SECONDARY,
-    { route: 'you' as Route, label: 'Profile & goals', icon: 'profile' as IconName }]
-
   return (
     <nav className="sidebar" aria-label="Primary">
       <div className="sidebar__brand">
         <span className="mark" aria-hidden="true">J</span>
         <div className="stack" style={{ gap: 0 }}>
           <span className="t-body strong">Jumbo</span>
-          <span className="t-caption dim2">{name}</span>
+          <span className="t-caption dim2">{name || 'Your companion'}</span>
         </div>
       </div>
 
-      {items.map((item) => (
+      {SIDEBAR.map((item) => (
         <button
           key={item.route}
           className="sidebar__item"
           aria-current={route === item.route ? 'page' : undefined}
           onClick={() => onNavigate(item.route)}
         >
-          <Icon name={item.icon} size={20} strokeWidth={route === item.route ? 2 : 1.7} />
+          <Icon name={item.icon} size={20} strokeWidth={route === item.route ? 2.1 : 1.75} />
           <span className="t-callout">{item.label}</span>
         </button>
       ))}

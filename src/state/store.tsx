@@ -1,47 +1,52 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
+import {
+  createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode,
+} from 'react'
 import type {
-  Baseline, Connection, DayRecord, GoalKey, InsightDecision, MealEntry,
-  Measurement, WorkoutEntry,
+  Baseline, DayRecord, GoalKey, InsightDecision, MealEntry, Measurement, Profile,
+  Reminders, WorkoutEntry,
 } from '../data/types'
 import { generateHistory, generateMeasurements, TODAY } from '../data/generate'
 import { computeBaseline } from '../lib/analytics'
 import type { Levers } from '../lib/trajectory'
-
-import { setHapticsEnabled } from '../lib/haptics'
+import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
+import { api, type ProviderInfo, type ServerConfig, type SyncedDay } from '../lib/api'
 import { uid } from '../lib/util'
 
-const STORAGE_KEY = 'jumbo.state.v1'
+const STORAGE_KEY = 'jumbo.state.v2'
 
 export interface Settings {
   haptics: boolean
-  /** Analysis of patterns across your data. Off by default is not the goal —
-   *  but the switch must exist and must actually change what the app shows. */
+  sound: boolean
+  /** Whether Jumbo interprets patterns at all. Off leaves the data visible and uninterpreted. */
   aiPatterns: boolean
-  /** Whether anything leaves the device. Simulated, but honest about itself. */
-  cloudProcessing: boolean
   creatorPersonalisation: boolean
-  reduceMotionPreferred: boolean
 }
+
+/**
+ * `dataMode` is the honesty switch that runs through the whole app.
+ *  'demo' — a clearly labelled sample history so the product is explorable.
+ *  'live' — records that actually came from a connected source.
+ */
+export type DataMode = 'demo' | 'live'
 
 export interface Persisted {
   onboarded: boolean
-  sampleMode: boolean
-  goal: GoalKey | null
-  customGoal: string
-  connections: Record<string, Connection>
-  following: string[]
+  profile: Profile
+  goals: GoalKey[]
+  dataMode: DataMode
   decisions: Record<string, InsightDecision>
   dismissed: string[]
+  followedChannels: string[]
+  savedVideos: string[]
   theme: 'system' | 'light' | 'dark'
   settings: Settings
+  reminders: Reminders
   levers: Levers | null
   milestones: string[]
-  /** User-authored records layered on top of the imported history. */
   addedMeals: Record<string, MealEntry[]>
   addedWorkouts: Record<string, WorkoutEntry>
   addedNotes: Record<string, string>
   addedMeasurements: Measurement[]
-  manualGapValues: Record<string, number>
 }
 
 export interface State extends Persisted {
@@ -50,79 +55,111 @@ export interface State extends Persisted {
   baseline: Baseline
   today: string
   hydrated: boolean
+
+  /** Server capability report. null until the first /api/config call returns. */
+  server: ServerConfig | null
+  serverReachable: boolean | null
+  providers: ProviderInfo[]
+  liveDays: SyncedDay[]
+  syncErrors: Array<{ provider: string; message: string }>
+  lastSyncAt: number | null
+  syncing: boolean
+
+  /** True once stored state has been read. Nothing is written before this. */
+  bootstrapped: boolean
 }
 
 const defaultSettings: Settings = {
   haptics: true,
+  sound: true,
   aiPatterns: true,
-  cloudProcessing: false,
   creatorPersonalisation: true,
-  reduceMotionPreferred: false,
+}
+
+const defaultReminders: Reminders = {
+  enabled: false,
+  breakfast: '08:00',
+  lunch: '13:00',
+  dinner: '19:30',
+  workout: '18:00',
 }
 
 const defaultPersisted: Persisted = {
   onboarded: false,
-  sampleMode: false,
-  goal: null,
-  customGoal: '',
-  connections: {},
-  following: ['c1', 'c4'],
+  profile: { name: '', phone: '' },
+  goals: [],
+  dataMode: 'demo',
   decisions: {},
   dismissed: [],
-  theme: 'system',
+  followedChannels: [],
+  savedVideos: [],
+  theme: 'dark',
   settings: defaultSettings,
+  reminders: defaultReminders,
   levers: null,
   milestones: [],
   addedMeals: {},
   addedWorkouts: {},
   addedNotes: {},
   addedMeasurements: [],
-  manualGapValues: {},
 }
 
 export type Action =
   | { type: 'hydrate'; payload: Partial<Persisted> }
-  | { type: 'setGoal'; goal: GoalKey; custom?: string }
-  | { type: 'connect'; sourceId: string }
-  | { type: 'disconnect'; sourceId: string }
-  | { type: 'sync'; sourceId: string }
-  | { type: 'finishOnboarding'; sampleMode?: boolean }
+  | { type: 'setProfile'; profile: Partial<Profile> }
+  | { type: 'toggleGoal'; goal: GoalKey }
+  | { type: 'setGoals'; goals: GoalKey[] }
+  | { type: 'setDataMode'; mode: DataMode }
+  | { type: 'finishOnboarding' }
   | { type: 'resetAll' }
   | { type: 'addMeal'; date: string; meal: MealEntry }
-  | { type: 'updateMeal'; date: string; meal: MealEntry }
   | { type: 'removeMeal'; date: string; mealId: string }
   | { type: 'logWorkout'; date: string; workout: WorkoutEntry }
   | { type: 'removeWorkout'; date: string }
   | { type: 'setNote'; date: string; note: string }
   | { type: 'addMeasurement'; measurement: Measurement }
-  | { type: 'setGapValue'; key: string; value: number }
-  | { type: 'toggleFollow'; creatorId: string }
+  | { type: 'toggleChannel'; channelId: string }
+  | { type: 'toggleSavedVideo'; videoId: string }
   | { type: 'decide'; insightId: string; decision: InsightDecision }
   | { type: 'dismissInsight'; insightId: string }
   | { type: 'setTheme'; theme: Persisted['theme'] }
   | { type: 'setSetting'; key: keyof Settings; value: boolean }
+  | { type: 'setReminders'; patch: Partial<Reminders> }
   | { type: 'setLevers'; levers: Levers }
   | { type: 'awardMilestone'; id: string }
+  | { type: 'serverConfig'; config: ServerConfig | null; reachable: boolean }
+  | { type: 'setProviders'; providers: ProviderInfo[] }
+  | { type: 'syncStart' }
+  | { type: 'syncDone'; days: SyncedDay[]; errors: State['syncErrors']; at: number }
 
-/** The imported history, generated once and reused. */
-const baseHistory = generateHistory(TODAY)
-const baseMeasurements = generateMeasurements(TODAY)
+/* ------------------------------------------------------- sample history */
+const sampleHistory = generateHistory(TODAY)
+const sampleMeasurements = generateMeasurements(TODAY)
 
-function composeDays(p: Persisted): DayRecord[] {
-  const connected = Object.keys(p.connections).length > 0
-  if (!connected) {
-    // Nothing connected: only what the person entered by hand exists.
-    const dates = new Set([
-      ...Object.keys(p.addedMeals), ...Object.keys(p.addedWorkouts), ...Object.keys(p.addedNotes), TODAY,
-    ])
-    return [...dates].sort().map((date) => ({
-      date, sleepHours: 0, sleepEfficiency: 0, bedtimeHour: 23, steps: 0, activeMinutes: 0,
-      restingHR: 0, hrv: 0, weightKg: 0, bodyFatPct: 0,
-      workout: p.addedWorkouts[date], meals: p.addedMeals[date] ?? [],
-      notes: p.addedNotes[date], restDay: !p.addedWorkouts[date],
-    }))
-  }
-  return baseHistory.map((d) => {
+/** Turns records that really came from a provider into Jumbo's day shape. */
+function fromLive(rows: SyncedDay[]): DayRecord[] {
+  return rows.map((r) => ({
+    date: r.date,
+    sleepHours: r.sleepHours ?? 0,
+    sleepEfficiency: r.sleepEfficiency ?? 0,
+    bedtimeHour: 23,
+    steps: r.steps ?? 0,
+    activeMinutes: r.activeMinutes ?? 0,
+    restingHR: r.restingHR ?? 0,
+    hrv: r.hrv ?? 0,
+    weightKg: r.weightKg ?? 0,
+    bodyFatPct: r.bodyFatPct ?? 0,
+    workout: r.workout
+      ? { id: `live-${r.date}`, type: r.workout.type as DayRecord['workout'] extends undefined ? never : never, minutes: r.workout.minutes, intensity: 2, source: 'imported' } as unknown as WorkoutEntry
+      : undefined,
+    meals: [],
+    restDay: !r.workout,
+  }))
+}
+
+function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
+  const base = p.dataMode === 'live' && live.length ? fromLive(live) : sampleHistory
+  return base.map((d) => {
     const extraMeals = p.addedMeals[d.date]
     const extraWorkout = p.addedWorkouts[d.date]
     const note = p.addedNotes[d.date]
@@ -137,14 +174,22 @@ function composeDays(p: Persisted): DayRecord[] {
   })
 }
 
-function derive(p: Persisted): State {
-  const connected = Object.keys(p.connections).length > 0
-  const days = composeDays(p)
-  const measurements = connected
-    ? [...p.addedMeasurements, ...baseMeasurements].sort((a, b) => (a.date < b.date ? 1 : -1))
-    : [...p.addedMeasurements].sort((a, b) => (a.date < b.date ? 1 : -1))
+type Runtime = Pick<State, 'server' | 'serverReachable' | 'providers' | 'liveDays' | 'syncErrors' | 'lastSyncAt' | 'syncing' | 'bootstrapped'>
+
+const emptyRuntime: Runtime = {
+  server: null, serverReachable: null, providers: [],
+  liveDays: [], syncErrors: [], lastSyncAt: null, syncing: false,
+  bootstrapped: false,
+}
+
+function derive(p: Persisted, rt: Runtime): State {
+  const days = composeDays(p, rt.liveDays)
+  const measurements = p.dataMode === 'live'
+    ? [...p.addedMeasurements].sort((a, b) => (a.date < b.date ? 1 : -1))
+    : [...p.addedMeasurements, ...sampleMeasurements].sort((a, b) => (a.date < b.date ? 1 : -1))
   return {
     ...p,
+    ...rt,
     days,
     measurements,
     baseline: computeBaseline(days, measurements),
@@ -153,171 +198,182 @@ function derive(p: Persisted): State {
   }
 }
 
-function persistedFrom(s: State): Persisted {
-  const { days: _d, measurements: _m, baseline: _b, today: _t, hydrated: _h, ...rest } = s
+const persistedOf = (s: State): Persisted => {
+  const {
+    days: _d, measurements: _m, baseline: _b, today: _t, hydrated: _h,
+    server: _s, serverReachable: _sr, providers: _p, liveDays: _l,
+    syncErrors: _e, lastSyncAt: _ls, syncing: _sy, bootstrapped: _bs, ...rest
+  } = s
   return rest
 }
 
+const runtimeOf = (s: State): Runtime => ({
+  server: s.server, serverReachable: s.serverReachable, providers: s.providers,
+  liveDays: s.liveDays, syncErrors: s.syncErrors, lastSyncAt: s.lastSyncAt,
+  syncing: s.syncing, bootstrapped: s.bootstrapped,
+})
+
 function reducer(state: State, action: Action): State {
-  const p = persistedFrom(state)
+  const p = persistedOf(state)
+  const rt = runtimeOf(state)
+  const next = (patch: Partial<Persisted>, rtPatch: Partial<Runtime> = {}) =>
+    derive({ ...p, ...patch }, { ...rt, ...rtPatch })
 
   switch (action.type) {
     case 'hydrate':
-      return derive({ ...p, ...action.payload, settings: { ...defaultSettings, ...(action.payload.settings ?? {}) } })
-
-    case 'setGoal':
-      return derive({ ...p, goal: action.goal, customGoal: action.custom ?? '' })
-
-    case 'connect':
       return derive({
-        ...p,
-        connections: {
-          ...p.connections,
-          [action.sourceId]: { id: action.sourceId, connectedAt: Date.now(), lastSyncMinutesAgo: 2, status: 'connected' },
-        },
+        ...p, ...action.payload,
+        settings: { ...defaultSettings, ...(action.payload.settings ?? {}) },
+        reminders: { ...defaultReminders, ...(action.payload.reminders ?? {}) },
+        profile: { ...defaultPersisted.profile, ...(action.payload.profile ?? {}) },
+      }, { ...rt, bootstrapped: true })
+
+    case 'setProfile': return next({ profile: { ...p.profile, ...action.profile } })
+    case 'toggleGoal':
+      return next({
+        goals: p.goals.includes(action.goal)
+          ? p.goals.filter((g) => g !== action.goal)
+          : [...p.goals, action.goal],
       })
-
-    case 'disconnect': {
-      const next = { ...p.connections }
-      delete next[action.sourceId]
-      return derive({ ...p, connections: next })
-    }
-
-    case 'sync':
-      return derive({
-        ...p,
-        connections: {
-          ...p.connections,
-          [action.sourceId]: { ...p.connections[action.sourceId], lastSyncMinutesAgo: 0, status: 'connected' },
-        },
-      })
-
-    case 'finishOnboarding':
-      return derive({ ...p, onboarded: true, sampleMode: action.sampleMode ?? p.sampleMode })
-
+    case 'setGoals': return next({ goals: action.goals })
+    case 'setDataMode': return next({ dataMode: action.mode })
+    case 'finishOnboarding': return next({ onboarded: true })
     case 'resetAll':
-      return derive({ ...defaultPersisted, theme: p.theme })
+      return derive({ ...defaultPersisted, theme: p.theme }, {
+        ...emptyRuntime, bootstrapped: true,
+        server: rt.server, serverReachable: rt.serverReachable, providers: rt.providers,
+      })
 
     case 'addMeal':
-      return derive({
-        ...p,
-        addedMeals: { ...p.addedMeals, [action.date]: [...(p.addedMeals[action.date] ?? []), action.meal] },
-      })
-
-    case 'updateMeal': {
-      const list = p.addedMeals[action.date] ?? []
-      const exists = list.some((m) => m.id === action.meal.id)
-      return derive({
-        ...p,
-        addedMeals: {
-          ...p.addedMeals,
-          [action.date]: exists ? list.map((m) => (m.id === action.meal.id ? action.meal : m)) : [...list, action.meal],
-        },
-      })
-    }
-
+      return next({ addedMeals: { ...p.addedMeals, [action.date]: [...(p.addedMeals[action.date] ?? []), action.meal] } })
     case 'removeMeal':
-      return derive({
-        ...p,
-        addedMeals: {
-          ...p.addedMeals,
-          [action.date]: (p.addedMeals[action.date] ?? []).filter((m) => m.id !== action.mealId),
-        },
-      })
-
+      return next({ addedMeals: { ...p.addedMeals, [action.date]: (p.addedMeals[action.date] ?? []).filter((m) => m.id !== action.mealId) } })
     case 'logWorkout':
-      return derive({ ...p, addedWorkouts: { ...p.addedWorkouts, [action.date]: action.workout } })
-
+      return next({ addedWorkouts: { ...p.addedWorkouts, [action.date]: action.workout } })
     case 'removeWorkout': {
-      const next = { ...p.addedWorkouts }
-      delete next[action.date]
-      return derive({ ...p, addedWorkouts: next })
+      const w = { ...p.addedWorkouts }; delete w[action.date]
+      return next({ addedWorkouts: w })
     }
+    case 'setNote': return next({ addedNotes: { ...p.addedNotes, [action.date]: action.note } })
+    case 'addMeasurement': return next({ addedMeasurements: [action.measurement, ...p.addedMeasurements] })
 
-    case 'setNote':
-      return derive({ ...p, addedNotes: { ...p.addedNotes, [action.date]: action.note } })
-
-    case 'addMeasurement':
-      return derive({ ...p, addedMeasurements: [action.measurement, ...p.addedMeasurements] })
-
-    case 'setGapValue':
-      return derive({ ...p, manualGapValues: { ...p.manualGapValues, [action.key]: action.value } })
-
-    case 'toggleFollow':
-      return derive({
-        ...p,
-        following: p.following.includes(action.creatorId)
-          ? p.following.filter((c) => c !== action.creatorId)
-          : [...p.following, action.creatorId],
+    case 'toggleChannel':
+      return next({
+        followedChannels: p.followedChannels.includes(action.channelId)
+          ? p.followedChannels.filter((c) => c !== action.channelId)
+          : [...p.followedChannels, action.channelId],
+      })
+    case 'toggleSavedVideo':
+      return next({
+        savedVideos: p.savedVideos.includes(action.videoId)
+          ? p.savedVideos.filter((v) => v !== action.videoId)
+          : [...p.savedVideos, action.videoId],
       })
 
-    case 'decide':
-      return derive({ ...p, decisions: { ...p.decisions, [action.insightId]: action.decision } })
-
-    case 'dismissInsight':
-      return derive({ ...p, dismissed: [...p.dismissed, action.insightId] })
-
-    case 'setTheme':
-      return derive({ ...p, theme: action.theme })
-
-    case 'setSetting':
-      return derive({ ...p, settings: { ...p.settings, [action.key]: action.value } })
-
-    case 'setLevers':
-      return derive({ ...p, levers: action.levers })
-
+    case 'decide': return next({ decisions: { ...p.decisions, [action.insightId]: action.decision } })
+    case 'dismissInsight': return next({ dismissed: [...p.dismissed, action.insightId] })
+    case 'setTheme': return next({ theme: action.theme })
+    case 'setSetting': return next({ settings: { ...p.settings, [action.key]: action.value } })
+    case 'setReminders': return next({ reminders: { ...p.reminders, ...action.patch } })
+    case 'setLevers': return next({ levers: action.levers })
     case 'awardMilestone':
-      return p.milestones.includes(action.id) ? state : derive({ ...p, milestones: [...p.milestones, action.id] })
+      return p.milestones.includes(action.id) ? state : next({ milestones: [...p.milestones, action.id] })
 
-    default:
-      return state
+    case 'serverConfig': return next({}, { server: action.config, serverReachable: action.reachable })
+    case 'setProviders': return next({}, { providers: action.providers })
+    case 'syncStart': return next({}, { syncing: true })
+    case 'syncDone': {
+      const hasLive = action.days.length > 0
+      return derive(
+        { ...p, dataMode: hasLive ? 'live' : p.dataMode },
+        { ...rt, liveDays: action.days, syncErrors: action.errors, lastSyncAt: action.at, syncing: false },
+      )
+    }
+    default: return state
   }
 }
 
-const StoreCtx = createContext<{ state: State; dispatch: (a: Action) => void } | null>(null)
+interface Ctx {
+  state: State
+  dispatch: (a: Action) => void
+  refreshProviders: () => Promise<void>
+  sync: () => Promise<void>
+}
+
+const StoreCtx = createContext<Ctx | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, defaultPersisted, derive)
-  const loaded = useRef(false)
+  const [state, dispatch] = useReducer(reducer, undefined, () => derive(defaultPersisted, emptyRuntime))
 
-  // Load once.
+  // Read once. `bootstrapped` gates the writer below, so a double-mount in
+  // development can never overwrite stored state with defaults.
   useEffect(() => {
+    let payload: Partial<Persisted> = {}
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) dispatch({ type: 'hydrate', payload: JSON.parse(raw) as Partial<Persisted> })
-    } catch {
-      /* Corrupt or unavailable storage should never block the app. */
-    }
-    loaded.current = true
+      if (raw) payload = JSON.parse(raw) as Partial<Persisted>
+    } catch { /* corrupt storage must never block the app */ }
+    dispatch({ type: 'hydrate', payload })
   }, [])
 
-  // Save on change.
   useEffect(() => {
-    if (!loaded.current) return
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedFrom(state)))
-    } catch {
-      /* Private browsing — the session still works, it just will not persist. */
-    }
+    if (!state.bootstrapped) return
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedOf(state))) } catch { /* private mode */ }
   }, [state])
 
-  // Theme + haptics side effects.
+  const refreshProviders = useCallback(async () => {
+    const r = await api.providers()
+    if (r.ok) dispatch({ type: 'setProviders', providers: r.data.providers })
+  }, [])
+
+  const sync = useCallback(async () => {
+    dispatch({ type: 'syncStart' })
+    const r = await api.sync(180)
+    if (r.ok) {
+      dispatch({ type: 'syncDone', days: r.data.days, errors: r.data.errors, at: r.data.syncedAt })
+    } else {
+      dispatch({ type: 'syncDone', days: [], errors: [{ provider: 'jumbo', message: r.message }], at: Date.now() })
+    }
+    await refreshProviders()
+  }, [refreshProviders])
+
+  // Capability probe, once. Determines what the app can honestly offer.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const r = await api.config()
+      if (cancelled) return
+      if (r.ok) {
+        dispatch({ type: 'serverConfig', config: r.data, reachable: true })
+        await refreshProviders()
+        await sync()
+      } else {
+        dispatch({ type: 'serverConfig', config: null, reachable: r.kind !== 'offline' })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [refreshProviders, sync])
+
+  // Theme
   useEffect(() => {
     const root = document.documentElement
     const apply = () => {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      const dark = state.theme === 'dark' || (state.theme === 'system' && prefersDark)
-      root.setAttribute('data-theme', dark ? 'dark' : 'light')
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches
+      const light = state.theme === 'light' || (state.theme === 'system' && prefersLight)
+      root.setAttribute('data-theme', light ? 'light' : 'dark')
+      document.querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', light ? '#FAFBF8' : '#08090A')
     }
     apply()
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [state.theme])
 
   useEffect(() => { setHapticsEnabled(state.settings.haptics) }, [state.settings.haptics])
+  useEffect(() => { setSoundEnabled(state.settings.sound) }, [state.settings.sound])
 
-  const value = useMemo(() => ({ state, dispatch }), [state])
+  const value = useMemo(() => ({ state, dispatch, refreshProviders, sync }), [state, refreshProviders, sync])
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>
 }
 
@@ -332,6 +388,6 @@ export const useToday = () => {
   return state.days[state.days.length - 1]
 }
 
-export const isConnected = (s: State) => Object.keys(s.connections).length > 0
-
+export const isDemo = (s: State) => s.dataMode === 'demo'
+export const connectedProviders = (s: State) => s.providers.filter((p) => p.connection)
 export const newMealId = () => `meal-${uid()}`

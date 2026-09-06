@@ -1,120 +1,189 @@
 import { useMemo } from 'react'
-import { Icon } from '../components/Icon'
-import { Rings, RingLegend, MiniRing } from '../components/Rings'
+import { AiOrb, Icon, type IconName } from '../components/Icon'
+import { Rings, MiniRing, RING_DEFS } from '../components/Rings'
 import { Sparkline } from '../components/Charts'
-import { Confidence, Empty, SectionHead } from '../components/UI'
+import { Confidence, DemoBadge, Empty, SectionHead, SetupNotice } from '../components/UI'
 import { useStore } from '../state/store'
+import { useInsights } from '../lib/useInsights'
 import type { Route } from '../components/Nav'
-import {
-  buildInsights, consistencyStreak, dailyProgress, dayKcal, dayProtein, lastN,
-} from '../lib/analytics'
-import { hoursToHM, prettyDateLong, round } from '../lib/util'
+import { consistencyStreak, dailyProgress, dayKcal, dayProtein, lastN } from '../lib/analytics'
+import { hoursToHM, prettyDateLong } from '../lib/util'
 
 export function Today({ onNavigate }: { onNavigate: (r: Route) => void }) {
   const { state } = useStore()
   const day = state.days[state.days.length - 1]
   const base = state.baseline
-  const connected = Object.keys(state.connections).length > 0
+  const insights = useInsights()
 
   const progress = useMemo(() => dailyProgress(day, base), [day, base])
   const streak = useMemo(() => consistencyStreak(state.days, base), [state.days, base])
-  const insights = useMemo(
-    () => (state.settings.aiPatterns ? buildInsights(state.days, base, state.measurements) : []),
-    [state.days, base, state.measurements, state.settings.aiPatterns],
-  )
-  const top = insights.filter((i) => !state.dismissed.includes(i.id)).slice(0, 2)
+  const top = insights.insights.filter((i) => !state.dismissed.includes(i.id))[0]
 
   const hour = new Date().getHours()
   const greeting = hour < 5 ? 'Still up' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const firstName = state.profile.name.trim().split(' ')[0]
 
-  if (!connected) {
-    return (
-      <div className="stack stack-6">
-        <header className="stack stack-2">
-          <p className="eyebrow">{prettyDateLong(day.date)}</p>
-          <h1 className="t-title1">{greeting}</h1>
-        </header>
-        <Empty
-          icon="link"
-          title="Nothing connected yet"
-          body="Connect a source and Jumbo fills in six months of history straight away — no setup week, nothing to type."
-          action={<button className="btn btn--primary" onClick={() => onNavigate('you')}>Connect a source</button>}
-        />
-      </div>
-    )
-  }
-
-  const kcal = dayKcal(day)
-  const protein = dayProtein(day)
-  const proteinTarget = Math.max(90, Math.round(base.weightKg * 1.6))
-  const stateLine = describeDay(progress)
+  const next = nextAction(progress, day.meals.length)
 
   return (
-    <div className="stack stack-10">
-      <header className="stack stack-2">
-        <p className="eyebrow">{prettyDateLong(day.date)}</p>
-        <h1 className="t-title1">{greeting}</h1>
-        <p className="t-callout dim">{stateLine}</p>
+    <div className="stack stack-14">
+      {/* ────────────────────────────────── How am I doing? */}
+      <header className="stack stack-3">
+        <div className="row row--between">
+          <p className="eyebrow">{prettyDateLong(day.date)}</p>
+          {state.dataMode === 'demo' && <DemoBadge inline />}
+        </div>
+        <h1 className="t-display">{greeting}{firstName ? `, ${firstName}` : ''}.</h1>
+        <p className="t-body dim" style={{ maxWidth: '32ch' }}>{describeDay(progress)}</p>
       </header>
 
-      {/* -------------------------------------------------- Daily state */}
-      <section className="card stack stack-5" aria-labelledby="today-state">
+      <section className="stack stack-6" aria-labelledby="today-state">
         <h2 className="sr-only" id="today-state">Today’s state</h2>
-        <div className="row" style={{ gap: 'var(--s-6)', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ color: 'var(--ink)', flex: 'none' }}>
-            <Rings progress={progress} size={158} />
-          </div>
-          <div className="grow stack stack-4" style={{ minWidth: 168 }}>
-            <div className="stack stack-1">
-              <span className="t-caption dim">Today so far</span>
-              <div className="row" style={{ alignItems: 'baseline', gap: 4 }}>
-                <span className="t-title1 num">{Math.round(progress.overall * 100)}</span>
-                <span className="t-callout dim">%</span>
-              </div>
-            </div>
-            <RingLegend progress={progress} />
-          </div>
+
+        <div className="stack stack-3" style={{ alignItems: 'center' }}>
+          <Rings progress={progress} size={216}>
+            <span className="num" style={{ fontSize: 34, fontWeight: 660, letterSpacing: '-0.04em', lineHeight: 1 }}>
+              {Math.round(progress.overall * 100)}
+            </span>
+          </Rings>
+          <span className="t-caption dim2">
+            <span className="num strong" style={{ color: 'var(--ink)' }}>{Math.round(progress.overall * 100)}%</span> of today so far
+          </span>
         </div>
 
-        <hr className="hairline" />
+        <ul className="row" style={{ justifyContent: 'space-between', gap: 'var(--s-2)' }}>
+          {RING_DEFS.map((r) => (
+            <li key={r.key} className="stack stack-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
+              <span className="dot" style={{ background: r.colour }} />
+              <span className="t-title3 num">{Math.round(progress[r.key] * 100)}</span>
+              <span className="t-caption dim2">{r.label}</span>
+            </li>
+          ))}
+        </ul>
 
-        <div className="row row--between">
+        <div className="card card--quiet row row--between">
           <div className="stack stack-1">
             <span className="t-caption dim">Consistency</span>
-            <span className="t-body strong num">{streak} {streak === 1 ? 'day' : 'days'}</span>
+            <span className="t-title3 num">{streak} {streak === 1 ? 'day' : 'days'}</span>
           </div>
-          <p className="t-caption dim2" style={{ maxWidth: '26ch', textAlign: 'right' }}>
+          <p className="t-caption dim2" style={{ maxWidth: '24ch', textAlign: 'right' }}>
             {progress.restDay
-              ? 'Rest day — recovery counts for more today.'
-              : 'Built on sleeping and moving enough. Rest days keep it going.'}
+              ? 'Rest day. Recovery counts for more today.'
+              : 'Built on sleeping and moving enough. One off day is forgiven.'}
           </p>
         </div>
       </section>
 
-      {/* -------------------------------------------------- Domain detail */}
+      {/* ────────────────────────────────── What changed? */}
       <section className="section">
-        <SectionHead title="Where it comes from" sub="Measured by your connected sources." />
-        <div className="stack stack-3">
+        <SectionHead
+          title="What changed"
+          sub={
+            insights.engine === 'claude' ? `Read by Jumbo’s AI${insights.model ? ` · ${insights.model}` : ''}`
+              : insights.engine === 'on-device' ? 'Computed on this device from your own records'
+              : 'Pattern analysis is off in your settings'
+          }
+          action={
+            insights.insights.length > 1
+              ? <button className="btn btn--ghost btn--sm" onClick={() => onNavigate('future')}>See all</button>
+              : undefined
+          }
+        />
+
+        {insights.problem?.kind === 'setup' && (
+          <SetupNotice
+            title="Jumbo’s AI is not connected"
+            message={insights.problem.message}
+            missing={insights.problem.missing}
+            compact
+          />
+        )}
+
+        {insights.engine === 'off' ? (
+          <Empty
+            icon="lock" title="Nothing is being interpreted"
+            body="Your data is still recorded and visible. Jumbo is simply not looking for patterns in it."
+            action={<button className="btn btn--secondary" onClick={() => onNavigate('you')}>Settings</button>}
+          />
+        ) : insights.loading && !top ? (
+          <div className="card row" style={{ gap: 'var(--s-4)' }}>
+            <AiOrb working label="Jumbo is reading your data" />
+            <div className="stack stack-2 grow">
+              <div className="skeleton" style={{ height: 14, width: '82%' }} />
+              <div className="skeleton" style={{ height: 14, width: '64%' }} />
+            </div>
+          </div>
+        ) : !top ? (
+          <Empty icon="ai" title="Nothing to flag" body="Your patterns look steady. Jumbo speaks up when something changes, not on a schedule." />
+        ) : (
+          <button
+            className="card card--brand stack stack-4 rise"
+            style={{ textAlign: 'left', cursor: 'pointer', width: '100%' }}
+            onClick={() => onNavigate('future')}
+          >
+            <div className="row row--between">
+              <div className="row" style={{ gap: 'var(--s-2)' }}>
+                <AiOrb size="sm" />
+                <span className="eyebrow">{top.domain}</span>
+              </div>
+              <Confidence value={top.confidence} compact />
+            </div>
+            <p className="t-body">{top.changed}</p>
+            <div className="row row--between">
+              <span className="t-caption dim2">{top.window}</span>
+              <span className="t-caption strong brandy">
+                Why it matters <Icon name="chevron" size={12} style={{ display: 'inline', verticalAlign: -1 }} />
+              </span>
+            </div>
+          </button>
+        )}
+      </section>
+
+      {/* ────────────────────────────────── What should I do next? */}
+      <section className="section">
+        <SectionHead title="Next" />
+        <div className="card stack stack-4">
+          <div className="row row--top" style={{ gap: 'var(--s-3)' }}>
+            <AiOrb size="sm" />
+            <div className="stack stack-1">
+              <p className="t-body strong">{next.title}</p>
+              <p className="t-callout dim">{next.body}</p>
+            </div>
+          </div>
+          <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
+            <button className="btn btn--primary btn--sm" onClick={() => onNavigate(next.route)}>{next.cta}</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => onNavigate('future')}>Where this leads</button>
+          </div>
+        </div>
+      </section>
+
+      {/* ────────────────────────────────── The detail, if wanted */}
+      <section className="section">
+        <SectionHead
+          title="Where it comes from"
+          sub={state.dataMode === 'live' ? 'Measured by your connected sources.' : 'Sample records, so you can see how this works.'}
+        />
+        <div className="stack stack-3 stagger">
           <DomainRow
-            icon="sleep" color="var(--sleep)" label="Sleep"
+            icon="sleep" colour="var(--sleep)" label="Sleep" idle
             value={day.sleepHours > 0 ? hoursToHM(day.sleepHours) : '—'}
-            sub={`${day.sleepEfficiency}% efficiency · bed at ${formatBedtime(day.bedtimeHour)}`}
+            sub={day.sleepEfficiency ? `${day.sleepEfficiency}% efficiency` : 'Not recorded'}
             ring={progress.sleep}
             spark={lastN(state.days, 21).map((d) => d.sleepHours)}
           />
           <DomainRow
-            icon="steps" color="var(--movement)" label="Movement"
+            icon="steps" colour="var(--movement)" label="Movement"
             value={day.steps.toLocaleString()}
             sub={`steps · ${day.activeMinutes} active minutes`}
             ring={progress.movement}
             spark={lastN(state.days, 21).map((d) => d.steps)}
           />
           <DomainRow
-            icon="plate" color="var(--nutrition)" label="Meals"
-            value={day.meals.length ? `${protein} g` : 'Nothing logged'}
+            icon="plate" colour="var(--nutrition)" label="Food"
+            value={day.meals.length ? `${dayProtein(day)} g` : 'Nothing logged'}
             sub={day.meals.length
-              ? `protein of ~${proteinTarget} g · ${kcal.toLocaleString()} kcal · ${day.meals.length} ${day.meals.length === 1 ? 'meal' : 'meals'}`
-              : 'Photograph your next meal to close the gap'}
+              ? `protein · ${dayKcal(day).toLocaleString()} kcal · ${day.meals.length} ${day.meals.length === 1 ? 'meal' : 'meals'}`
+              : 'One photo closes this gap'}
             ring={progress.nourish}
             spark={lastN(state.days, 21).map(dayProtein)}
             action={<button className="btn btn--secondary btn--sm" onClick={() => onNavigate('capture')}>
@@ -122,106 +191,38 @@ export function Today({ onNavigate }: { onNavigate: (r: Route) => void }) {
             </button>}
           />
           <DomainRow
-            icon="dumbbell" color="var(--recovery)" label="Training"
-            value={day.workout ? `${day.workout.type}` : progress.restDay ? 'Rest day' : 'Nothing yet'}
+            icon="training" colour="var(--training)" label="Training"
+            value={day.workout ? day.workout.type : progress.restDay ? 'Rest day' : 'Nothing yet'}
             sub={day.workout
               ? `${day.workout.minutes} min · ${['easy', 'moderate', 'hard'][day.workout.intensity - 1]}`
-              : progress.restDay ? 'Planned recovery — this counts' : 'Log a session when you finish'}
-            ring={day.workout ? 1 : progress.restDay ? 1 : 0}
+              : progress.restDay ? 'Planned recovery, this counts' : 'Log a session when you finish'}
+            ring={day.workout || progress.restDay ? 1 : 0}
             spark={lastN(state.days, 21).map((d) => (d.workout ? d.workout.minutes : 0))}
-            action={!day.workout && !progress.restDay
-              ? <button className="btn btn--secondary btn--sm" onClick={() => onNavigate('capture')}>Log</button>
-              : undefined}
           />
           <DomainRow
-            icon="heart" color="var(--heart)" label="Recovery"
-            value={`${day.hrv} ms`}
-            sub={`HRV vs ${base.hrv} ms baseline · resting HR ${day.restingHR} bpm`}
+            icon="heart" colour="var(--recovery)" label="Recovery" idle
+            value={day.hrv ? `${day.hrv} ms` : '—'}
+            sub={day.hrv ? `HRV against your ${base.hrv} ms baseline · resting HR ${day.restingHR}` : 'Not recorded'}
             ring={progress.recovery}
             spark={lastN(state.days, 21).map((d) => d.hrv)}
           />
         </div>
-      </section>
 
-      {/* -------------------------------------------------- Insights */}
-      <section className="section">
-        <SectionHead
-          title="What Jumbo noticed"
-          sub={state.settings.aiPatterns ? 'Two things worth a moment.' : 'Pattern analysis is off in your privacy settings.'}
-          action={<button className="btn btn--ghost btn--sm" onClick={() => onNavigate('insights')}>All insights</button>}
-        />
-        {!state.settings.aiPatterns ? (
-          <Empty
-            icon="lock" title="Pattern analysis is off"
-            body="Your data is still recorded and visible — Jumbo just isn’t interpreting it."
-            action={<button className="btn btn--secondary" onClick={() => onNavigate('you')}>Privacy settings</button>}
-          />
-        ) : top.length === 0 ? (
-          <Empty icon="sparkle" title="Nothing to flag" body="Your patterns look steady. Jumbo will speak up when something changes." />
-        ) : (
-          <div className="stack stack-3">
-            {top.map((i) => (
-              <button
-                key={i.id} className="card stack stack-3"
-                style={{ textAlign: 'left', cursor: 'pointer', width: '100%' }}
-                onClick={() => onNavigate('insights')}
-              >
-                <div className="row row--between">
-                  <span className="eyebrow">{i.domain}</span>
-                  <Confidence value={i.confidence} compact />
-                </div>
-                <p className="t-body">{i.changed}</p>
-                <div className="row row--between">
-                  <span className="t-caption dim2">{i.window}</span>
-                  <span className="t-caption strong" style={{ color: 'var(--accent)' }}>
-                    See the evidence <Icon name="chevron" size={12} style={{ display: 'inline', verticalAlign: -1 }} />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+        <button
+          className="btn btn--ghost btn--block"
+          onClick={() => onNavigate('measurements')}
+          style={{ justifyContent: 'space-between' }}
+        >
+          <span className="row" style={{ gap: 'var(--s-2)' }}>
+            <Icon name="measure" size={17} /> Measurements
+          </span>
+          <span className="row t-caption dim2" style={{ gap: 6 }}>
+            VO₂ max {base.vo2max.toFixed(1)} <Icon name="chevron" size={14} />
+          </span>
+        </button>
 
-      {/* -------------------------------------------------- Next step */}
-      <section className="section">
-        <SectionHead title="The next useful thing" />
-        <div className="card stack stack-4">
-          <div className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
-            <Icon name="sparkle" size={20} style={{ color: 'var(--accent)', flex: 'none', marginTop: 2 }} />
-            <div className="stack stack-1">
-              <p className="t-body strong">{nextAction(progress, day.meals.length).title}</p>
-              <p className="t-callout dim">{nextAction(progress, day.meals.length).body}</p>
-            </div>
-          </div>
-          <div className="row" style={{ gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-            <button className="btn btn--primary btn--sm" onClick={() => onNavigate(nextAction(progress, day.meals.length).route)}>
-              {nextAction(progress, day.meals.length).cta}
-            </button>
-            <button className="btn btn--ghost btn--sm" onClick={() => onNavigate('trajectory')}>
-              See where this leads
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------- Shortcuts */}
-      <section className="section">
-        <SectionHead title="Also in Jumbo" />
-        <div className="grid grid--2">
-          <ShortcutCard
-            icon="measure" title="Measurements"
-            sub={`VO₂ max ${base.vo2max.toFixed(1)} · ${state.measurements.length} records`}
-            onClick={() => onNavigate('measurements')}
-          />
-          <ShortcutCard
-            icon="explore" title="Explore"
-            sub={`${state.following.length} creators followed`}
-            onClick={() => onNavigate('explore')}
-          />
-        </div>
-        <p className="t-caption dim2" style={{ marginTop: 'var(--s-2)' }}>
-          Jumbo is a wellness companion. It does not diagnose, and it is not a substitute for
+        <p className="t-caption dim2">
+          Jumbo is a wellness companion. It does not diagnose and it is not a substitute for
           professional care.
         </p>
       </section>
@@ -231,23 +232,24 @@ export function Today({ onNavigate }: { onNavigate: (r: Route) => void }) {
 
 /* ---------------------------------------------------------------- pieces */
 function DomainRow({
-  icon, color, label, value, sub, ring, spark, action,
+  icon, colour, label, value, sub, ring, spark, action, idle,
 }: {
-  icon: 'sleep' | 'steps' | 'plate' | 'dumbbell' | 'heart'
-  color: string
+  icon: IconName
+  colour: string
   label: string
   value: string
   sub: string
   ring: number
   spark: number[]
   action?: React.ReactNode
+  idle?: boolean
 }) {
   return (
-    <div className="card row" style={{ gap: 'var(--s-4)', alignItems: 'center' }}>
-      <div style={{ position: 'relative', color: 'var(--ink)', flex: 'none' }}>
-        <MiniRing value={ring} color={color} size={46} label={label} />
-        <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color }}>
-          <Icon name={icon} size={17} />
+    <div className="card row" style={{ gap: 'var(--s-4)' }}>
+      <div style={{ position: 'relative', flex: 'none' }}>
+        <MiniRing value={ring} colour={colour} size={48} label={label} />
+        <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: colour }}>
+          <Icon name={icon} size={18} motion={idle ? 'idle' : 'none'} />
         </span>
       </div>
       <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
@@ -255,31 +257,19 @@ function DomainRow({
         <span className="t-title3 num">{value}</span>
         <span className="t-caption dim2">{sub}</span>
       </div>
-      <div className="stack stack-2" style={{ alignItems: 'flex-end', flex: 'none' }}>
-        <Sparkline values={spark} color={color} width={72} height={26} label={`${label} over 21 days`} />
+      <div className="stack stack-2 none" style={{ alignItems: 'flex-end' }}>
+        <Sparkline values={spark} colour={colour} width={72} height={26} label={`${label} over 21 days`} />
         {action}
       </div>
     </div>
   )
 }
 
-function ShortcutCard({
-  icon, title, sub, onClick,
-}: { icon: 'measure' | 'explore'; title: string; sub: string; onClick: () => void }) {
-  return (
-    <button className="card stack stack-2" style={{ textAlign: 'left', cursor: 'pointer' }} onClick={onClick}>
-      <Icon name={icon} size={20} style={{ color: 'var(--accent)' }} />
-      <span className="t-callout strong">{title}</span>
-      <span className="t-caption dim2">{sub}</span>
-    </button>
-  )
-}
-
 function describeDay(p: ReturnType<typeof dailyProgress>) {
   if (p.restDay) return 'A rest day. Sleep and food are what matter today.'
-  if (p.recovery < 0.35) return 'Recovery is running low — an easy day would serve you better than a hard one.'
-  if (p.overall > 0.7) return 'Everything is tracking well today.'
-  if (p.sleep < 0.75) return 'Short night. Expect the rest of today to feel heavier than usual.'
+  if (p.recovery < 0.35) return 'Recovery is running low. An easy day would serve you better than a hard one.'
+  if (p.overall > 0.7) return 'Everything is tracking well.'
+  if (p.sleep < 0.75) return 'Short night. Expect today to feel heavier than usual.'
   return 'A normal day so far. Nothing needs fixing.'
 }
 
@@ -288,44 +278,34 @@ function nextAction(p: ReturnType<typeof dailyProgress>, meals: number):
   if (meals === 0) {
     return {
       title: 'Photograph your next meal',
-      body: 'Food is the one thing your devices can’t see. One photo, five seconds, and the picture is complete.',
+      body: 'Food is the one thing your devices cannot see. One photo and the picture is complete.',
       cta: 'Open the camera', route: 'capture',
     }
   }
   if (p.recovery < 0.4) {
     return {
       title: 'Take the easy option today',
-      body: 'Your recovery signals are below your baseline. A walk or a mobility session keeps the streak without the cost.',
+      body: 'Your recovery signals are below baseline. A walk or a mobility session keeps the streak without the cost.',
       cta: 'Log something easy', route: 'capture',
     }
   }
   if (p.movement < 0.5) {
     return {
-      title: 'A twenty-minute walk would finish the ring',
-      body: 'You’re short of your usual movement. Walking is the least fragile way to close the gap.',
+      title: 'A twenty-minute walk finishes the ring',
+      body: 'You are short of your usual movement. Walking is the least fragile way to close the gap.',
       cta: 'Log a walk', route: 'capture',
     }
   }
   if (p.nourish < 0.6) {
     return {
-      title: 'Protein is behind where it usually is',
-      body: 'One protein-forward item at your next meal usually covers it.',
+      title: 'Protein is behind where it usually sits',
+      body: 'One protein-forward item at your next meal normally covers it.',
       cta: 'Log a meal', route: 'capture',
     }
   }
   return {
-    title: 'You’re on track — look further out',
-    body: 'This is a good moment to see what your current pattern could mean over the next year.',
-    cta: 'Open Trajectory', route: 'trajectory',
+    title: 'You are on track. Look further out.',
+    body: 'A good moment to see what this pattern could mean over the next year.',
+    cta: 'Open Future', route: 'future',
   }
 }
-
-function formatBedtime(h: number) {
-  const hh = Math.floor(h % 24)
-  const mm = Math.round((h % 1) * 60)
-  const d = new Date()
-  d.setHours(hh, mm, 0, 0)
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-}
-
-export { round }

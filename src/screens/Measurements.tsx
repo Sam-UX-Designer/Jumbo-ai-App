@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { LineChart } from '../components/Charts'
-import { Empty, ProvenanceTag, ScreenHead, Segmented, SectionHead } from '../components/UI'
+import { DemoBadge, Empty, ProvenanceTag, ScreenHead, Segmented, SectionHead } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Measurement, MeasurementKind } from '../data/types'
 import { prettyDate, round, formatSigned } from '../lib/util'
@@ -20,7 +20,7 @@ const META: Record<MeasurementKind, KindMeta> = {
   vo2max:       { label: 'VO₂ max',        unit: 'ml/kg/min', better: 'up',   group: 'fitness', note: 'Estimated by your watch from running heart-rate data, not measured in a lab.' },
   gripStrength: { label: 'Grip strength',  unit: 'kg',        better: 'up',   group: 'fitness', note: 'A simple proxy for whole-body strength.' },
   restingHR:    { label: 'Resting HR',     unit: 'bpm',       better: 'down', group: 'fitness' },
-  bodyFat:      { label: 'Body fat',       unit: '%',         better: 'down', group: 'body', note: 'From DEXA — the most reliable of the everyday methods.' },
+  bodyFat:      { label: 'Body fat',       unit: '%',         better: 'down', group: 'body', note: 'From DEXA, the most reliable of the everyday methods.' },
   leanMass:     { label: 'Lean mass',      unit: 'kg',        better: 'up',   group: 'body' },
   boneDensity:  { label: 'Bone density',   unit: 'g/cm²',     better: 'up',   group: 'body' },
   waist:        { label: 'Waist',          unit: 'cm',        better: 'down', group: 'body' },
@@ -71,8 +71,10 @@ export function Measurements() {
       <ScreenHead
         eyebrow="Measurements"
         title="The numbers you measure now and then"
-        sub="Lab panels, scans and tests — kept next to the daily data so you can see them move together."
+        sub="Lab panels, scans and tests, kept next to the daily data so you can see them move together."
       />
+
+      {state.dataMode === 'demo' && <DemoBadge />}
 
       {/* VO₂ max gets the headline: it is the measurement most tied to trajectory. */}
       {vo2.length > 1 && (
@@ -98,7 +100,7 @@ export function Measurements() {
           />
 
           <p className="t-caption dim2">
-            {META.vo2max.note} Watch estimates track direction well and absolute values less well —
+            {META.vo2max.note} Watch estimates track direction well and absolute values less well,
             the trend is the part to trust.
           </p>
         </section>

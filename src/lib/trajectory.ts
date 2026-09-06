@@ -24,7 +24,7 @@ export interface Projected {
   band: { vo2max: number; restingHR: number; bodyFatPct: number; leanMassKg: number; recoveryIndex: number }
 }
 
-export const MONTH_OPTIONS = [6, 12, 24] as const
+export const MONTH_OPTIONS = [12, 36, 60] as const
 export type Horizon = (typeof MONTH_OPTIONS)[number]
 
 export function leversFromBaseline(b: Baseline): Levers {
@@ -149,11 +149,85 @@ export const RELATIONSHIPS: RelationshipNote[] = [
 ]
 
 export const METRIC_META = {
-  vo2max:       { label: 'VO₂ max',        unit: 'ml/kg/min', better: 'up'   as const, color: 'var(--movement)' },
-  restingHR:    { label: 'Resting HR',     unit: 'bpm',       better: 'down' as const, color: 'var(--heart)' },
-  bodyFatPct:   { label: 'Body fat',       unit: '%',         better: 'down' as const, color: 'var(--nutrition)' },
-  leanMassKg:   { label: 'Lean mass',      unit: 'kg',        better: 'up'   as const, color: 'var(--recovery)' },
-  recoveryIndex:{ label: 'Recovery index', unit: '/100',      better: 'up'   as const, color: 'var(--sleep)' },
+  vo2max:       { label: 'Aerobic fitness', unit: 'ml/kg/min', better: 'up'   as const, color: 'var(--movement)' },
+  restingHR:    { label: 'Resting heart rate', unit: 'bpm',    better: 'down' as const, color: 'var(--training)' },
+  bodyFatPct:   { label: 'Body fat',        unit: '%',         better: 'down' as const, color: 'var(--nutrition)' },
+  leanMassKg:   { label: 'Lean mass',       unit: 'kg',        better: 'up'   as const, color: 'var(--recovery)' },
+  recoveryIndex:{ label: 'Recovery',        unit: '/100',      better: 'up'   as const, color: 'var(--sleep)' },
+}
+
+/**
+ * The four ready-made scenarios on the Future screen. Each one changes only
+ * the habits it names, so the person can see one lever at a time rather than
+ * an undifferentiated "better you".
+ */
+export interface Scenario {
+  id: string
+  label: string
+  blurb: string
+  accent: string
+  apply: (current: Levers) => Levers
+}
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 'current',
+    label: 'Carry on as you are',
+    blurb: 'Your habits over the last four weeks, continued.',
+    accent: 'var(--ink-2)',
+    apply: (l) => ({ ...l }),
+  },
+  {
+    id: 'sleep',
+    label: 'Sleep more consistently',
+    blurb: 'Half an hour more, most nights, nothing else changed.',
+    accent: 'var(--sleep)',
+    apply: (l) => ({ ...l, sleepHours: clamp(l.sleepHours + 0.5, 5, 9.5) }),
+  },
+  {
+    id: 'move',
+    label: 'Move more, sustainably',
+    blurb: 'More easy aerobic work and a few thousand more steps.',
+    accent: 'var(--movement)',
+    apply: (l) => ({
+      ...l,
+      cardioMinutes: clamp(l.cardioMinutes + 90, 0, 420),
+      steps: clamp(l.steps + 2000, 2000, 18000),
+    }),
+  },
+  {
+    id: 'strength',
+    label: 'Build and keep strength',
+    blurb: 'Two sessions a week, with the protein to support them.',
+    accent: 'var(--training)',
+    apply: (l) => ({
+      ...l,
+      strengthSessions: clamp(l.strengthSessions + 2, 0, 6),
+      proteinPerKg: clamp(l.proteinPerKg + 0.4, 0.6, 2.4),
+    }),
+  },
+]
+
+/**
+ * A plausible energy shape across one waking day, 6am to 11pm.
+ * This is an illustration built from the projected recovery index and sleep,
+ * not a measurement — the UI labels it as such.
+ */
+export function energyCurve(sleepHours: number, recoveryIndex: number): number[] {
+  const rest = clamp((sleepHours - 5.5) / 3, 0, 1)
+  const rec = clamp(recoveryIndex / 100, 0, 1)
+  const ceiling = 0.42 + rest * 0.34 + rec * 0.24
+  const dipDepth = 0.3 - rest * 0.15 - rec * 0.08
+  const eveningHold = 0.2 + rest * 0.22 + rec * 0.2
+
+  const hours = 18 // 6am to midnight
+  return Array.from({ length: hours }, (_, i) => {
+    const t = i / (hours - 1)
+    const morningRamp = Math.min(1, t / 0.22)
+    const afternoonDip = Math.exp(-(((t - 0.46) / 0.13) ** 2)) * dipDepth
+    const eveningFade = Math.max(0, (t - 0.68) / 0.32) ** 1.6 * (1 - eveningHold)
+    return clamp(ceiling * morningRamp - afternoonDip - ceiling * eveningFade, 0.04, 1)
+  })
 }
 
 export type ProjMetric = keyof typeof METRIC_META
