@@ -286,6 +286,121 @@ ai.post('/future', async (req, res) => {
   }
 })
 
+/* ================================================================== chat */
+
+const CHAT_TOOL = {
+  name: 'answer',
+  description: 'Answer one question from a person about their own health data.',
+  strict: true,
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      answer: {
+        type: 'string',
+        description:
+          'The reply, in plain prose. Lead with the useful conclusion, then the reasoning. '
+          + 'Where the question warrants it, work through what you noticed, why it may matter, '
+          + 'what the data shows, what they could try, and that the choice is theirs. '
+          + 'Do not print those as headings unless the answer is long enough to need them.',
+      },
+      followUps: {
+        type: 'array',
+        description: 'Up to three short questions this person might naturally ask next. Empty when none fit.',
+        items: { type: 'string' },
+      },
+      groundedIn: {
+        type: 'array',
+        description: 'The figures from the summary you actually used. Empty when the answer needed none.',
+        items: { type: 'string' },
+      },
+    },
+    required: ['answer', 'followUps', 'groundedIn'],
+  },
+}
+
+const CHAT_SYSTEM = `You are Jumbo, a wellness and longevity companion, talking with one person about their own health data. You are not a clinician and Jumbo is not a medical device.
+
+You are given a statistical summary of this person's data. It contains no name, no phone number, no notes and no photographs.
+
+How to answer:
+- Lead with the useful conclusion. Explanation comes after it, not before.
+- Every figure you state must come from the summary you were given. If the summary does not contain what the question needs, say plainly which data is missing and what would fill the gap.
+- Never invent a health record, a measurement, or a history. Never imply data exists when it does not.
+- Separate what was measured from what research suggests in general from what Jumbo estimated. Say which you are doing.
+- Show uncertainty where it exists. A weak signal described confidently is a failure.
+- Offer options, not orders, and make clear the choice is theirs.
+- Be warm and brief. Two or three short paragraphs is usually right. This is a conversation, not a report.
+
+Hard limits:
+- No diagnosis, no disease prediction, no claims about life expectancy or how long someone will live.
+- If asked to diagnose or to predict lifespan, say directly that you cannot and will not, then offer what you can actually help with.
+- If someone describes symptoms that worry them, tell them plainly to speak to a clinician. Do not attempt to reassure them out of it.`
+
+ai.post('/chat', async (req, res) => {
+  if (!client) return setupRequired(res, 'Ask Jumbo')
+
+  const { question, summary, history, goals } = req.body ?? {}
+  if (typeof question !== 'string' || !question.trim()) {
+    return res.status(400).json({ error: 'no_question', message: 'There was no question to answer.' })
+  }
+
+  // The conversation is replayed so Jumbo keeps context, capped so a long
+  // session cannot grow the request without bound.
+  const turns = Array.isArray(history) ? history.slice(-10) : []
+  const messages = [
+    ...turns
+      .filter((t) => typeof t?.text === 'string' && t.text.trim())
+      .map((t) => ({
+        role: t.role === 'jumbo' ? 'assistant' : 'user',
+        content: String(t.text).slice(0, 4000),
+      })),
+    {
+      role: 'user',
+      content: [
+        goals?.length ? `Their stated goals: ${goals.join(', ')}.` : 'They have not set any goals yet.',
+        `A statistical summary of their data:\n${JSON.stringify(summary ?? {}, null, 2)}`,
+        `Their question: ${question.slice(0, 2000)}`,
+      ].join('\n\n'),
+    },
+  ]
+
+  // The first turn must come from the person, or the API rejects the thread.
+  while (messages.length > 1 && messages[0].role !== 'user') messages.shift()
+
+  try {
+    const response = await client.messages.create({
+      model: env.anthropicModel,
+      max_tokens: 2000,
+      system: CHAT_SYSTEM,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'medium' },
+      tools: [CHAT_TOOL],
+      tool_choice: { type: 'tool', name: CHAT_TOOL.name },
+      messages,
+    })
+
+    if (response.stop_reason === 'refusal') {
+      return res.status(422).json({
+        error: 'declined',
+        message: response.stop_details?.explanation || 'Jumbo declined to answer that.',
+      })
+    }
+    const block = response.content.find((b) => b.type === 'tool_use')
+    if (!block) throw new Error('The model did not return an answer.')
+
+    res.json({
+      source: 'claude',
+      model: env.anthropicModel,
+      answer: block.input.answer,
+      followUps: (block.input.followUps ?? []).slice(0, 3),
+      groundedIn: (block.input.groundedIn ?? []).slice(0, 6),
+    })
+  } catch (err) {
+    handleAiError(res, err, 'Ask Jumbo')
+  }
+})
+
 /* ================================================================ shared */
 
 function handleAiError(res, err, feature) {

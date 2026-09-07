@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import '../styles/explore.css'
 import { AiOrb, Icon } from '../components/Icon'
-import { AssetImage } from '../components/Asset'
+import { AssetImage, AvatarButton } from '../components/Asset'
 import {
-  Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice, Sheet, useToast,
+  Empty, ErrorNotice, SectionHead, Segmented, SetupNotice, Sheet, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
 import { api, compactCount, isoDurationMinutes, type YoutubeVideo } from '../lib/api'
@@ -16,9 +17,26 @@ const GOAL_LABEL: Record<GoalKey, string> = {
   nutrition: 'Eat better', aging: 'Healthy ageing', consistency: 'Be consistent', custom: 'Your goal',
 }
 
-const TOPICS = [
-  'zone 2 training', 'strength after 40', 'sleep and HRV', 'protein and lean mass',
-  'VO2 max and healthspan', 'deload weeks', 'hip mobility', 'reading a lipid panel',
+/**
+ * The topic chips. 'for-you' is the goals-driven search; the rest are real
+ * queries sent to YouTube, so a chip always produces genuine results or a
+ * genuine error.
+ */
+const TOPICS: Array<{ id: string; label: string; query: string | null }> = [
+  { id: 'for-you',   label: 'For you',   query: null },
+  { id: 'sleep',     label: 'Sleep',     query: 'sleep quality and HRV science' },
+  { id: 'fitness',   label: 'Fitness',   query: 'strength training and zone 2 for health' },
+  { id: 'nutrition', label: 'Nutrition', query: 'protein and nutrition for lean mass' },
+  { id: 'longevity', label: 'Longevity', query: 'longevity and healthspan research' },
+  { id: 'mental',    label: 'Mental',    query: 'stress, recovery and mental health habits' },
+]
+
+type Sort = 'relevant' | 'recent' | 'longest'
+
+const SORTS: Array<{ value: Sort; label: string }> = [
+  { value: 'relevant', label: 'Most relevant' },
+  { value: 'recent',   label: 'Most recent' },
+  { value: 'longest',  label: 'Longest first' },
 ]
 
 export function Explore() {
@@ -31,8 +49,16 @@ export function Explore() {
   const [problem, setProblem] = useState<{ kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string } | null>(null)
   const [open, setOpen] = useState<YoutubeVideo | null>(null)
   const [resolvedQuery, setResolvedQuery] = useState('')
+  const [topic, setTopic] = useState('for-you')
+  const [sort, setSort] = useState<Sort>('relevant')
+  const [showFilters, setShowFilters] = useState(false)
 
-  const goals = state.goals.length ? state.goals : (['fitness'] as GoalKey[])
+  // Memoised: a fresh array here would change `load`'s identity on every
+  // render, and the effect below would refetch forever.
+  const goals = useMemo(
+    () => (state.goals.length ? state.goals : (['fitness'] as GoalKey[])),
+    [state.goals],
+  )
   const personalise = state.settings.creatorPersonalisation
 
   const load = useCallback(async (q?: string) => {
@@ -63,34 +89,103 @@ export function Explore() {
   const followedVideos = useMemo(() => videos.filter((v) => followed.includes(v.channelId)), [videos, followed])
   const savedVideos = useMemo(() => videos.filter((v) => state.savedVideos.includes(v.id)), [videos, state.savedVideos])
 
-  const shown = tab === 'for-you' ? videos : tab === 'saved' ? savedVideos : followedVideos
+  const pool = tab === 'for-you' ? videos : tab === 'saved' ? savedVideos : followedVideos
+
+  // Sorting is done here, on results YouTube actually returned. Nothing is
+  // reordered into existence.
+  const shown = useMemo(() => {
+    const list = [...pool]
+    if (sort === 'recent') {
+      list.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1))
+    } else if (sort === 'longest') {
+      list.sort((a, b) => (isoDurationMinutes(b.durationIso) ?? 0) - (isoDurationMinutes(a.durationIso) ?? 0))
+    }
+    return list
+  }, [pool, sort])
+
+  const featured = tab === 'for-you' ? shown[0] : undefined
+  const trending = tab === 'for-you' ? shown.slice(1, 5) : []
+  const rest = featured ? shown.slice(5) : shown
+
+  const pickTopic = (t: (typeof TOPICS)[number]) => {
+    haptic('selection')
+    setTopic(t.id)
+    setTab('for-you')
+    setQuery(t.query ?? '')
+    void load(t.query ?? undefined)
+  }
 
   return (
     <div className="stack stack-10">
-      <ScreenHead
-        eyebrow="Explore"
-        title="Learn from people, not from Jumbo"
-        sub="Real videos from YouTube, chosen against your goals. Their views are their own. Jumbo does not endorse them and does not treat them as evidence."
-      />
+      <header className="stack stack-2">
+        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+          <div className="stack stack-1" style={{ minWidth: 0 }}>
+            <p className="eyebrow">Explore</p>
+            <h1 className="t-title1">Learn from real people</h1>
+          </div>
+          <AvatarButton />
+        </div>
+        <p className="t-callout dim" style={{ maxWidth: '46ch' }}>
+          Real videos from YouTube, chosen against your goals. Their views are their own. Jumbo
+          does not endorse them and does not treat them as evidence.
+        </p>
+      </header>
 
       <form
-        className="row" style={{ gap: 'var(--s-2)' }}
-        onSubmit={(e) => { e.preventDefault(); haptic('selection'); void load(query.trim()) }}
+        className="searchbar"
+        onSubmit={(e) => { e.preventDefault(); haptic('selection'); setTopic(''); void load(query.trim()) }}
       >
+        <Icon name="search" size={18} style={{ color: 'var(--ink-3)', flex: 'none' }} />
         <input
-          className="input grow" value={query} placeholder="Search health and fitness videos"
-          aria-label="Search videos" onChange={(e) => setQuery(e.target.value)}
+          className="searchbar__input" value={query}
+          placeholder="Search videos, topics or creators…"
+          aria-label="Search videos, topics or creators"
+          onChange={(e) => setQuery(e.target.value)}
         />
-        <button className="btn btn--primary none" type="submit">Search</button>
+        {query && (
+          <button
+            type="button" className="icon-btn" aria-label="Clear search"
+            onClick={() => { setQuery(''); setTopic('for-you'); void load() }}
+          >
+            <Icon name="close" size={17} />
+          </button>
+        )}
+        <button
+          type="button"
+          className={`icon-btn icon-btn--edge${showFilters ? ' is-on' : ''}`}
+          aria-label="Filter and sort"
+          aria-expanded={showFilters}
+          onClick={() => { haptic('selection'); setShowFilters((f) => !f) }}
+        >
+          <Icon name="filter" size={18} />
+        </button>
       </form>
 
-      <div className="rail" role="group" aria-label="Suggested topics">
+      <div className="rail" role="group" aria-label="Topics">
         {TOPICS.map((t) => (
-          <button key={t} className="chip" onClick={() => { setQuery(t); haptic('selection'); void load(t) }}>
-            {t}
+          <button
+            key={t.id} className="chip" aria-pressed={topic === t.id}
+            onClick={() => pickTopic(t)}
+          >
+            {t.label}
           </button>
         ))}
       </div>
+
+      {showFilters && (
+        <div className="card card--quiet stack stack-3">
+          <span className="eyebrow">Sort results</span>
+          <Segmented
+            ariaLabel="Sort results"
+            value={sort}
+            onChange={(v) => { haptic('selection'); setSort(v as Sort) }}
+            options={SORTS}
+          />
+          <p className="t-caption dim2">
+            Sorting reorders what YouTube returned. It does not change the search.
+          </p>
+        </div>
+      )}
 
       <Segmented
         ariaLabel="Explore section"
@@ -134,10 +229,70 @@ export function Explore() {
         </div>
       )}
 
+      {/* ────────────────────────────── the one to watch first */}
+      {!loading && featured && (
+        <section className="section">
+          <SectionHead title="Featured" />
+          <button className="feature" onClick={() => setOpen(featured)}>
+            <span className="feature__art">
+              <AssetImage
+                asset="videoThumbnail" src={featured.thumbnail} alt=""
+                rounded="none" className="feature__img"
+              />
+              <span className="feature__play" aria-hidden="true">
+                <Icon name="play" size={26} />
+              </span>
+              {isoDurationMinutes(featured.durationIso) !== null && (
+                <span className="feature__len num">{isoDurationMinutes(featured.durationIso)} min</span>
+              )}
+            </span>
+            <span className="stack stack-1" style={{ padding: 'var(--s-4)', textAlign: 'left', minWidth: 0 }}>
+              <span className="t-title3">{featured.title}</span>
+              <span className="t-caption dim2">
+                {featured.channelTitle}
+                {compactCount(featured.viewCount) ? ` · ${compactCount(featured.viewCount)} views` : ''}
+              </span>
+            </span>
+          </button>
+        </section>
+      )}
+
+      {/* ────────────────────────────── the next few, at a glance */}
+      {!loading && trending.length > 0 && (
+        <section className="section">
+          <SectionHead title="Trending for you" />
+          <ul className="trend-rail">
+            {trending.map((v) => (
+              <li key={v.id}>
+                <button className="trend" onClick={() => setOpen(v)}>
+                  <AssetImage
+                    asset="videoThumbnail" src={v.thumbnail} alt=""
+                    rounded="none" className="trend__img"
+                  />
+                  <span className="trend__title t-caption strong">{v.title}</span>
+                  <span className="t-micro dim2">{v.channelTitle}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="section">
         <SectionHead
-          title={tab === 'for-you' ? 'Videos' : tab === 'saved' ? 'Saved' : 'From people you follow'}
+          title={tab === 'for-you' ? 'Recommended videos' : tab === 'saved' ? 'Saved' : 'From people you follow'}
           sub={tab === 'for-you' && shown.length ? `${shown.length} results` : undefined}
+          action={
+            shown.length > 1 ? (
+              <button
+                className="btn btn--ghost btn--sm"
+                onClick={() => { haptic('selection'); setShowFilters((f) => !f) }}
+              >
+                {SORTS.find((o) => o.value === sort)?.label}
+                <Icon name="chevron-down" size={14} />
+              </button>
+            ) : undefined
+          }
         />
 
         {loading ? (
@@ -162,7 +317,7 @@ export function Explore() {
           />
         ) : (
           <ul className="stack stack-3 stagger">
-            {shown.map((v) => (
+            {(tab === 'for-you' ? rest : shown).map((v) => (
               <VideoRow
                 key={v.id}
                 video={v}

@@ -1,0 +1,154 @@
+/* ============================================================
+   Ask Jumbo
+
+   A conversation, so the composer is pinned and the thread scrolls
+   under it. The bubbles are asymmetric on purpose: the person's words
+   sit on the brand colour, Jumbo's on a surface, so a glance tells you
+   who said what.
+   ============================================================ */
+
+/* The conversation owns the screen: it cancels the main padding on all four
+   sides so the composer can sit directly above the tab bar rather than
+   floating in the middle of it. */
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - var(--tab-h) - env(safe-area-inset-bottom));
+  margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1)
+          calc(-1 * (var(--tab-h) + var(--s-10) + env(safe-area-inset-bottom)));
+}
+@media (min-width: 768px) { .chat { margin-inline: calc(var(--s-8) * -1); } }
+@media (min-width: 1024px) {
+  .chat {
+    min-height: calc(100dvh - var(--s-10));
+    margin: calc(var(--s-10) * -1) calc(var(--s-8) * -1) calc(var(--s-18) * -1);
+  }
+}
+
+.chat__head {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--glass);
+  -webkit-backdrop-filter: saturate(170%) blur(22px);
+  backdrop-filter: saturate(170%) blur(22px);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.chat__body {
+  flex: 1;
+  display: flex; flex-direction: column; gap: var(--s-5);
+  padding: var(--s-5) var(--s-4) var(--s-6);
+}
+
+/* ------------------------------------------------------------- empty */
+.chat__empty {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-6);
+  padding: var(--s-8) 0;
+}
+
+.chat__prompts {
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  justify-content: center;
+  max-width: 460px;
+}
+.chat__prompts--inline { justify-content: flex-start; }
+.chip--sm { min-height: 34px; padding: 0 var(--s-3); font-size: var(--t-caption); }
+
+/* ------------------------------------------------------------ thread */
+.chat__thread { display: flex; flex-direction: column; gap: var(--s-5); }
+
+.bubble-row {
+  display: flex; align-items: flex-end; gap: var(--s-2);
+  max-width: 100%;
+}
+.bubble-row--you { justify-content: flex-end; }
+.bubble-row--you > .stack { align-items: flex-end; }
+
+.bubble {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-card);
+  max-width: min(560px, 82vw);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.bubble p { overflow-wrap: anywhere; }
+
+.bubble--you {
+  background: var(--brand);
+  color: var(--brand-ink);
+  border-bottom-right-radius: 6px;
+  font-weight: 540;
+}
+.bubble--jumbo {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  border-bottom-left-radius: 6px;
+}
+
+/* Jumbo is writing. Three dots, and nothing else moving on the screen. */
+.typing { display: inline-flex; gap: 5px; padding: var(--s-1) 0; }
+.typing i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-3);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .typing i { animation: typing 1.25s var(--ease) infinite; }
+  .typing i:nth-child(2) { animation-delay: .16s; }
+  .typing i:nth-child(3) { animation-delay: .32s; }
+}
+@keyframes typing {
+  0%, 60%, 100% { opacity: .3; transform: translateY(0) }
+  30%           { opacity: 1;  transform: translateY(-3px) }
+}
+
+/* ---------------------------------------------------------- composer */
+.chat__composer {
+  position: sticky;
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex; align-items: flex-end; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--glass);
+  -webkit-backdrop-filter: saturate(170%) blur(22px);
+  backdrop-filter: saturate(170%) blur(22px);
+  border-top: 1px solid var(--hairline);
+}
+
+.chat__input {
+  flex: 1; min-width: 0;
+  min-height: 46px; max-height: 128px;
+  padding: 12px var(--s-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-firm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit; font-size: var(--t-body);
+  resize: none;
+}
+.chat__input::placeholder { color: var(--ink-3); }
+.chat__input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.chat__input:disabled { opacity: .5; }
+
+/* Dormant until there is something to send — the spec asks for exactly this. */
+.chat__send {
+  flex: none; width: 46px; height: 46px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--brand); color: var(--brand-ink);
+  transition: transform var(--d-fast) var(--ease), opacity var(--d-fast) var(--ease);
+}
+.chat__send:active:not(:disabled) { transform: scale(0.9); }
+.chat__send:disabled {
+  background: var(--surface-3); color: var(--ink-4);
+  cursor: not-allowed;
+}
+
+/* Sits above the composer, so the disclaimer is never orphaned below it. */
+.chat__foot { padding: 0 var(--s-4) var(--s-3); text-align: center; }
+
+@media (min-width: 1024px) {
+  .chat__composer { bottom: 0; }
+}

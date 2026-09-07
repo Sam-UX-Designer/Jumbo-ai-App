@@ -13,15 +13,21 @@ export const RING_DEFS = [
  * state — the only looping motion on the screen is none.
  */
 export function Rings({
-  progress, size = 208, children,
-}: { progress: DailyProgress; size?: number; children?: React.ReactNode }) {
+  progress, size = 208, children, weight = 13.5,
+}: {
+  progress: DailyProgress
+  size?: number
+  children?: React.ReactNode
+  /** Size ÷ stroke. Raise it for thinner rings and a roomier centre. */
+  weight?: number
+}) {
   const [shown, setShown] = useState(false)
   useEffect(() => {
     const t = window.setTimeout(() => setShown(true), 80)
     return () => window.clearTimeout(t)
   }, [])
 
-  const stroke = size / 13.5
+  const stroke = size / weight
   const gap = stroke * 0.5
   const cx = size / 2
 

@@ -11,6 +11,8 @@ export type IconName =
   | 'trash' | 'link' | 'unlink' | 'sync' | 'lock' | 'info' | 'ai' | 'play' | 'clock'
   | 'sun' | 'moon' | 'phone' | 'watch' | 'ring' | 'scale' | 'lab' | 'note'
   | 'bell' | 'sound' | 'external' | 'flag'
+  | 'search' | 'filter' | 'bookmark' | 'more' | 'mic' | 'arrow-up' | 'chevron-down'
+  | 'target' | 'sprout' | 'shield' | 'sparkles'
 
 type Motion = 'none' | 'idle' | 'active' | 'celebrate'
 
@@ -57,6 +59,17 @@ const PATHS: Record<IconName, string> = {
   sound: 'M11.2 5.2 6.8 9H3.4v6h3.4l4.4 3.8V5.2ZM15.4 9.4a3.6 3.6 0 0 1 0 5.2M18.2 6.8a7.4 7.4 0 0 1 0 10.4',
   external: 'M14.4 4.4h5.2v5.2M19.6 4.4 11 13M17 13.6v5a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 18.6V8.4A1.4 1.4 0 0 1 5.4 7h5',
   flag: 'M5.4 21V3.6h11.2l-1.9 4 1.9 4H5.4',
+  search: 'M10.9 18.3a7.4 7.4 0 1 0 0-14.8 7.4 7.4 0 0 0 0 14.8ZM16.3 16.3 20.8 20.8',
+  filter: 'M4 7.2h9M17.6 7.2h2.4M4 16.8h2.4M11 16.8h9M15.2 4.8v4.8M8.6 14.4v4.8',
+  bookmark: 'M6.4 3.9h11.2v16.7L12 16.4l-5.6 4.2V3.9Z',
+  more: 'M12 6.4v.02M12 12v.02M12 17.6v.02',
+  mic: 'M12 3.4a2.7 2.7 0 0 0-2.7 2.7v6a2.7 2.7 0 0 0 5.4 0v-6A2.7 2.7 0 0 0 12 3.4ZM5.6 11.4a6.4 6.4 0 0 0 12.8 0M12 18.2v3',
+  'arrow-up': 'M12 20V4.4M5.4 11 12 4.4 18.6 11',
+  'chevron-down': 'M5.4 9.4 12 16l6.6-6.6',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16.6a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2ZM12 13.4a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8Z',
+  sprout: 'M12 21v-7.4M12 13.6C12 9.4 14.8 6.6 19 6.6c0 4.2-2.8 7-7 7ZM12 15.4c0-3.2-2-5.2-5.2-5.2 0 3.2 2 5.2 5.2 5.2Z',
+  shield: 'M12 3.2 20 6v6.1c0 4.4-3.2 7.4-8 8.7-4.8-1.3-8-4.3-8-8.7V6l8-2.8ZM8.8 12.1l2.3 2.3 4.1-4.4',
+  sparkles: 'M11 3.6l1.5 4.4 4.4 1.5-4.4 1.5L11 15.4 9.5 11 5.1 9.5 9.5 8 11 3.6ZM18.2 14.6l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8.8-2.3Z',
 }
 
 /** Which icons carry their own motion class. */

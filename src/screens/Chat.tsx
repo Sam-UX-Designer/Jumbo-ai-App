@@ -1,0 +1,181 @@
+import { useEffect, useRef, useState } from 'react'
+import '../styles/chat.css'
+import { Icon } from '../components/Icon'
+import { AvatarButton, Mascot } from '../components/Asset'
+import { ErrorNotice, SetupNotice } from '../components/UI'
+import { useStore } from '../state/store'
+import { useChat, QUICK_PROMPTS } from '../lib/useChat'
+import { useNavigate } from '../components/Nav'
+import { haptic } from '../lib/feedback'
+
+/**
+ * Ask Jumbo.
+ *
+ * A real conversation: every reply is a Claude call grounded in a summary of
+ * this person's own records. Nothing here is scripted, so when the API is not
+ * configured the screen says so instead of answering.
+ */
+export function Chat({ initialQuestion }: { initialQuestion?: string }) {
+  const { state } = useStore()
+  const navigate = useNavigate()
+  const chat = useChat()
+  const [draft, setDraft] = useState('')
+  const endRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const sentInitial = useRef(false)
+
+  const firstName = state.profile.name.trim().split(' ')[0]
+
+  // A question handed over from another screen is asked once, on arrival.
+  useEffect(() => {
+    if (!initialQuestion || sentInitial.current || !chat.ready) return
+    sentInitial.current = true
+    chat.send(initialQuestion)
+  }, [initialQuestion, chat])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [chat.messages])
+
+  const submit = () => {
+    if (!draft.trim() || !chat.ready) return
+    chat.send(draft)
+    setDraft('')
+    inputRef.current?.focus()
+  }
+
+  const ask = (question: string) => {
+    if (!chat.ready) return
+    haptic('selection')
+    chat.send(question)
+  }
+
+  return (
+    <div className="chat">
+      <header className="chat__head">
+        <button className="icon-btn" aria-label="Back to Future" onClick={() => navigate('future')}>
+          <Icon name="back" size={20} />
+        </button>
+        <div className="stack" style={{ gap: 0, minWidth: 0 }}>
+          <span className="t-body strong">Ask Jumbo</span>
+          <span className="t-caption dim2">
+            {chat.generating ? 'Thinking…' : 'Grounded in your own data'}
+          </span>
+        </div>
+        <div className="grow" />
+        {chat.messages.length > 0 && (
+          <button className="btn btn--ghost btn--sm" onClick={chat.clear}>Clear</button>
+        )}
+        <AvatarButton size={36} />
+      </header>
+
+      <div className="chat__body">
+        {!chat.ready && (
+          chat.reason?.includes('API is not running')
+            ? <ErrorNotice title="Jumbo’s API is not running" message={chat.reason} />
+            : <SetupNotice title="Ask Jumbo is not connected" message={chat.reason ?? ''} missing={chat.missing} />
+        )}
+
+        {chat.messages.length === 0 ? (
+          <div className="chat__empty">
+            <Mascot size={104} label="Jumbo" />
+            <div className="stack stack-2" style={{ textAlign: 'center' }}>
+              <h1 className="t-title2">
+                {firstName ? `Hi ${firstName}.` : 'Hi.'} Ask me anything about your health.
+              </h1>
+              <p className="t-callout dim" style={{ maxWidth: '34ch', marginInline: 'auto' }}>
+                I can only talk about what your data actually shows. Where it is silent, I will
+                say so rather than guess.
+              </p>
+            </div>
+            <ul className="chat__prompts">
+              {QUICK_PROMPTS.map((q) => (
+                <li key={q}>
+                  <button className="chip" disabled={!chat.ready} onClick={() => ask(q)}>{q}</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <ul className="chat__thread">
+            {chat.messages.map((m) => (
+              <li key={m.id} className={`bubble-row bubble-row--${m.role}`}>
+                {m.role === 'jumbo' && !m.error && <Mascot size={34} thinking={m.pending} />}
+
+                <div className="stack stack-3" style={{ minWidth: 0, maxWidth: '100%' }}>
+                  {m.pending ? (
+                    <div className="bubble bubble--jumbo">
+                      <span className="typing" aria-label="Jumbo is writing an answer">
+                        <i /><i /><i />
+                      </span>
+                    </div>
+                  ) : m.error ? (
+                    <ErrorNotice
+                      title="That answer did not come back"
+                      message={m.error}
+                      onRetry={() => chat.retry(m.id)}
+                    />
+                  ) : (
+                    <div className={`bubble bubble--${m.role}`}>
+                      {m.text.split('\n\n').filter(Boolean).map((para, i) => (
+                        <p key={i} className="t-body">{para}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {!!m.followUps?.length && (
+                    <ul className="chat__prompts chat__prompts--inline">
+                      {m.followUps.map((q) => (
+                        <li key={q}>
+                          <button className="chip chip--sm" onClick={() => ask(q)}>{q}</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div ref={endRef} />
+      </div>
+
+      <p className="chat__foot t-caption dim2">
+        Jumbo is a wellness companion. It does not diagnose and it is not a substitute for
+        professional care.
+      </p>
+
+      <form
+        className="chat__composer"
+        onSubmit={(e) => { e.preventDefault(); submit() }}
+      >
+        <textarea
+          ref={inputRef}
+          className="chat__input"
+          rows={1}
+          value={draft}
+          disabled={!chat.ready}
+          placeholder="Ask about your health…"
+          aria-label="Ask Jumbo anything about your health"
+          onChange={(e) => {
+            setDraft(e.target.value)
+            e.target.style.height = 'auto'
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
+          }}
+        />
+        <button
+          type="submit"
+          className="chat__send"
+          aria-label="Send"
+          disabled={!draft.trim() || !chat.ready}
+        >
+          <Icon name="arrow-up" size={20} strokeWidth={2.2} />
+        </button>
+      </form>
+    </div>
+  )
+}

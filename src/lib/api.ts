@@ -131,6 +131,15 @@ export interface FutureNarrative {
   confidence: number
 }
 
+export interface ChatAnswer {
+  source: 'claude'
+  model: string
+  answer: string
+  followUps: string[]
+  /** The figures Jumbo says it actually used. Shown, so a claim can be checked. */
+  groundedIn: string[]
+}
+
 export interface YoutubeVideo {
   id: string
   title: string
@@ -176,6 +185,13 @@ export const api = {
 
   future: (payload: { baseline: unknown; levers: unknown; projection: unknown; horizonMonths: number }) =>
     call<FutureNarrative>('/ai/future', { method: 'POST', body: JSON.stringify(payload) }),
+
+  chat: (payload: {
+    question: string
+    summary: unknown
+    goals: string[]
+    history: Array<{ role: 'you' | 'jumbo'; text: string }>
+  }) => call<ChatAnswer>('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
 
   youtube: (params: { q?: string; goals?: string[]; limit?: number }) => {
     const qs = new URLSearchParams()

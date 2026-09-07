@@ -64,7 +64,7 @@ export function scheduleReminders(
     if (delay === null) return
 
     const timer = window.setTimeout(() => {
-      fire(kind)
+      fire(kind, () => onFire(kind))
       onFire(kind)
       scheduleReminders(reminders, onFire)   // re-arm for tomorrow
     }, delay)
@@ -74,11 +74,16 @@ export function scheduleReminders(
   return clearAll
 }
 
-function fire(kind: ReminderKind) {
+/**
+ * Raises the notification. Tapping it brings Jumbo forward and opens the
+ * capture the reminder is about, rather than dropping the person on Home.
+ */
+function fire(kind: ReminderKind, onOpen: () => void) {
   if (!notificationsSupported() || Notification.permission !== 'granted') return
   const { title, body } = COPY[kind]
   try {
-    new Notification(`Jumbo · ${title}`, { body, tag: `jumbo-${kind}`, icon: '/favicon.svg' })
+    const n = new Notification(`Jumbo · ${title}`, { body, tag: `jumbo-${kind}`, icon: '/favicon.svg' })
+    n.onclick = () => { window.focus(); n.close(); onOpen() }
   } catch { /* some browsers require a service worker registration; degrade quietly */ }
 }
 

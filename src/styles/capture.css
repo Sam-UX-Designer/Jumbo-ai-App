@@ -93,3 +93,30 @@
   border: 1px solid var(--hairline); background: var(--surface-2);
 }
 .shot-preview img { width: 100%; max-height: 260px; object-fit: cover; }
+
+/* ------------------------------------------------ the camera-first route */
+.snap {
+  display: flex; align-items: center; gap: var(--s-4);
+  width: 100%; padding: var(--s-4);
+  border: 1px dashed var(--brand-line);
+  border-radius: var(--r-card);
+  background: linear-gradient(150deg, var(--brand-dim), transparent 58%), var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: transform var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+}
+.snap:hover  { border-color: var(--brand); }
+.snap:active { transform: scale(0.99); }
+.snap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.snap__shot { width: 92px; height: 92px; flex: none; }
+
+/* The microphone is live. */
+.btn.is-listening { border-color: var(--brand); color: var(--accent-text); }
+@media (prefers-reduced-motion: no-preference) {
+  .btn.is-listening { animation: listening 1.6s var(--ease) infinite; }
+}
+@keyframes listening {
+  0%, 100% { box-shadow: 0 0 0 0 var(--brand-glow) }
+  50%      { box-shadow: 0 0 0 6px transparent }
+}
