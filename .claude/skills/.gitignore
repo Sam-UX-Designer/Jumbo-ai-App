@@ -1,0 +1,2 @@
+# The impeccable launcher downloads its binary on first run; don't commit it.
+impeccable/scripts/bin/
