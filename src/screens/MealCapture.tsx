@@ -15,7 +15,15 @@ type Phase = 'camera' | 'analysing' | 'review' | 'saved'
 
 interface Failure { kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string }
 
-export function MealCapture({ open, onClose, date }: { open: boolean; onClose: () => void; date: string }) {
+export function MealCapture({
+  open, onClose, date, startIn = 'camera',
+}: {
+  open: boolean
+  onClose: () => void
+  date: string
+  /** 'manual' skips the camera and opens straight into building the meal by hand. */
+  startIn?: 'camera' | 'manual'
+}) {
   const { state, dispatch } = useStore()
   const toast = useToast()
 
@@ -29,11 +37,15 @@ export function MealCapture({ open, onClose, date }: { open: boolean; onClose: (
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    if (!open) {
-      setPhase('camera'); setShot(null); setResult(null); setItems([])
-      setFailure(null); setAdding(false); setQuery('')
+    if (open) {
+      // Opened from "Search food" or "Type manually": no camera, straight to
+      // building the meal, with the search already open.
+      if (startIn === 'manual') { setPhase('review'); setAdding(true) }
+      return
     }
-  }, [open])
+    setPhase('camera'); setShot(null); setResult(null); setItems([])
+    setFailure(null); setAdding(false); setQuery('')
+  }, [open, startIn])
 
   const analyse = async (capture: Capture) => {
     setShot(capture)
@@ -100,6 +112,7 @@ export function MealCapture({ open, onClose, date }: { open: boolean; onClose: (
       onClose={onClose}
       title={
         phase === 'camera' ? 'Photograph your meal'
+          : phase === 'review' && !shot ? 'Build your meal'
           : phase === 'analysing' ? 'Reading the plate'
           : phase === 'saved' ? 'Saved'
           : failure ? 'Build the meal' : 'Check before saving'

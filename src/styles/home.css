@@ -1,0 +1,237 @@
+/* ============================================================
+   Home
+
+   The week strip, the score, the four numbers, the way into the AI,
+   and the day's focus. Everything here is sized so the whole screen
+   holds together on a small phone before it gets roomier.
+   ============================================================ */
+
+/* ------------------------------------------------------- week strip */
+.daterail {
+  display: flex;
+  gap: var(--s-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(var(--s-2) * -1);
+  padding-inline: var(--s-2);
+  scroll-padding-inline: var(--s-4);
+}
+.daterail::-webkit-scrollbar { display: none; }
+
+.daterail__day {
+  flex: 1 0 auto;
+  min-width: 46px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: var(--s-2) var(--s-1) var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-card);
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease),
+              color var(--d-fast) var(--ease);
+}
+.daterail__day:hover:not(:disabled) { background: var(--surface); color: var(--ink-2); }
+.daterail__day:disabled { opacity: .38; cursor: default; }
+.daterail__day:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.daterail__label { font-size: var(--t-micro); font-weight: 620; letter-spacing: .03em; }
+.daterail__num   { font-size: var(--t-title3); font-weight: 640; color: var(--ink); line-height: 1; }
+.daterail__ring  { display: block; height: 22px; }
+
+.daterail__day.is-selected {
+  background: var(--brand-dim);
+  border-color: var(--brand);
+  color: var(--accent-text);
+}
+.daterail__day.is-selected .daterail__num { color: var(--ink); }
+
+/* Today is marked even when another day is being read. */
+.daterail__day.is-today:not(.is-selected) .daterail__label { color: var(--accent-text); }
+
+/* ------------------------------------------------------ health score */
+/* Rings above the words on a phone; side by side once there is room for
+   both without squeezing the sentence into a column. */
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  text-align: center;
+}
+.score__say { align-items: center; }
+
+@media (min-width: 560px) {
+  .score { flex-direction: row; text-align: left; gap: var(--s-6); }
+  .score__say { align-items: flex-start; }
+}
+
+.score__num {
+  display: block;
+  font-size: 34px; font-weight: 680; letter-spacing: -0.045em; line-height: 1;
+  color: var(--ink);
+}
+.score__cap {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px; font-weight: 660; line-height: 1.3;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* The AI's read of the day, inside the score card. */
+.insight-card {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--brand-line);
+  background: var(--brand-dim);
+  color: var(--ink);
+  text-align: left;
+}
+.insight-card--tap { cursor: pointer; transition: transform var(--d-fast) var(--ease); }
+.insight-card--tap:active { transform: scale(0.985); }
+.insight-card--tap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ------------------------------------------------------ key metrics */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+@media (min-width: 560px) { .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.metric {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  min-width: 0;
+}
+.metric__value {
+  font-size: var(--t-title2); font-weight: 660; letter-spacing: -0.03em;
+  line-height: 1.1; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.metric__delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: var(--s-2);
+  font-size: var(--t-caption); font-weight: 620;
+  color: var(--ink-3);
+}
+.metric__delta.is-up   { color: var(--positive); }
+.metric__delta.is-down { color: var(--caution); }
+
+/* --------------------------------------------------------- ask card */
+.ask-card {
+  display: flex; align-items: center; gap: var(--s-4);
+  width: 100%; padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--hairline-firm);
+  border-radius: var(--r-card);
+  background:
+    linear-gradient(180deg, var(--brand-dim), transparent 62%),
+    var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+}
+.ask-card:hover  { border-color: var(--brand-line); }
+.ask-card:active { transform: scale(0.99); }
+.ask-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ------------------------------------------------------ daily focus */
+.focus-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-3);
+}
+@media (min-width: 560px) { .focus-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.focus {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  min-width: 0;
+}
+@media (min-width: 560px) {
+  .focus { flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+  .focus .grow { flex: none; }
+}
+.focus.is-done { border-color: var(--brand-line); background: var(--brand-dim); }
+.focus .t-callout { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ============================================================
+   Future
+   ============================================================ */
+
+/* Jumbo's greeting. A speech bubble with a tail towards the mascot. */
+.speech {
+  position: relative;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--hairline-firm);
+  background: var(--surface);
+  min-width: 0;
+}
+.speech::before {
+  content: '';
+  position: absolute; left: -7px; top: 26px;
+  width: 12px; height: 12px;
+  background: var(--surface);
+  border-left: 1px solid var(--hairline-firm);
+  border-bottom: 1px solid var(--hairline-firm);
+  transform: rotate(45deg);
+}
+
+/* A recommendation, sized like a focus card so the two rows rhyme. */
+.reco {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2);
+  width: 100%; height: 100%;
+  padding: var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
+}
+.reco:hover  { border-color: var(--brand-line); }
+.reco:active { transform: scale(0.99); }
+.reco:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* The always-available way into the conversation. */
+.ask-bar {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border: 1px solid var(--hairline-firm);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--d-fast) var(--ease);
+}
+.ask-bar:hover { border-color: var(--brand-line); }
+.ask-bar:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.ask-bar__go {
+  flex: none; width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--brand); color: var(--brand-ink);
+}
+
+/* A metric you can open. */
+.metric--tap {
+  width: 100%; height: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  transition: border-color var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
+}
+.metric--tap:hover  { border-color: var(--hairline-firm); }
+.metric--tap:active { transform: scale(0.985); }
+.metric--tap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }

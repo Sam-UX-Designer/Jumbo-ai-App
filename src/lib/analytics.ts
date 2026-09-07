@@ -1,5 +1,5 @@
 import type { Baseline, DayRecord, Insight, Measurement } from '../data/types'
-import { mean, median, round, trendPerDay, clamp, sum } from './util'
+import { mean, median, round, trendPerDay, clamp, sum, hoursToHM } from './util'
 import { mealTotals } from '../data/foods'
 
 export const lastN = (days: DayRecord[], n: number) => days.slice(Math.max(0, days.length - n))
@@ -366,5 +366,181 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
       count: measurements.length,
     },
     notes: 'All figures are this person\'s own records. Do not invent any number that is not present here.',
+  }
+}
+
+/* ============================================================
+   Home: the four headline numbers, and the day's focus.
+   ============================================================ */
+
+export interface KeyMetric {
+  key: 'sleep' | 'movement' | 'nutrition' | 'recovery'
+  label: string
+  icon: 'sleep' | 'steps' | 'plate' | 'heart'
+  colour: string
+  value: string
+  unit: string
+  /** Change against the seven days before this one, or null when there is no basis. */
+  deltaPct: number | null
+  /** Used instead of a percentage where a percentage would mislead. */
+  note?: string
+  ring: number
+}
+
+/**
+ * The four numbers Home leads with, each compared against the person's own
+ * previous seven days rather than a population average. A day with no history
+ * behind it reports no change rather than inventing one.
+ */
+export function keyMetrics(days: DayRecord[], date: string, base: Baseline): KeyMetric[] {
+  const index = days.findIndex((d) => d.date === date)
+  const day = index >= 0 ? days[index] : days[days.length - 1]
+  const prior = index > 0 ? days.slice(Math.max(0, index - 7), index) : []
+  const progress = dailyProgress(day, base)
+
+  const change = (now: number, before: number[]) => {
+    const past = mean(before.filter((v) => v > 0))
+    if (!past || !now) return null
+    return round(((now - past) / past) * 100, 0)
+  }
+
+  const kcal = dayKcal(day)
+  const protein = dayProtein(day)
+  const proteinTarget = Math.max(90, Math.round(base.weightKg * 1.6))
+
+  return [
+    {
+      key: 'sleep',
+      label: 'Sleep',
+      icon: 'sleep',
+      colour: 'var(--sleep)',
+      value: day.sleepHours > 0 ? hoursToHM(day.sleepHours) : '—',
+      unit: day.sleepEfficiency ? `${day.sleepEfficiency}% efficiency` : 'not recorded',
+      deltaPct: change(day.sleepHours, prior.map((d) => d.sleepHours)),
+      ring: progress.sleep,
+    },
+    {
+      key: 'movement',
+      label: 'Movement',
+      icon: 'steps',
+      colour: 'var(--movement)',
+      value: day.steps > 0 ? day.steps.toLocaleString() : '—',
+      unit: 'steps',
+      deltaPct: change(day.steps, prior.map((d) => d.steps)),
+      ring: progress.movement,
+    },
+    {
+      key: 'nutrition',
+      label: 'Nutrition',
+      icon: 'plate',
+      colour: 'var(--nutrition)',
+      value: kcal > 0 ? kcal.toLocaleString() : '—',
+      unit: 'kcal',
+      deltaPct: null,
+      note: day.meals.length === 0
+        ? 'Nothing logged'
+        : protein >= proteinTarget ? 'On target' : `${protein} of ${proteinTarget} g protein`,
+      ring: progress.nourish,
+    },
+    {
+      key: 'recovery',
+      label: 'Recovery',
+      icon: 'heart',
+      colour: 'var(--recovery)',
+      value: day.hrv > 0 ? String(Math.round(progress.recovery * 100)) : '—',
+      unit: '/ 100',
+      deltaPct: change(day.hrv, prior.map((d) => d.hrv)),
+      ring: progress.recovery,
+    },
+  ]
+}
+
+export interface FocusItem {
+  id: string
+  title: string
+  sub: string
+  icon: 'steps' | 'plate' | 'sleep'
+  colour: string
+  progress: number
+  done: boolean
+}
+
+/**
+ * Today's focus: three small, finishable things, each one derived from where
+ * this person actually is against their own baseline. Never a fixed list.
+ */
+export function todaysFocus(day: DayRecord, base: Baseline): FocusItem[] {
+  const progress = dailyProgress(day, base)
+  const stepTarget = day.restDay ? Math.max(4500, Math.round(base.steps * 0.6)) : Math.max(7000, Math.round(base.steps))
+  const stepsShort = Math.max(0, stepTarget - day.steps)
+  // Roughly 100 steps a minute at an easy walking pace.
+  const walkMinutes = Math.max(10, Math.round(stepsShort / 100 / 5) * 5)
+
+  const protein = dayProtein(day)
+  const proteinTarget = Math.max(90, Math.round(base.weightKg * 1.6))
+
+  const bedHour = Math.min(23.5, round(base.sleepHours > 0 ? 23.5 : 23, 1))
+  const bedLabel = `${Math.floor(bedHour)}:${String(Math.round((bedHour % 1) * 60)).padStart(2, '0')}`
+
+  return [
+    {
+      id: 'move',
+      title: stepsShort > 0 ? `${walkMinutes} min walk` : 'Movement done',
+      sub: stepsShort > 0 ? `${stepsShort.toLocaleString()} steps to go` : `${day.steps.toLocaleString()} steps`,
+      icon: 'steps',
+      colour: 'var(--movement)',
+      progress: progress.movement,
+      done: stepsShort === 0,
+    },
+    {
+      id: 'protein',
+      title: 'Protein target',
+      sub: `${protein} / ${proteinTarget} g`,
+      icon: 'plate',
+      colour: 'var(--nutrition)',
+      progress: clamp(protein / proteinTarget, 0, 1),
+      done: protein >= proteinTarget,
+    },
+    {
+      id: 'wind-down',
+      title: 'Wind down',
+      sub: `Bed by ${bedLabel}`,
+      icon: 'sleep',
+      colour: 'var(--sleep)',
+      progress: day.bedtimeHour > 0 && day.bedtimeHour <= bedHour ? 1 : 0,
+      done: day.bedtimeHour > 0 && day.bedtimeHour <= bedHour,
+    },
+  ]
+}
+
+/** The one-line state of the day, in the product's own voice. */
+export function motivationalStatus(p: DailyProgress): { headline: string; body: string } {
+  if (p.restDay) {
+    return {
+      headline: 'Resting',
+      body: 'A rest day is part of the plan. Sleep and food are what matter today.',
+    }
+  }
+  if (p.overall >= 0.7) {
+    return {
+      headline: 'On track',
+      body: 'You’re building a healthier, brighter tomorrow.',
+    }
+  }
+  if (p.recovery < 0.35) {
+    return {
+      headline: 'Take it easy',
+      body: 'Recovery is running low. An easy day will serve you better than a hard one.',
+    }
+  }
+  if (p.overall >= 0.4) {
+    return {
+      headline: 'Building',
+      body: 'A normal day so far. Nothing needs fixing.',
+    }
+  }
+  return {
+    headline: 'Early days',
+    body: 'The day is still young. One small thing moves it.',
   }
 }

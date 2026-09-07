@@ -29,8 +29,24 @@ export interface Settings {
  */
 export type DataMode = 'demo' | 'live'
 
+/** One turn of the conversation with Jumbo. */
+export interface ChatMessage {
+  id: string
+  role: 'you' | 'jumbo'
+  text: string
+  /** Follow-ups Jumbo offered after this answer. */
+  followUps?: string[]
+  /** Set when this turn failed, so the UI can offer a retry. */
+  error?: string
+  pending?: boolean
+}
+
 export interface Persisted {
   onboarded: boolean
+  /** True once the six-digit code was entered. The phone is the account key. */
+  phoneVerified: boolean
+  /** What the person allowed Jumbo to read, by metric. */
+  permissions: Record<string, boolean>
   profile: Profile
   goals: GoalKey[]
   dataMode: DataMode
@@ -55,6 +71,11 @@ export interface State extends Persisted {
   baseline: Baseline
   today: string
   hydrated: boolean
+
+  /** The day Home is showing. Always a real date, never ahead of today. */
+  selectedDate: string
+  /** The active conversation. Kept for the session, never written to disk. */
+  chat: ChatMessage[]
 
   /** Server capability report. null until the first /api/config call returns. */
   server: ServerConfig | null
@@ -84,8 +105,14 @@ const defaultReminders: Reminders = {
   workout: '18:00',
 }
 
+export const DEFAULT_PERMISSIONS: Record<string, boolean> = {
+  sleep: true, steps: true, workouts: true, heart: true, body: true,
+}
+
 const defaultPersisted: Persisted = {
   onboarded: false,
+  phoneVerified: false,
+  permissions: { ...DEFAULT_PERMISSIONS },
   profile: { name: '', phone: '' },
   goals: [],
   dataMode: 'demo',
@@ -110,6 +137,13 @@ export type Action =
   | { type: 'toggleGoal'; goal: GoalKey }
   | { type: 'setGoals'; goals: GoalKey[] }
   | { type: 'setDataMode'; mode: DataMode }
+  | { type: 'setPhoneVerified'; verified: boolean }
+  | { type: 'setPermission'; key: string; value: boolean }
+  | { type: 'selectDate'; date: string }
+  | { type: 'chatSend'; id: string; text: string }
+  | { type: 'chatReply'; id: string; text: string; followUps: string[] }
+  | { type: 'chatFail'; id: string; message: string }
+  | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
   | { type: 'resetAll' }
   | { type: 'addMeal'; date: string; meal: MealEntry }
@@ -174,12 +208,16 @@ function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
   })
 }
 
-type Runtime = Pick<State, 'server' | 'serverReachable' | 'providers' | 'liveDays' | 'syncErrors' | 'lastSyncAt' | 'syncing' | 'bootstrapped'>
+type Runtime = Pick<State,
+  'server' | 'serverReachable' | 'providers' | 'liveDays' | 'syncErrors' | 'lastSyncAt'
+  | 'syncing' | 'bootstrapped' | 'selectedDate' | 'chat'>
 
 const emptyRuntime: Runtime = {
   server: null, serverReachable: null, providers: [],
   liveDays: [], syncErrors: [], lastSyncAt: null, syncing: false,
   bootstrapped: false,
+  selectedDate: TODAY,
+  chat: [],
 }
 
 function derive(p: Persisted, rt: Runtime): State {
@@ -195,6 +233,9 @@ function derive(p: Persisted, rt: Runtime): State {
     baseline: computeBaseline(days, measurements),
     today: TODAY,
     hydrated: true,
+    // A day that no longer exists (a shorter history after a sync) falls back
+    // to today rather than leaving Home pointing at nothing.
+    selectedDate: days.some((d) => d.date === rt.selectedDate) ? rt.selectedDate : TODAY,
   }
 }
 
@@ -202,7 +243,8 @@ const persistedOf = (s: State): Persisted => {
   const {
     days: _d, measurements: _m, baseline: _b, today: _t, hydrated: _h,
     server: _s, serverReachable: _sr, providers: _p, liveDays: _l,
-    syncErrors: _e, lastSyncAt: _ls, syncing: _sy, bootstrapped: _bs, ...rest
+    syncErrors: _e, lastSyncAt: _ls, syncing: _sy, bootstrapped: _bs,
+    selectedDate: _sd, chat: _c, ...rest
   } = s
   return rest
 }
@@ -211,6 +253,7 @@ const runtimeOf = (s: State): Runtime => ({
   server: s.server, serverReachable: s.serverReachable, providers: s.providers,
   liveDays: s.liveDays, syncErrors: s.syncErrors, lastSyncAt: s.lastSyncAt,
   syncing: s.syncing, bootstrapped: s.bootstrapped,
+  selectedDate: s.selectedDate, chat: s.chat,
 })
 
 function reducer(state: State, action: Action): State {
@@ -226,6 +269,7 @@ function reducer(state: State, action: Action): State {
         settings: { ...defaultSettings, ...(action.payload.settings ?? {}) },
         reminders: { ...defaultReminders, ...(action.payload.reminders ?? {}) },
         profile: { ...defaultPersisted.profile, ...(action.payload.profile ?? {}) },
+        permissions: { ...DEFAULT_PERMISSIONS, ...(action.payload.permissions ?? {}) },
       }, { ...rt, bootstrapped: true })
 
     case 'setProfile': return next({ profile: { ...p.profile, ...action.profile } })
@@ -237,7 +281,40 @@ function reducer(state: State, action: Action): State {
       })
     case 'setGoals': return next({ goals: action.goals })
     case 'setDataMode': return next({ dataMode: action.mode })
+    case 'setPhoneVerified': return next({ phoneVerified: action.verified })
+    case 'setPermission': return next({ permissions: { ...p.permissions, [action.key]: action.value } })
     case 'finishOnboarding': return next({ onboarded: true })
+
+    /* Day selection and the conversation live outside `Persisted`, so they are
+       patched straight onto state rather than round-tripped through derive(). */
+    case 'selectDate':
+      return state.days.some((d) => d.date === action.date)
+        ? { ...state, selectedDate: action.date }
+        : state
+    case 'chatSend':
+      return {
+        ...state,
+        chat: [
+          ...state.chat,
+          { id: `${action.id}-you`, role: 'you', text: action.text },
+          { id: action.id, role: 'jumbo', text: '', pending: true },
+        ],
+      }
+    case 'chatReply':
+      return {
+        ...state,
+        chat: state.chat.map((m) => (m.id === action.id
+          ? { ...m, text: action.text, followUps: action.followUps, pending: false, error: undefined }
+          : m)),
+      }
+    case 'chatFail':
+      return {
+        ...state,
+        chat: state.chat.map((m) => (m.id === action.id
+          ? { ...m, pending: false, error: action.message }
+          : m)),
+      }
+    case 'chatClear': return { ...state, chat: [] }
     case 'resetAll':
       return derive({ ...defaultPersisted, theme: p.theme }, {
         ...emptyRuntime, bootstrapped: true,

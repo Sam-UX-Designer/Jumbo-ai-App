@@ -57,3 +57,31 @@
   background: var(--brand); color: var(--brand-ink);
 }
 .import-count { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------- verification */
+.otp { display: flex; gap: var(--s-2); }
+
+.otp__box {
+  flex: 1; min-width: 0;
+  height: 60px;
+  padding: 0;
+  text-align: center;
+  font-size: var(--t-title2); font-weight: 660;
+  border: 1px solid var(--hairline-firm);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  color: var(--ink);
+}
+.otp__box:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.otp__box.is-wrong { border-color: var(--critical); }
+@media (prefers-reduced-motion: no-preference) {
+  .otp__box.is-wrong { animation: shake 320ms var(--ease); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0) }
+  25%      { transform: translateX(-4px) }
+  75%      { transform: translateX(4px) }
+}
+
+/* A wide artwork band, for the future preview. */
+.ob-art--band { aspect-ratio: 3 / 1; max-height: 180px; object-fit: cover; }

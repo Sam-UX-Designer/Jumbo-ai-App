@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../styles/capture.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
-import { AssetImage } from '../components/Asset'
-import { Empty, ScreenHead, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
+import { AssetImage, AvatarButton } from '../components/Asset'
+import { DateRail } from '../components/DateRail'
+import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
+import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
 import { useStore } from '../state/store'
 import type { Measurement, MeasurementKind, WorkoutEntry, WorkoutType } from '../data/types'
@@ -12,6 +14,9 @@ import { celebrate, haptic } from '../lib/feedback'
 import { prettyDate, uid } from '../lib/util'
 
 type Modal = null | 'meal' | 'workout' | 'measurement' | 'note'
+
+/** Where a capture starts from, so the sheet can open in the right mode. */
+type MealMode = 'camera' | 'manual'
 
 const WORKOUT_TYPES: WorkoutType[] =
   ['Run', 'Strength', 'Walk', 'Cycle', 'Swim', 'Yoga', 'Mobility', 'Hike', 'Row', 'Other']
@@ -30,10 +35,26 @@ const MEASURE_KINDS: Array<{ kind: MeasurementKind; label: string; unit: string;
 export function Capture() {
   const { state, dispatch } = useStore()
   const [modal, setModal] = useState<Modal>(null)
-  const today = state.days[state.days.length - 1]
+  const [mealMode, setMealMode] = useState<MealMode>('camera')
+  const [dictate, setDictate] = useState(false)
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
+
+  // Capture writes to the day Home is showing, so a forgotten meal lands on
+  // the right date rather than always on today.
+  const date = state.selectedDate
+  const today = state.days.find((d) => d.date === date) ?? state.days[state.days.length - 1]
+  const isToday = date === state.today
   const progress = dailyProgress(today, state.baseline)
+
+  // Only offered where the browser genuinely supports it.
+  const dictation = useDictation(() => {})
+
+  const openMeal = (mode: MealMode) => {
+    haptic('selection')
+    setMealMode(mode)
+    setModal('meal')
+  }
 
   const logged = [
     ...today.meals.map((m) => ({
@@ -45,17 +66,20 @@ export function Capture() {
        */
       photo: null as string | null,
       title: `${m.slot} · ${mealTotals(m.items).kcal} kcal`,
-      sub: `${m.items.length} items · ${m.method === 'camera' ? 'from a photo' : m.method === 'manual' ? 'entered by hand' : 'imported'}`,
+      time: m.time,
+      sub: m.items.slice(0, 3).map((i) => i.name).join(', ') || `${m.items.length} items`,
       remove: m.method !== 'imported' ? () => dispatch({ type: 'removeMeal', date: today.date, mealId: m.id }) : undefined,
     })),
     ...(today.workout ? [{
       id: today.workout.id, icon: 'training' as IconName, colour: 'var(--training)', photo: undefined,
+      time: '',
       title: `${today.workout.type} · ${today.workout.minutes} min`,
       sub: `${['easy', 'moderate', 'hard'][today.workout.intensity - 1]}${today.workout.perceivedEffort ? ` · felt ${today.workout.perceivedEffort}/10` : ''}`,
       remove: today.workout.source === 'manual' ? () => dispatch({ type: 'removeWorkout', date: today.date }) : undefined,
     }] : []),
     ...(today.notes ? [{
       id: 'note', icon: 'note' as IconName, colour: 'var(--sleep)', photo: undefined,
+      time: '',
       title: 'Note', sub: today.notes,
       remove: () => dispatch({ type: 'setNote', date: today.date, note: '' }),
     }] : []),
@@ -63,16 +87,26 @@ export function Capture() {
 
   return (
     <div className="stack stack-10">
-      <ScreenHead
-        eyebrow="Capture"
-        title="Add what your devices can’t see"
-        sub="Sleep, steps and heart data arrive on their own. This is only for the gaps."
-      />
+      <header className="stack stack-5">
+        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+          <div className="stack stack-1" style={{ minWidth: 0 }}>
+            <p className="eyebrow">Capture</p>
+            <h1 className="t-title1">
+              {isToday ? 'Add today’s data' : `Add to ${prettyDate(date)}`}
+            </h1>
+          </div>
+          <AvatarButton />
+        </div>
+        <p className="t-callout dim" style={{ maxWidth: '44ch' }}>
+          Sleep, steps and heart data arrive on their own. This is only for the gaps.
+        </p>
+        <DateRail selected={date} onSelect={(d) => dispatch({ type: 'selectDate', date: d })} />
+      </header>
 
       <section className="cap-tiles stagger">
         <CaptureTile
-          icon="camera" colour="var(--nutrition)" title="Meal" sub="Photo, then correct"
-          primary onClick={() => { haptic('selection'); setModal('meal') }}
+          icon="camera" colour="var(--nutrition)" title="Meal" sub="Photo, then AI"
+          primary onClick={() => openMeal('camera')}
         />
         <CaptureTile
           icon="training" colour="var(--training)" title="Workout" sub="Type, time, effort"
@@ -84,7 +118,7 @@ export function Capture() {
         />
         <CaptureTile
           icon="note" colour="var(--sleep)" title="Note" sub="How today felt"
-          onClick={() => { haptic('selection'); setModal('note') }}
+          onClick={() => { haptic('selection'); setDictate(false); setModal('note') }}
         />
       </section>
 
@@ -98,14 +132,53 @@ export function Capture() {
         </div>
       )}
 
+      {/* ────────────────────────────── the camera-first route, up front */}
+      <button className="snap" onClick={() => openMeal('camera')}>
+        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="snap__shot" />
+        <span className="stack stack-2 grow" style={{ minWidth: 0, textAlign: 'left' }}>
+          <span className="t-title3">Snap your meal</span>
+          <span className="t-caption dim">
+            Take a photo and Jumbo’s AI estimates the foods, portions and nutrition. You correct
+            it before anything is saved.
+          </span>
+          <span className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start', pointerEvents: 'none' }}>
+            <Icon name="camera" size={15} /> Take photo
+          </span>
+        </span>
+      </button>
+
+      {/* ────────────────────────────── the other ways in */}
+      <section className="stack stack-3">
+        <SectionHead title="More ways to add" />
+        <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
+          <button className="chip" onClick={() => openMeal('manual')}>
+            <Icon name="search" size={16} /> Search food
+          </button>
+          {dictation.supported && (
+            <button
+              className="chip"
+              onClick={() => { haptic('selection'); setDictate(true); setModal('note') }}
+            >
+              <Icon name="mic" size={16} /> Voice log
+            </button>
+          )}
+          <button className="chip" onClick={() => openMeal('manual')}>
+            <Icon name="note" size={16} /> Type manually
+          </button>
+        </div>
+      </section>
+
       <section className="section">
-        <SectionHead title="Logged today" sub={prettyDate(today.date)} />
+        <SectionHead
+          title="Recently added"
+          sub={isToday ? prettyDate(today.date) : `On ${prettyDate(today.date)}`}
+        />
         {logged.length === 0 ? (
           <Empty
             icon="plate"
             title="Nothing added yet"
             body="Food is the one thing a wearable cannot see. A photo takes about five seconds."
-            action={<button className="btn btn--primary" onClick={() => setModal('meal')}>
+            action={<button className="btn btn--primary" onClick={() => openMeal('camera')}>
               <Icon name="camera" size={16} /> Photograph a meal
             </button>}
           />
@@ -130,6 +203,7 @@ export function Capture() {
                   <span className="t-callout strong">{row.title}</span>
                   <span className="t-caption dim2" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</span>
                 </div>
+                {row.time && <span className="t-caption dim2 num none">{row.time}</span>}
                 {row.remove && (
                   <button
                     className="icon-btn" aria-label={`Remove ${row.title}`}
@@ -149,10 +223,16 @@ export function Capture() {
         )}
       </section>
 
-      <MealCapture open={modal === 'meal'} onClose={() => setModal(null)} date={today.date} />
+      <MealCapture
+        open={modal === 'meal'} onClose={() => setModal(null)}
+        date={today.date} startIn={mealMode}
+      />
       <WorkoutSheet open={modal === 'workout'} onClose={() => setModal(null)} date={today.date} />
       <MeasurementSheet open={modal === 'measurement'} onClose={() => setModal(null)} />
-      <NoteSheet open={modal === 'note'} onClose={() => setModal(null)} date={today.date} initial={today.notes ?? ''} />
+      <NoteSheet
+        open={modal === 'note'} onClose={() => setModal(null)}
+        date={today.date} initial={today.notes ?? ''} autoDictate={dictate}
+      />
       {confirmNode}
     </div>
   )
@@ -324,34 +404,68 @@ function MeasurementSheet({ open, onClose }: { open: boolean; onClose: () => voi
 
 /* ------------------------------------------------------------------- note */
 function NoteSheet({
-  open, onClose, date, initial,
-}: { open: boolean; onClose: () => void; date: string; initial: string }) {
+  open, onClose, date, initial, autoDictate,
+}: {
+  open: boolean; onClose: () => void; date: string; initial: string; autoDictate?: boolean
+}) {
   const { dispatch } = useStore()
   const toast = useToast()
   const [text, setText] = useState(initial)
 
+  // Dictated words are appended, so speaking twice adds to the note rather
+  // than replacing it.
+  const dictation = useDictation((heard) => {
+    setText((t) => (t ? `${t.replace(/\s+$/, '')} ${heard}` : heard).slice(0, 400))
+  })
+
+  // Opened from "Voice log", so start listening rather than making them tap
+  // the microphone a second time.
+  useEffect(() => {
+    if (open && autoDictate && dictation.supported && !dictation.listening) dictation.start()
+    if (!open && dictation.listening) dictation.stop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoDictate])
+
+  const close = () => { dictation.stop(); onClose() }
+
   return (
     <Sheet
-      open={open} onClose={onClose} title="Note"
+      open={open} onClose={close} title="Note"
       subtitle="Context the numbers miss: travel, stress, a cold, a good day."
       footer={
         <>
-          <button className="btn btn--secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn--secondary" onClick={close}>Cancel</button>
           <button className="btn btn--primary grow" onClick={() => {
+            dictation.stop()
             dispatch({ type: 'setNote', date, note: text.trim() })
             haptic('success'); toast({ text: 'Note saved', icon: 'note' }); onClose()
           }}>Save note</button>
         </>
       }
     >
-      <div className="field">
-        <label className="sr-only" htmlFor="day-note">Note for today</label>
-        <textarea
-          id="day-note" className="textarea" value={text} maxLength={400}
-          placeholder="Flew back last night, slept badly, taking today easy."
-          onChange={(e) => setText(e.target.value)}
-        />
-        <span className="field__hint">{text.length}/400 · Notes stay on this device.</span>
+      <div className="stack stack-3">
+        <div className="field">
+          <label className="sr-only" htmlFor="day-note">Note for this day</label>
+          <textarea
+            id="day-note" className="textarea" value={text} maxLength={400}
+            placeholder="Flew back last night, slept badly, taking today easy."
+            onChange={(e) => setText(e.target.value)}
+          />
+          <span className="field__hint">{text.length}/400 · Notes stay on this device.</span>
+        </div>
+
+        {dictation.supported && (
+          <button
+            className={`btn btn--secondary${dictation.listening ? ' is-listening' : ''}`}
+            style={{ alignSelf: 'flex-start' }}
+            aria-pressed={dictation.listening}
+            onClick={() => { haptic('selection'); dictation.toggle() }}
+          >
+            <Icon name="mic" size={16} />
+            {dictation.listening ? 'Listening — tap to stop' : 'Dictate instead'}
+          </button>
+        )}
+        {dictation.error && <p className="t-caption" style={{ color: 'var(--caution)' }}>{dictation.error}</p>}
       </div>
     </Sheet>
   )

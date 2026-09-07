@@ -39,11 +39,14 @@
   --hairline:      rgba(255, 255, 255, 0.075);
   --hairline-firm: rgba(255, 255, 255, 0.16);
 
-  /* ── Health dimensions ───────────────────────────────────── */
-  --sleep:      #6E7BFF;  --sleep-dim:      rgba(110, 123, 255, 0.16);
+  /* ── Health dimensions ──────────────────────────────────────
+     The four ring colours are named by the specification: sleep violet,
+     movement mint, food amber, recovery blue. Training keeps the coral so
+     it never reads as a fifth ring. */
+  --sleep:      #A78BFF;  --sleep-dim:      rgba(167, 139, 255, 0.16);
   --movement:   #2ED8A7;  --movement-dim:   rgba(46, 216, 167, 0.16);
   --nutrition:  #FFA53D;  --nutrition-dim:  rgba(255, 165, 61, 0.16);
-  --recovery:   #B57BFF;  --recovery-dim:   rgba(181, 123, 255, 0.16);
+  --recovery:   #4E8CFF;  --recovery-dim:   rgba(78, 140, 255, 0.16);
   --training:   #FF5C7A;  --training-dim:   rgba(255, 92, 122, 0.16);
   --measure:    #46C8F5;  --measure-dim:    rgba(70, 200, 245, 0.16);
 
@@ -92,7 +95,8 @@
   --d-slow: 420ms;
   --d-story: 720ms;
 
-  --tab-h: 62px;
+  --tab-h: 66px;
+  --fab:   56px;
   --maxw: 1120px;
 }
 
@@ -123,10 +127,10 @@
   --hairline:      rgba(11, 13, 10, 0.09);
   --hairline-firm: rgba(11, 13, 10, 0.18);
 
-  --sleep:     #4550D6;  --sleep-dim:     rgba(69, 80, 214, 0.11);
+  --sleep:     #6B3FD4;  --sleep-dim:     rgba(107, 63, 212, 0.11);
   --movement:  #0E8A68;  --movement-dim:  rgba(14, 138, 104, 0.11);
   --nutrition: #A45B00;  --nutrition-dim: rgba(164, 91, 0, 0.11);
-  --recovery:  #7639C9;  --recovery-dim:  rgba(118, 57, 201, 0.11);
+  --recovery:  #1A5FD0;  --recovery-dim:  rgba(26, 95, 208, 0.11);
   --training:  #C1304C;  --training-dim:  rgba(193, 48, 76, 0.11);
   --measure:   #0A6F92;  --measure-dim:   rgba(10, 111, 146, 0.11);
 

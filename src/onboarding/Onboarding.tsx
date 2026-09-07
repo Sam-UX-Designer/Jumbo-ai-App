@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/onboarding.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
-import { AssetImage, BrandMark, BrandWordmark, SourceLogo } from '../components/Asset'
-import { Confidence, ErrorNotice, ProvenanceTag, SetupNotice } from '../components/UI'
+import { AssetImage, BrandMark, BrandWordmark, Mascot, SourceLogo } from '../components/Asset'
+import { Confidence, ErrorNotice, ProvenanceTag, SetupNotice, Switch } from '../components/UI'
 import { Sparkline } from '../components/Charts'
 import { useStore } from '../state/store'
 import { api, type ProviderInfo } from '../lib/api'
@@ -10,10 +10,28 @@ import { nativeBridge } from '../lib/native'
 import type { GoalKey } from '../data/types'
 import { celebrate, haptic, playSound } from '../lib/feedback'
 import { lastN } from '../lib/analytics'
+import { QUICK_PROMPTS } from '../lib/useChat'
+import { requestNotificationPermission } from '../lib/reminders'
 import { hoursToHM, round } from '../lib/util'
 
-const STEPS = ['welcome', 'you', 'goals', 'connect', 'import', 'baseline', 'ready'] as const
+/**
+ * The journey, in the order the storyboard sets out: who you are, what you
+ * want, what you already have, what Jumbo made of it, and what happens next.
+ * Fourteen short screens rather than one long form.
+ */
+const STEPS = [
+  'welcome', 'you', 'verify', 'goals', 'connect', 'permissions', 'import',
+  'summary', 'insight', 'ask', 'preview', 'celebrate', 'reminders', 'ready',
+] as const
 type Step = (typeof STEPS)[number]
+
+const PERMISSIONS: Array<{ key: string; label: string; detail: string; icon: IconName; colour: string }> = [
+  { key: 'sleep',    label: 'Sleep',             detail: 'Duration, efficiency and bedtime',  icon: 'sleep',   colour: 'var(--sleep)' },
+  { key: 'steps',    label: 'Steps',             detail: 'Daily steps and active minutes',    icon: 'steps',   colour: 'var(--movement)' },
+  { key: 'workouts', label: 'Workouts',          detail: 'Type, duration and intensity',      icon: 'training',colour: 'var(--training)' },
+  { key: 'heart',    label: 'Heart rate',        detail: 'Resting heart rate and HRV',        icon: 'heart',   colour: 'var(--recovery)' },
+  { key: 'body',     label: 'Body measurements', detail: 'Weight, body fat and lean mass',    icon: 'measure', colour: 'var(--measure)' },
+]
 
 const GOALS: Array<{ key: GoalKey; label: string; detail: string; icon: IconName }> = [
   { key: 'energy',      label: 'More energy',    detail: 'Steadier through the day', icon: 'bolt' },
@@ -56,11 +74,18 @@ export function Onboarding() {
         </div>
 
         {step === 'welcome' && <Welcome onNext={() => go('you')} onSkip={exploreWithSamples} />}
-        {step === 'you' && <YouStep onNext={() => go('goals')} />}
+        {step === 'you' && <YouStep onNext={() => go('verify')} />}
+        {step === 'verify' && <VerifyStep onNext={() => go('goals')} />}
         {step === 'goals' && <GoalsStep onNext={() => go('connect')} />}
-        {step === 'connect' && <ConnectStep onNext={() => go('import')} onSkip={() => { dispatch({ type: 'setDataMode', mode: 'demo' }); go('import') }} />}
-        {step === 'import' && <ImportStep onNext={() => go('baseline')} onSync={sync} />}
-        {step === 'baseline' && <BaselineStep onNext={() => go('ready')} />}
+        {step === 'connect' && <ConnectStep onNext={() => go('permissions')} onSkip={() => { dispatch({ type: 'setDataMode', mode: 'demo' }); go('permissions') }} />}
+        {step === 'permissions' && <PermissionsStep onNext={() => go('import')} />}
+        {step === 'import' && <ImportStep onNext={() => go('summary')} onSync={sync} />}
+        {step === 'summary' && <SummaryStep onNext={() => go('insight')} />}
+        {step === 'insight' && <InsightStep onNext={() => go('ask')} />}
+        {step === 'ask' && <AskStep onNext={() => go('preview')} />}
+        {step === 'preview' && <PreviewStep onNext={() => go('celebrate')} />}
+        {step === 'celebrate' && <CelebrateStep onNext={() => go('reminders')} />}
+        {step === 'reminders' && <RemindersStep onNext={() => go('ready')} />}
         {step === 'ready' && (
           <ReadyStep
             onStart={() => {
@@ -163,6 +188,141 @@ function YouStep({ onNext }: { onNext: () => void }) {
       </div>
     </>
   )
+}
+
+/* ---------------------------------------------------------------- verify */
+/**
+ * Six-digit verification.
+ *
+ * There is no SMS provider wired to this build, so Jumbo does not claim to
+ * have sent a text. It generates the code on the device and shows it, saying
+ * exactly why. The flow — masked number, six boxes, resend timer — is real;
+ * only the delivery is missing, and the screen says so.
+ */
+function VerifyStep({ onNext }: { onNext: () => void }) {
+  const { state, dispatch } = useStore()
+  const [code, setCode] = useState(() => newCode())
+  const [entered, setEntered] = useState<string[]>(Array(6).fill(''))
+  const [wrong, setWrong] = useState(false)
+  const [seconds, setSeconds] = useState(30)
+  const boxes = useRef<Array<HTMLInputElement | null>>([])
+
+  const masked = maskPhone(state.profile.phone)
+  const full = entered.join('')
+
+  useEffect(() => {
+    if (seconds <= 0) return
+    const t = window.setTimeout(() => setSeconds((v) => v - 1), 1000)
+    return () => window.clearTimeout(t)
+  }, [seconds])
+
+  useEffect(() => { boxes.current[0]?.focus() }, [])
+
+  // Six digits in: check them, and move on when they match.
+  useEffect(() => {
+    if (full.length < 6) { setWrong(false); return }
+    if (full === code) {
+      haptic('success')
+      dispatch({ type: 'setPhoneVerified', verified: true })
+      window.setTimeout(onNext, 320)
+    } else {
+      haptic('error')
+      setWrong(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [full, code])
+
+  const put = (i: number, value: string) => {
+    const digits = value.replace(/\D/g, '')
+    if (!digits) {
+      setEntered((e) => e.map((c, n) => (n === i ? '' : c)))
+      return
+    }
+    // Pasting the whole code fills every box at once.
+    setEntered((e) => {
+      const next = [...e]
+      for (let n = 0; n < digits.length && i + n < 6; n++) next[i + n] = digits[n]
+      return next
+    })
+    boxes.current[Math.min(5, i + digits.length)]?.focus()
+  }
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">Is this number yours?</h1>
+          <p className="t-callout dim">
+            Enter the six-digit code for <span className="strong">{masked}</span>.
+          </p>
+        </div>
+
+        <div className="otp" role="group" aria-label="Six digit verification code">
+          {entered.map((digit, i) => (
+            <input
+              key={i}
+              ref={(el) => { boxes.current[i] = el }}
+              className={`otp__box num${wrong ? ' is-wrong' : ''}`}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={digit}
+              aria-label={`Digit ${i + 1}`}
+              aria-invalid={wrong}
+              onChange={(e) => put(i, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Backspace' && !entered[i] && i > 0) boxes.current[i - 1]?.focus()
+              }}
+            />
+          ))}
+        </div>
+
+        <p className="t-caption" aria-live="polite" style={{ color: wrong ? 'var(--critical)' : 'var(--ink-3)' }}>
+          {wrong ? 'That code does not match. Check it and try again.' : '\u00a0'}
+        </p>
+
+        <div className="notice notice--setup" role="note">
+          <Icon name="info" size={18} style={{ color: 'var(--caution)', flex: 'none', marginTop: 2 }} />
+          <div className="stack stack-1">
+            <span className="t-caption strong">No SMS service is connected</span>
+            <p className="t-caption dim">
+              Jumbo has not sent you a text, and will not pretend it did. Your code is{' '}
+              <span className="num strong" style={{ color: 'var(--ink)', letterSpacing: '.14em' }}>{code}</span>.
+              Wire an SMS provider to the server and this arrives on your phone instead.
+            </p>
+          </div>
+        </div>
+
+        <button
+          className="btn btn--ghost"
+          style={{ alignSelf: 'flex-start' }}
+          disabled={seconds > 0}
+          onClick={() => {
+            haptic('selection')
+            setCode(newCode()); setEntered(Array(6).fill('')); setWrong(false); setSeconds(30)
+            boxes.current[0]?.focus()
+          }}
+        >
+          {seconds > 0 ? `Resend code (0:${String(seconds).padStart(2, '0')})` : 'Resend code'}
+        </button>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" disabled={full !== code} onClick={onNext}>
+          Verify
+        </button>
+      </div>
+    </>
+  )
+}
+
+const newCode = () => String(Math.floor(100000 + Math.random() * 900000))
+
+/** Keeps the last two digits, so the person can check it is their number. */
+function maskPhone(phone: string) {
+  const trimmed = phone.trim()
+  if (trimmed.length < 4) return trimmed || 'your number'
+  return `${trimmed.slice(0, 3)} ${'•'.repeat(Math.max(2, trimmed.length - 5))} ${trimmed.slice(-2)}`
 }
 
 /* ----------------------------------------------------------------- goals */
@@ -438,8 +598,75 @@ function ImportStep({ onNext, onSync }: { onNext: () => void; onSync: () => Prom
   )
 }
 
-/* -------------------------------------------------------------- baseline */
-function BaselineStep({ onNext }: { onNext: () => void }) {
+/* ----------------------------------------------------------- permissions */
+/**
+ * What Jumbo will read, before the platform's own prompt appears. Declining
+ * is a first-class answer: the app carries on and says which parts are dark.
+ */
+function PermissionsStep({ onNext }: { onNext: () => void }) {
+  const { state, dispatch } = useStore()
+  const granted = PERMISSIONS.filter((p) => state.permissions[p.key]).length
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">What Jumbo would like to read.</h1>
+          <p className="t-callout dim">
+            Turn off anything you would rather keep to yourself. You can change this at any time,
+            and Jumbo will tell you what it can no longer see.
+          </p>
+        </div>
+
+        <ul className="card stack stack-1">
+          {PERMISSIONS.map((perm) => (
+            <li key={perm.key} className="import-row">
+              <span style={{ color: state.permissions[perm.key] ? perm.colour : 'var(--ink-4)', flex: 'none' }}>
+                <Icon name={perm.icon} size={20} />
+              </span>
+              <div className="grow stack" style={{ gap: 1, minWidth: 0 }}>
+                <span className="t-callout strong">{perm.label}</span>
+                <span className="t-caption dim2">{perm.detail}</span>
+              </div>
+              <Switch
+                checked={Boolean(state.permissions[perm.key])}
+                label={perm.label}
+                onChange={(v) => dispatch({ type: 'setPermission', key: perm.key, value: v })}
+              />
+            </li>
+          ))}
+        </ul>
+
+        <p className="t-caption dim2" aria-live="polite">
+          {granted === 0
+            ? 'Nothing selected. Jumbo will still work, with far less to go on.'
+            : `${granted} of ${PERMISSIONS.length} allowed.`}
+        </p>
+
+        <div className="notice" role="note">
+          <Icon name="lock" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
+          <p className="t-caption dim">
+            Jumbo only ever reads. It never writes back to a health app, and imported records stay
+            on this device.
+          </p>
+        </div>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>Allow access</button>
+        <button className="btn btn--ghost btn--block" onClick={() => {
+          PERMISSIONS.forEach((perm) => dispatch({ type: 'setPermission', key: perm.key, value: false }))
+          onNext()
+        }}>
+          Not now
+        </button>
+      </div>
+    </>
+  )
+}
+
+/* --------------------------------------------------------- data summary */
+function SummaryStep({ onNext }: { onNext: () => void }) {
   const { state } = useStore()
   const b = state.baseline
   const [ready, setReady] = useState(false)
@@ -449,21 +676,16 @@ function BaselineStep({ onNext }: { onNext: () => void }) {
     return () => window.clearTimeout(t)
   }, [])
 
-  const recent = lastN(state.days, 21)
-  const earlier = state.days.slice(-42, -21)
-  const sleepDelta = round(
-    recent.reduce((a, d) => a + d.sleepHours, 0) / Math.max(1, recent.length) -
-    earlier.reduce((a, d) => a + d.sleepHours, 0) / Math.max(1, earlier.length), 1,
-  )
-
   return (
     <>
       <div className="ob__body">
         <div className="stack stack-3">
-          <h1 className="t-title1">{ready ? 'Your baseline' : 'Working out your baseline…'}</h1>
+          <h1 className="t-title1">
+            {ready ? 'Jumbo has learned your usual rhythm.' : 'Reading your usual rhythm…'}
+          </h1>
           <p className="t-callout dim">
             {ready
-              ? `Built from your own ${b.daysOfHistory} days. Not an average of other people.`
+              ? `Here is what your last ${b.daysOfHistory} days look like. Your own numbers, not an average of other people.`
               : 'Reading six months of history.'}
           </p>
         </div>
@@ -481,31 +703,74 @@ function BaselineStep({ onNext }: { onNext: () => void }) {
               <Tile label="Aerobic fitness" value={b.vo2max.toFixed(1)} unit="ml/kg/min" />
             </div>
 
-            <div className="card card--brand stack stack-3">
-              <div className="row row--between">
-                <div className="row" style={{ gap: 'var(--s-2)' }}>
-                  <AiOrb size="sm" />
-                  <span className="eyebrow">First insight</span>
-                </div>
-                <Confidence value={0.78} compact />
-              </div>
-              <p className="t-body">
-                Your sleep has moved {sleepDelta >= 0 ? 'up' : 'down'} by {Math.abs(sleepDelta).toFixed(1)} hours a
-                night over the last three weeks, and your resting heart rate followed it.
-              </p>
-              <p className="t-caption dim">
-                An association across 42 days of your own data. Jumbo will keep watching it. There is
-                nothing to do about it yet.
-              </p>
-            </div>
           </div>
         )}
       </div>
 
       <div className="ob__foot">
         <button className="btn btn--primary btn--lg btn--block" onClick={onNext} disabled={!ready}>
-          {ready ? 'Continue' : 'Just a moment…'}
+          {ready ? 'See what Jumbo noticed' : 'Just a moment…'}
         </button>
+      </div>
+    </>
+  )
+}
+
+/* --------------------------------------------------------- first insight */
+function InsightStep({ onNext }: { onNext: () => void }) {
+  const { state } = useStore()
+  const recent = lastN(state.days, 21)
+  const earlier = state.days.slice(-42, -21)
+  const avg = (xs: typeof recent) => xs.reduce((a, d) => a + d.sleepHours, 0) / Math.max(1, xs.length)
+  const sleepDelta = round(avg(recent) - avg(earlier), 1)
+  const rhrDelta = round(
+    recent.reduce((a, d) => a + d.restingHR, 0) / Math.max(1, recent.length)
+    - earlier.reduce((a, d) => a + d.restingHR, 0) / Math.max(1, earlier.length),
+    1,
+  )
+
+  useEffect(() => { haptic('success') }, [])
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">Jumbo noticed something.</h1>
+          <p className="t-callout dim">
+            The first pattern in your own history. Not advice yet — just what is there.
+          </p>
+        </div>
+
+        <div className="card card--brand stack stack-3 rise">
+          <div className="row row--between">
+            <div className="row" style={{ gap: 'var(--s-2)' }}>
+              <Mascot size={34} />
+              <span className="eyebrow">Sleep</span>
+            </div>
+            <Confidence value={0.62} compact />
+          </div>
+          <p className="t-body">
+            Your sleep has moved {sleepDelta >= 0 ? 'up' : 'down'} by {Math.abs(sleepDelta).toFixed(1)} hours a
+            night over the last three weeks, and your resting heart rate has
+            {rhrDelta === 0 ? ' held steady' : rhrDelta > 0 ? ` risen ${Math.abs(rhrDelta).toFixed(1)} bpm` : ` fallen ${Math.abs(rhrDelta).toFixed(1)} bpm`} alongside it.
+          </p>
+          <p className="t-caption dim">
+            An association across 42 days of your own data — not a cause. Jumbo will keep watching
+            it, and there is nothing to do about it yet.
+          </p>
+        </div>
+
+        <div className="notice" role="note">
+          <Icon name="lock" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
+          <p className="t-caption dim">
+            Everything Jumbo says carries a confidence and a limitation. When the data cannot
+            support a claim, it says so instead of making one.
+          </p>
+        </div>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>Continue</button>
       </div>
     </>
   )
@@ -521,12 +786,204 @@ function Tile({ label, value, unit }: { label: string; value: string; unit: stri
   )
 }
 
+/* ------------------------------------------------------- AI introduction */
+function AskStep({ onNext }: { onNext: () => void }) {
+  const { state } = useStore()
+  const first = state.profile.name.trim().split(' ')[0]
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">Ask Jumbo anything.</h1>
+          <p className="t-callout dim">
+            Your personal health companion. It answers from your own records, and says so when
+            they cannot answer.
+          </p>
+        </div>
+
+        <div className="ob-hero" style={{ gap: 'var(--s-5)' }}>
+          <Mascot size={104} label="Jumbo" />
+          <ul className="stack stack-2" style={{ width: '100%' }}>
+            {QUICK_PROMPTS.slice(0, 4).map((q) => (
+              <li key={q} className="card card--quiet row row--between" style={{ padding: 'var(--s-4)' }}>
+                <span className="t-callout">{q}</span>
+                <Icon name="chevron" size={15} style={{ color: 'var(--ink-3)', flex: 'none' }} />
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="t-caption dim2">
+          {first ? `${first}, these ` : 'These '}are live once setup finishes — every answer is
+          generated against your data, never a canned reply.
+        </p>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>Continue</button>
+      </div>
+    </>
+  )
+}
+
+/* --------------------------------------------------------- future preview */
+function PreviewStep({ onNext }: { onNext: () => void }) {
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">Want to see where your habits lead?</h1>
+          <p className="t-callout dim">
+            Not a prediction. A way to explore what your current pattern could point towards, and
+            what changes when you change one thing.
+          </p>
+        </div>
+
+        <AssetImage
+          asset="futurePath" alt="" rounded="card" loading="eager" className="ob-art ob-art--band"
+        />
+
+        <div className="notice" role="note">
+          <Icon name="info" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
+          <p className="t-caption dim">
+            Jumbo models directions, not dates. It says nothing about disease and nothing about how
+            long you will live.
+          </p>
+        </div>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>Explore my future</button>
+        <button className="btn btn--ghost btn--block" onClick={onNext}>Maybe later</button>
+      </div>
+    </>
+  )
+}
+
+/* ----------------------------------------------------------- celebration */
+function CelebrateStep({ onNext }: { onNext: () => void }) {
+  const { state } = useStore()
+  const first = state.profile.name.trim().split(' ')[0]
+
+  // The one moment in setup that earns confetti, a sound and a haptic.
+  useEffect(() => { celebrate('milestone') }, [])
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="ob-hero" style={{ alignItems: 'center', textAlign: 'center' }}>
+          <AssetImage asset="celebration" alt="" rounded="none" loading="eager" className="ob-art ob-art--square" />
+          <div className="stack stack-3">
+            <h1 className="t-title1">{first ? `You’re all set, ${first}!` : 'You’re all set!'}</h1>
+            <p className="t-body dim" style={{ maxWidth: '30ch' }}>
+              Your health is connected. Jumbo gets sharper the more you use it.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="ob__foot">
+        <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>
+          Set my reminders
+        </button>
+      </div>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------- reminders */
+const REMINDER_ROWS: Array<{ key: 'breakfast' | 'lunch' | 'dinner' | 'workout'; label: string; icon: IconName; colour: string }> = [
+  { key: 'breakfast', label: 'Breakfast', icon: 'plate',    colour: 'var(--nutrition)' },
+  { key: 'lunch',     label: 'Lunch',     icon: 'plate',    colour: 'var(--nutrition)' },
+  { key: 'dinner',    label: 'Dinner',    icon: 'plate',    colour: 'var(--nutrition)' },
+  { key: 'workout',   label: 'Workout',   icon: 'training', colour: 'var(--training)' },
+]
+
+function RemindersStep({ onNext }: { onNext: () => void }) {
+  const { state, dispatch } = useStore()
+  const r = state.reminders
+
+  return (
+    <>
+      <div className="ob__body">
+        <div className="stack stack-3">
+          <h1 className="t-title1">When should Jumbo check in?</h1>
+          <p className="t-callout dim">
+            Set the moments that matter. Jumbo nudges once and then leaves you alone — it will not
+            nag you about one you ignored.
+          </p>
+        </div>
+
+        <ul className="card stack stack-1">
+          {REMINDER_ROWS.map((row) => (
+            <li key={row.key} className="import-row">
+              <span style={{ color: r[row.key] ? row.colour : 'var(--ink-4)', flex: 'none' }}>
+                <Icon name={row.icon} size={20} />
+              </span>
+              <span className="grow t-callout strong">{row.label}</span>
+              <input
+                type="time"
+                className="input"
+                style={{ width: 128, minHeight: 42 }}
+                value={r[row.key] || '08:00'}
+                aria-label={`${row.label} time`}
+                onChange={(e) => dispatch({ type: 'setReminders', patch: { [row.key]: e.target.value } })}
+              />
+              <Switch
+                checked={Boolean(r[row.key])}
+                label={`${row.label} reminder`}
+                onChange={(on) => dispatch({
+                  type: 'setReminders',
+                  patch: { [row.key]: on ? (r[row.key] || defaultTime(row.key)) : '' },
+                })}
+              />
+            </li>
+          ))}
+        </ul>
+
+        <div className="notice" role="note">
+          <Icon name="bell" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
+          <p className="t-caption dim">
+            A browser can only raise a notification while Jumbo is open. In the app they arrive
+            whether it is open or not. Either way, you can change these in Profile.
+          </p>
+        </div>
+      </div>
+
+      <div className="ob__foot">
+        <button
+          className="btn btn--primary btn--lg btn--block"
+          onClick={() => {
+            void requestNotificationPermission()
+            dispatch({ type: 'setReminders', patch: { enabled: true } })
+            haptic('success')
+            onNext()
+          }}
+        >
+          Set reminders
+        </button>
+        <button
+          className="btn btn--ghost btn--block"
+          onClick={() => { dispatch({ type: 'setReminders', patch: { enabled: false } }); onNext() }}
+        >
+          I’ll do this later
+        </button>
+      </div>
+    </>
+  )
+}
+
+const defaultTime = (key: string) =>
+  key === 'breakfast' ? '08:00' : key === 'lunch' ? '13:00' : key === 'dinner' ? '19:30' : '18:00'
+
 /* ----------------------------------------------------------------- ready */
 function ReadyStep({ onStart }: { onStart: () => void }) {
   const { state } = useStore()
   const first = state.profile.name.trim().split(' ')[0]
 
-  useEffect(() => { celebrate('milestone') }, [])
+  // The celebration already fired two screens ago. One flourish per journey.
+  useEffect(() => { haptic('success') }, [])
 
   return (
     <>
@@ -534,23 +991,38 @@ function ReadyStep({ onStart }: { onStart: () => void }) {
         <div className="ob-hero" style={{ alignItems: 'center', textAlign: 'center' }}>
           <AssetImage asset="ready" alt="" rounded="none" loading="eager" className="ob-art ob-art--square" />
           <div className="stack stack-3">
-            <h1 className="t-title1">{first ? `${first}, your baseline is ready` : 'Your baseline is ready'}</h1>
+            <h1 className="t-title1">Good to go{first ? `, ${first}` : ''}!</h1>
             <p className="t-body dim" style={{ maxWidth: '30ch' }}>
-              Six months of history, one personal baseline and a first pattern to watch. That is the
-              hard part done.
+              You’re ready to build a healthier, brighter tomorrow with Jumbo.
             </p>
           </div>
-          <div className="card card--quiet stack stack-2" style={{ width: '100%', textAlign: 'left' }}>
-            <span className="eyebrow">Next</span>
-            <p className="t-callout">
-              Photograph your next meal. It is the one thing your devices cannot see, and it closes
-              the last gap in your picture.
-            </p>
-          </div>
+          <ul className="card card--quiet stack stack-3" style={{ width: '100%', textAlign: 'left' }}>
+            {[
+              ['Account created', true],
+              ['Data connected', state.dataMode === 'live' || state.baseline.daysOfHistory > 0],
+              ['Goals set', state.goals.length > 0],
+              ['Reminders configured', state.reminders.enabled],
+            ].map(([label, done]) => (
+              <li key={String(label)} className="row" style={{ gap: 'var(--s-3)' }}>
+                <span
+                  className="import-check"
+                  style={{ background: done ? 'var(--brand)' : 'var(--surface-3)', color: done ? 'var(--brand-ink)' : 'var(--ink-3)' }}
+                  aria-hidden="true"
+                >
+                  <Icon name={done ? 'check' : 'minus'} size={14} strokeWidth={2.6} />
+                </span>
+                <span className="t-callout">{String(label)}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="t-caption dim2">
+            Next: photograph a meal. It is the one thing your devices cannot see.
+          </p>
         </div>
       </div>
       <div className="ob__foot">
-        <button className="btn btn--primary btn--lg btn--block" onClick={onStart}>Open Jumbo</button>
+        <button className="btn btn--primary btn--lg btn--block" onClick={onStart}>Let’s go</button>
       </div>
     </>
   )

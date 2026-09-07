@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AiOrb, Icon } from '../components/Icon'
-import { AssetImage, Mascot } from '../components/Asset'
+import '../styles/home.css'
+import { AiOrb, Icon, type IconName } from '../components/Icon'
+import { AvatarButton, Mascot } from '../components/Asset'
+import { useNavigate } from '../components/Nav'
 import { DayCurve, ProjectionChart } from '../components/Charts'
 import {
-  Confidence, Disclosure, Empty, ErrorNotice, ProvenanceTag, ScreenHead,
+  Confidence, Disclosure, Empty, ErrorNotice, ProvenanceTag,
   SectionHead, Segmented, SetupNotice,
 } from '../components/UI'
 import { useStore } from '../state/store'
@@ -13,7 +15,7 @@ import {
   METRIC_META, MONTH_OPTIONS, RELATIONSHIPS, SCENARIOS, energyCurve, leversFromBaseline,
   project, projectPath, type Horizon, type Levers, type ProjMetric, type Projected,
 } from '../lib/trajectory'
-import { lastN } from '../lib/analytics'
+import { dailyProgress, lastN } from '../lib/analytics'
 import { clamp, mean, prettyDate, round } from '../lib/util'
 import { haptic } from '../lib/feedback'
 import type { Insight, InsightDecision } from '../data/types'
@@ -27,6 +29,14 @@ const PICK: Record<ProjMetric, (p: Projected) => number> = {
 }
 
 const HORIZON_LABEL: Record<Horizon, string> = { 12: '1 year', 36: '3 years', 60: '5 years' }
+
+/** The questions the spec asks Future to offer, each sent as a real question. */
+const FUTURE_PROMPTS: Array<{ text: string; icon: IconName; colour: string }> = [
+  { text: 'How can I improve my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
+  { text: 'What is my longevity outlook?', icon: 'heart', colour: 'var(--training)' },
+  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
+  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--movement)' },
+]
 
 export function Future() {
   const { state, dispatch } = useStore()
@@ -57,6 +67,85 @@ export function Future() {
   const insights = useInsights()
   const narrativeRef = useRef<HTMLElement>(null)
   const firstName = state.profile.name.trim().split(' ')[0]
+  const navigate = useNavigate()
+
+  /**
+   * The Jumbo Index: the projection's recovery composite, expressed as the
+   * change from where this person is now. A model estimate, labelled as one.
+   */
+  const jumboIndex = round(projected.recoveryIndex - nowState.recoveryIndex, 1)
+
+  const outlookPath = useMemo(
+    () => projectPath(base, activeLevers, months, PICK.recoveryIndex),
+    [base, activeLevers, months],
+  )
+  const outlookObserved = useMemo(
+    () => observedSeries(state.days, base, 'recoveryIndex'),
+    [state.days, base],
+  )
+
+  /** The headline numbers, taken from measurements — never modelled here. */
+  const vitals = useMemo(() => {
+    const today = state.days[state.days.length - 1]
+    const nowProgress = dailyProgress(today, base)
+    const week = lastN(state.days, 7)
+    const priorWeek = state.days.slice(Math.max(0, state.days.length - 14), state.days.length - 7)
+    const load = (d: typeof today) => (d.workout ? d.workout.minutes * d.workout.intensity : 0)
+    const thisLoad = mean(week.map(load))
+    const lastLoad = mean(priorWeek.map(load))
+    const loadDelta = lastLoad > 0 ? Math.round(((thisLoad - lastLoad) / lastLoad) * 100) : null
+
+    return [
+      {
+        label: 'Aerobic fitness', icon: 'bolt' as IconName, colour: 'var(--movement)',
+        value: base.vo2max > 0 ? base.vo2max.toFixed(1) : '—', unit: 'ml/kg/min',
+        note: base.vo2max > 0 ? 'VO₂ max estimate' : 'Not supplied',
+        good: null as boolean | null,
+      },
+      {
+        label: 'Resting heart rate', icon: 'heart' as IconName, colour: 'var(--training)',
+        value: base.restingHR > 0 ? String(Math.round(base.restingHR)) : '—', unit: 'bpm',
+        note: base.restingHR > 0 ? `${Math.round(base.hrv)} ms HRV baseline` : 'Not supplied',
+        good: null,
+      },
+      {
+        label: 'Sleep quality', icon: 'sleep' as IconName, colour: 'var(--sleep)',
+        value: String(Math.round(nowProgress.sleep * 100)), unit: '/ 100',
+        note: `${round(mean(week.map((d) => d.sleepHours)), 1)} h average this week`,
+        good: nowProgress.sleep >= 0.75 ? true : null,
+      },
+      {
+        label: 'Activity load', icon: 'training' as IconName, colour: 'var(--recovery)',
+        value: loadDelta === null ? '—' : `${loadDelta > 0 ? '+' : ''}${loadDelta}%`, unit: 'this week',
+        note: loadDelta === null ? 'Needs two weeks' : loadDelta > 40 ? 'A sharp rise' : 'Against last week',
+        good: loadDelta !== null && loadDelta > 40 ? false : null,
+      },
+    ]
+  }, [state.days, base])
+
+  /**
+   * Recommendations are the options Jumbo's own analysis put forward, not a
+   * fixed list. Each one opens the conversation on that subject.
+   */
+  const recommended = useMemo(() => {
+    const meta: Record<string, { icon: IconName; colour: string }> = {
+      sleep: { icon: 'sleep', colour: 'var(--sleep)' },
+      movement: { icon: 'steps', colour: 'var(--movement)' },
+      nutrition: { icon: 'plate', colour: 'var(--nutrition)' },
+      recovery: { icon: 'heart', colour: 'var(--recovery)' },
+      body: { icon: 'measure', colour: 'var(--measure)' },
+    }
+    return insights.insights
+      .filter((i) => !state.dismissed.includes(i.id) && i.options.length > 0)
+      .slice(0, 3)
+      .map((i) => ({
+        id: i.id,
+        title: i.options[0],
+        sub: i.domain[0].toUpperCase() + i.domain.slice(1),
+        question: `${i.changed} What should I do about it?`,
+        ...(meta[i.domain] ?? { icon: 'ai' as IconName, colour: 'var(--brand)' }),
+      }))
+  }, [insights.insights, state.dismissed])
 
   const pickScenario = (id: string) => {
     haptic('selection')
@@ -66,42 +155,154 @@ export function Future() {
 
   return (
     <div className="stack stack-14">
-      <ScreenHead
-        eyebrow="Future"
-        title="If this carries on"
-        sub="Not a prediction. A picture of what your current pattern points towards, and what changes when you change a habit."
-      />
-
-      {/* ────────────────────────────── Jumbo, in the circular area
-          reserved for the mascot artwork. Tapping it moves to the
-          scenario Jumbo has written. */}
-      <section className="stack stack-4">
-        <AssetImage
-          asset="futurePath" alt="" rounded="card" loading="eager"
-          className="future-banner"
-        />
-        <div className="row row--top" style={{ gap: 'var(--s-4)' }}>
-        <Mascot
-          size={92}
-          thinking={narrative.loading}
-          onClick={() => {
-            narrativeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            narrativeRef.current?.focus({ preventScroll: true })
-          }}
-          label={narrative.loading ? 'Jumbo is working on your scenario' : 'Read Jumbo’s scenario'}
-        />
-        <div className="card card--quiet stack stack-2 grow">
-          <p className="t-body">
-            {firstName ? `${firstName}, ` : ''}Jumbo has {base.daysOfHistory} days of your history to work
-            from. Explore where your current habits could lead.
-          </p>
-          <p className="t-caption dim2">This is a modelled scenario, not a medical prediction.</p>
+      <header className="stack stack-2" style={{ marginBottom: 'calc(var(--s-8) * -1)' }}>
+        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+          <div className="stack stack-1" style={{ minWidth: 0 }}>
+            <p className="eyebrow">AI Future</p>
+            <h1 className="t-title1">Ask. Learn. Live longer.</h1>
+          </div>
+          <AvatarButton />
         </div>
+      </header>
+
+      {/* ────────────────────────────── Jumbo greets, and offers a way in.
+          The mascot sits in the circular area reserved for its artwork. */}
+      <section className="stack stack-4">
+        <div className="row row--top" style={{ gap: 'var(--s-3)' }}>
+          <Mascot
+            size={84}
+            thinking={narrative.loading}
+            onClick={() => navigate('chat')}
+            label="Ask Jumbo"
+          />
+          <div className="speech grow">
+            <p className="t-body">
+              {firstName ? `Hi ${firstName}! ` : 'Hi! '}
+              <span aria-hidden="true">👋</span> I’ve read {base.daysOfHistory} days of your data.
+              What would you like to know?
+            </p>
+          </div>
+        </div>
+
+        <ul className="rail" aria-label="Ask Jumbo a common question">
+          {FUTURE_PROMPTS.map((q) => (
+            <li key={q.text}>
+              <button className="chip" onClick={() => { haptic('selection'); navigate('chat', q.text) }}>
+                <Icon name={q.icon} size={15} style={{ color: q.colour }} />
+                {q.text}
+              </button>
+            </li>
+          ))}
+          <li>
+            <button className="chip" onClick={() => { haptic('selection'); navigate('chat') }}>
+              <Icon name="chevron" size={15} /> More
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      {/* ────────────────────────────── the numbers Jumbo actually holds */}
+      <section className="section">
+        <SectionHead
+          title="Your AI insights"
+          sub="Measured by your sources, read against your own history."
+        />
+        <ul className="metric-grid">
+          {vitals.map((v) => (
+            <li key={v.label} className="metric">
+              <Icon name={v.icon} size={20} style={{ color: v.colour }} />
+              <span className="t-caption dim">{v.label}</span>
+              <span className="metric__value num">{v.value}</span>
+              <span className="t-caption dim2">{v.unit}</span>
+              <span className={`metric__delta${v.good === true ? ' is-up' : v.good === false ? ' is-down' : ''}`}>
+                {v.note}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="t-caption dim2">
+          {state.dataMode === 'demo'
+            ? 'From the sample history, so you can see the shape of it.'
+            : 'From your connected sources. Blank means nothing has supplied it.'}
+        </p>
+      </section>
+
+      {/* ────────────────────────────── the outlook, as a model estimate */}
+      <section className="section">
+        <SectionHead
+          title="Your longevity outlook"
+          sub={`Where ${scenarioId === 'current' ? 'your current pattern' : 'this scenario'} points, over ${HORIZON_LABEL[months].toLowerCase()}.`}
+          action={
+            <Segmented
+              ariaLabel="How far ahead"
+              value={months}
+              onChange={(v) => { haptic('selection'); setMonths(v as Horizon) }}
+              options={MONTH_OPTIONS.map((m) => ({ value: m, label: HORIZON_LABEL[m] }))}
+            />
+          }
+        />
+        <div className="card stack stack-4">
+          <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+            <div className="stack stack-1">
+              <span className="row t-title1 num" style={{ gap: 6, color: jumboIndex >= 0 ? 'var(--accent-text)' : 'var(--caution)' }}>
+                {jumboIndex > 0 ? '+' : ''}{jumboIndex}
+              </span>
+              <span className="t-caption dim">Jumbo Index, a model estimate</span>
+            </div>
+            <ProvenanceTag kind="model" />
+          </div>
+
+          <ProjectionChart
+            observed={outlookObserved.values}
+            observedLabels={outlookObserved.labels}
+            projected={outlookPath}
+            color={scenario.accent === 'var(--ink-2)' ? 'var(--brand)' : scenario.accent}
+            unit="/100"
+            dp={0}
+            height={180}
+          />
+
+          <div className="row row--wrap" style={{ gap: 'var(--s-4)' }}>
+            <LegendKey colour="var(--brand)" kind="solid" label="Measured" />
+            <LegendKey colour="var(--brand)" kind="dashed" label="Modelled" />
+            <LegendKey colour="var(--brand)" kind="band" label="Plausible range" />
+          </div>
+
+          <Disclosure summary="What the Jumbo Index is">
+            <p className="t-callout dim">
+              A single 0–100 composite of the projection’s recovery index — heart-rate variability
+              and sleep consistency — expressed as the change from where you are now. It is Jumbo’s
+              own model, not a clinical measure, and it says nothing about disease or life
+              expectancy.
+            </p>
+          </Disclosure>
         </div>
       </section>
 
+      {/* ────────────────────────────── what to actually do about it */}
+      {recommended.length > 0 && (
+        <section className="section">
+          <SectionHead title="Recommended for you" sub="Drawn from what Jumbo just read in your data." />
+          <ul className="focus-row">
+            {recommended.map((r) => (
+              <li key={r.id}>
+                <button
+                  className="reco"
+                  onClick={() => { haptic('selection'); navigate('chat', r.question) }}
+                >
+                  <Icon name={r.icon} size={20} style={{ color: r.colour }} />
+                  <span className="t-callout strong">{r.title}</span>
+                  <span className="t-caption dim2">{r.sub}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* ────────────────────────────── choose a life, and a horizon */}
       <section className="stack stack-4">
+        <SectionHead title="Explore a change" sub="Change one habit and the model updates." />
         <div className="rail" role="group" aria-label="Choose a scenario">
           {[...SCENARIOS, { id: 'custom', label: 'Tune it yourself', blurb: '', accent: 'var(--brand)' }].map((s) => (
             <button
@@ -316,6 +517,17 @@ export function Future() {
           </ul>
         )}
       </section>
+
+      {/* ────────────────────────────── the way in, always available */}
+      <button className="ask-bar" onClick={() => { haptic('selection'); navigate('chat') }}>
+        <Icon name="sparkles" size={18} style={{ color: 'var(--brand)', flex: 'none' }} />
+        <span className="grow t-callout dim" style={{ textAlign: 'left' }}>
+          Ask me anything about your health…
+        </span>
+        <span className="ask-bar__go" aria-hidden="true">
+          <Icon name="arrow-up" size={17} strokeWidth={2.2} />
+        </span>
+      </button>
 
       {/* ────────────────────────────── how this is built */}
       <section className="section">

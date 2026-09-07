@@ -3,57 +3,95 @@ import { Icon, type IconName } from './Icon'
 import { BrandMark } from './Asset'
 import { haptic } from '../lib/feedback'
 
-export type Route = 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements'
+export type Route =
+  | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
  * right of every top-level screen and has to reach the profile from there;
  * threading a callback through five screens to do it would be worse.
  */
-const NavCtx = createContext<(route: Route) => void>(() => {})
+type Navigate = (route: Route, question?: string) => void
+
+const NavCtx = createContext<Navigate>(() => {})
+
+/**
+ * Navigating to the chat can carry the question that sent you there, so a
+ * quick prompt is asked on arrival rather than only prefilled.
+ */
 export const useNavigate = () => useContext(NavCtx)
 
-export function NavProvider({ navigate, children }: { navigate: (r: Route) => void; children: ReactNode }) {
+export function NavProvider({ navigate, children }: { navigate: Navigate; children: ReactNode }) {
   return <NavCtx.Provider value={navigate}>{children}</NavCtx.Provider>
 }
 
 interface NavItem { route: Route; label: string; icon: IconName }
 
 /**
- * Five destinations, and only five. Trajectory and Insights were one idea
- * split across two tabs; they are now a single place called Future.
+ * Four destinations around one action. Capture is the centre button rather
+ * than a fifth tab because adding something is the thing people come back to
+ * do, and it should be reachable without aiming.
  */
-export const PRIMARY: NavItem[] = [
-  { route: 'today',   label: 'Today',   icon: 'today' },
-  { route: 'future',  label: 'Future',  icon: 'future' },
-  { route: 'capture', label: 'Capture', icon: 'capture' },
+const LEFT: NavItem[] = [
+  { route: 'today',  label: 'Today',     icon: 'today' },
+  { route: 'future', label: 'AI Future', icon: 'future' },
+]
+
+const RIGHT: NavItem[] = [
   { route: 'explore', label: 'Explore', icon: 'explore' },
   { route: 'you',     label: 'You',     icon: 'profile' },
 ]
 
+export const PRIMARY: NavItem[] = [
+  ...LEFT,
+  { route: 'capture', label: 'Capture', icon: 'capture' },
+  ...RIGHT,
+]
+
 const SIDEBAR: NavItem[] = [
-  ...PRIMARY.slice(0, 3),
+  ...LEFT,
+  { route: 'chat',    label: 'Ask Jumbo',    icon: 'ai' },
+  { route: 'capture', label: 'Capture',      icon: 'capture' },
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
-  ...PRIMARY.slice(3),
+  ...RIGHT,
 ]
 
 export function TabBar({ route, onNavigate }: { route: Route; onNavigate: (r: Route) => void }) {
+  const go = (r: Route) => { haptic('selection'); onNavigate(r) }
+
+  const tab = (item: NavItem) => {
+    // Measurements and the chat are reached from within a section, so the tab
+    // they belong to stays lit rather than nothing being current.
+    const current = route === item.route
+      || (item.route === 'you' && route === 'measurements')
+      || (item.route === 'future' && route === 'chat')
+    return (
+      <button
+        key={item.route}
+        className="tabbar__item"
+        aria-current={current ? 'page' : undefined}
+        onClick={() => go(item.route)}
+      >
+        <Icon name={item.icon} size={23} strokeWidth={current ? 2.1 : 1.75} />
+        <span>{item.label}</span>
+      </button>
+    )
+  }
+
   return (
     <nav className="tabbar" aria-label="Primary">
-      {PRIMARY.map((item) => {
-        const current = route === item.route || (item.route === 'you' && route === 'measurements')
-        return (
-          <button
-            key={item.route}
-            className="tabbar__item"
-            aria-current={current ? 'page' : undefined}
-            onClick={() => { haptic('selection'); onNavigate(item.route) }}
-          >
-            <Icon name={item.icon} size={23} strokeWidth={current ? 2.1 : 1.75} />
-            <span>{item.label}</span>
-          </button>
-        )
-      })}
+      {LEFT.map(tab)}
+
+      <button
+        className={`tabbar__fab${route === 'capture' ? ' is-current' : ''}`}
+        aria-label="Add to today"
+        aria-current={route === 'capture' ? 'page' : undefined}
+        onClick={() => go('capture')}
+      >
+        <Icon name="plus" size={26} strokeWidth={2.4} />
+      </button>
+
+      {RIGHT.map(tab)}
     </nav>
   )
 }
