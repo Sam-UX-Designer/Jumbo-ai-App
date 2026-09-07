@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="WHOOP logo placeholder">
+  <title>WHOOP — logo placeholder</title>
+  <text x="64" y="60" fill="#6E7269" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="44" font-weight="760" letter-spacing="-1" text-anchor="middle" dominant-baseline="central">W</text>
+  <text x="64" y="104" fill="#8A8F88" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="12" font-weight="600" letter-spacing="1" text-anchor="middle">PLACEHOLDER</text>
+  <rect x="1.5" y="1.5" width="125" height="125" rx="28.5" fill="none" stroke="#6E7269" stroke-width="3" opacity="0.6"/>
+</svg>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '../components/Icon'
+import { AssetImage } from '../components/Asset'
 import { AiOrb } from '../components/Icon'
 import { Camera, type Capture } from '../components/Camera'
 import { Confidence, ErrorNotice, SetupNotice, Sheet, Stepper, useToast } from '../components/UI'
@@ -329,16 +330,10 @@ export function MealCapture({ open, onClose, date }: { open: boolean; onClose: (
       {/* -------------------------------------------------------- saved */}
       {phase === 'saved' && (
         <div className="stack stack-4" style={{ alignItems: 'center', padding: 'var(--s-10) 0' }}>
-          <span
-            className="pop"
-            style={{
-              width: 78, height: 78, borderRadius: '50%', display: 'grid', placeItems: 'center',
-              background: 'var(--brand)', color: 'var(--brand-ink)',
-            }}
-            aria-hidden="true"
-          >
-            <Icon name="check" size={34} strokeWidth={2.6} motion="celebrate" />
-          </span>
+          <AssetImage
+            asset="celebration" alt="" rounded="none" loading="eager"
+            className="pop" style={{ width: 132, height: 132, background: 'none' }}
+          />
           <p className="t-title3">{slot} saved</p>
           <p className="t-callout dim" style={{ textAlign: 'center', maxWidth: '30ch' }}>
             It is part of today, and part of what Jumbo watches over time.

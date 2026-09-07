@@ -19,14 +19,12 @@
 
 .ob-hero { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--s-6); }
 
-.ob-orb {
-  width: 132px; height: 132px; border-radius: 42px;
-  background: var(--brand); color: var(--brand-ink);
-  box-shadow: 0 30px 70px -22px var(--brand-glow);
-  display: grid; place-items: center;
-  font-size: 52px; font-weight: 780; letter-spacing: -0.05em;
-}
-@media (prefers-reduced-motion: no-preference) { .ob-orb { animation: pop 640ms var(--ease-spring) both; } }
+/* Artwork slots. The sizes hold whether the finished file has landed or the
+   placeholder is still in place, so the layout never shifts on delivery. */
+.ob-art { width: 100%; box-shadow: var(--shadow-2); }
+.ob-art--wide   { aspect-ratio: 3 / 2; max-height: 264px; object-fit: cover; }
+.ob-art--square { aspect-ratio: 1; width: 188px; max-width: 60vw; margin-inline: auto; background: none; box-shadow: none; }
+@media (prefers-reduced-motion: no-preference) { .ob-art { animation: pop 640ms var(--ease-spring) both; } }
 
 /* goals */
 .goal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
@@ -59,11 +57,3 @@
   background: var(--brand); color: var(--brand-ink);
 }
 .import-count { font-variant-numeric: tabular-nums; }
-
-/* the win */
-.win-badge {
-  width: 116px; height: 116px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--brand); color: var(--brand-ink);
-  box-shadow: 0 26px 60px -20px var(--brand-glow);
-}
-@media (prefers-reduced-motion: no-preference) { .win-badge { animation: pop 560ms var(--ease-spring) both; } }

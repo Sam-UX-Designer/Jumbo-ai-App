@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/onboarding.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
+import { AssetImage, BrandMark, BrandWordmark, SourceLogo } from '../components/Asset'
 import { Confidence, ErrorNotice, ProvenanceTag, SetupNotice } from '../components/UI'
 import { Sparkline } from '../components/Charts'
 import { useStore } from '../state/store'
@@ -43,7 +44,7 @@ export function Onboarding() {
               <Icon name="back" size={20} />
             </button>
           ) : (
-            <span className="mark" aria-hidden="true">J</span>
+            <BrandMark size={34} />
           )}
           <div className="ob__progress" role="progressbar" aria-valuenow={idx + 1}
             aria-valuemin={1} aria-valuemax={STEPS.length} aria-label="Setup progress">
@@ -79,7 +80,8 @@ function Welcome({ onNext, onSkip }: { onNext: () => void; onSkip: () => void })
     <>
       <div className="ob__body">
         <div className="ob-hero">
-          <div className="ob-orb" aria-hidden="true">J</div>
+          <AssetImage asset="welcomeHero" alt="" rounded="card" loading="eager" className="ob-art ob-art--wide" />
+          <BrandWordmark height={30} />
           <div className="stack stack-4">
             <h1 className="t-hero">Your health,<br />joined up.</h1>
             <p className="t-body dim" style={{ maxWidth: '32ch' }}>
@@ -267,14 +269,7 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
             return (
               <div key={p.id} className="card stack stack-3">
                 <div className="row" style={{ gap: 'var(--s-3)' }}>
-                  <span style={{
-                    width: 42, height: 42, borderRadius: 'var(--r-tile)', flex: 'none',
-                    display: 'grid', placeItems: 'center',
-                    background: isConnected ? 'var(--brand-dim)' : 'var(--surface-2)',
-                    color: isConnected ? 'var(--brand)' : 'var(--ink-3)',
-                  }} aria-hidden="true">
-                    <Icon name={SOURCE_ICON[p.id] ?? 'link'} size={20} />
-                  </span>
+                  <SourceLogo providerId={p.id} connected={isConnected} fallbackIcon={SOURCE_ICON[p.id] ?? 'link'} />
                   <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
                     <span className="t-callout strong">{p.name}</span>
                     <span className="t-caption dim2">{p.blurb}</span>
@@ -537,9 +532,7 @@ function ReadyStep({ onStart }: { onStart: () => void }) {
     <>
       <div className="ob__body">
         <div className="ob-hero" style={{ alignItems: 'center', textAlign: 'center' }}>
-          <div className="win-badge" aria-hidden="true">
-            <Icon name="check" size={48} strokeWidth={2.4} motion="celebrate" />
-          </div>
+          <AssetImage asset="ready" alt="" rounded="none" loading="eager" className="ob-art ob-art--square" />
           <div className="stack stack-3">
             <h1 className="t-title1">{first ? `${first}, your baseline is ready` : 'Your baseline is ready'}</h1>
             <p className="t-body dim" style={{ maxWidth: '30ch' }}>

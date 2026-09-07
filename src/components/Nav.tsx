@@ -1,7 +1,21 @@
+import { createContext, useContext, type ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
+import { BrandMark } from './Asset'
 import { haptic } from '../lib/feedback'
 
 export type Route = 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements'
+
+/**
+ * Navigation, available to anything on screen. The avatar sits in the top
+ * right of every top-level screen and has to reach the profile from there;
+ * threading a callback through five screens to do it would be worse.
+ */
+const NavCtx = createContext<(route: Route) => void>(() => {})
+export const useNavigate = () => useContext(NavCtx)
+
+export function NavProvider({ navigate, children }: { navigate: (r: Route) => void; children: ReactNode }) {
+  return <NavCtx.Provider value={navigate}>{children}</NavCtx.Provider>
+}
 
 interface NavItem { route: Route; label: string; icon: IconName }
 
@@ -50,7 +64,7 @@ export function Sidebar({
   return (
     <nav className="sidebar" aria-label="Primary">
       <div className="sidebar__brand">
-        <span className="mark" aria-hidden="true">J</span>
+        <BrandMark size={34} />
         <div className="stack" style={{ gap: 0 }}>
           <span className="t-body strong">Jumbo</span>
           <span className="t-caption dim2">{name || 'Your companion'}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AiOrb, Icon } from '../components/Icon'
+import { AssetImage, Mascot } from '../components/Asset'
 import { DayCurve, ProjectionChart } from '../components/Charts'
 import {
   Confidence, Disclosure, Empty, ErrorNotice, ProvenanceTag, ScreenHead,
@@ -54,6 +55,8 @@ export function Future() {
 
   const narrative = useNarrative({ base, levers: activeLevers, projection: projected, months, key: `${scenarioId}-${months}` })
   const insights = useInsights()
+  const narrativeRef = useRef<HTMLElement>(null)
+  const firstName = state.profile.name.trim().split(' ')[0]
 
   const pickScenario = (id: string) => {
     haptic('selection')
@@ -68,6 +71,34 @@ export function Future() {
         title="If this carries on"
         sub="Not a prediction. A picture of what your current pattern points towards, and what changes when you change a habit."
       />
+
+      {/* ────────────────────────────── Jumbo, in the circular area
+          reserved for the mascot artwork. Tapping it moves to the
+          scenario Jumbo has written. */}
+      <section className="stack stack-4">
+        <AssetImage
+          asset="futurePath" alt="" rounded="card" loading="eager"
+          className="future-banner"
+        />
+        <div className="row row--top" style={{ gap: 'var(--s-4)' }}>
+        <Mascot
+          size={92}
+          thinking={narrative.loading}
+          onClick={() => {
+            narrativeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            narrativeRef.current?.focus({ preventScroll: true })
+          }}
+          label={narrative.loading ? 'Jumbo is working on your scenario' : 'Read Jumbo’s scenario'}
+        />
+        <div className="card card--quiet stack stack-2 grow">
+          <p className="t-body">
+            {firstName ? `${firstName}, ` : ''}Jumbo has {base.daysOfHistory} days of your history to work
+            from. Explore where your current habits could lead.
+          </p>
+          <p className="t-caption dim2">This is a modelled scenario, not a medical prediction.</p>
+        </div>
+        </div>
+      </section>
 
       {/* ────────────────────────────── choose a life, and a horizon */}
       <section className="stack stack-4">
@@ -98,7 +129,7 @@ export function Future() {
       </section>
 
       {/* ────────────────────────────── the day it could feel like */}
-      <section className="card stack stack-5">
+      <section className="card stack stack-5" ref={narrativeRef} tabIndex={-1}>
         <div className="row row--between row--top">
           <div className="stack stack-1">
             <span className="eyebrow">An ordinary day, in {HORIZON_LABEL[months].toLowerCase()}</span>

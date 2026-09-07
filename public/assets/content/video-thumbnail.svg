@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Video thumbnail placeholder">
+  <title>Video thumbnail — placeholder</title>
+  <circle cx="320" cy="164" r="46" fill="none" stroke="#8A8F88" stroke-width="3"/>
+  <path d="M308 142l38 22-38 22Z" fill="#8A8F88"/>
+  <text x="320" y="256" fill="#8A8F88" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="20" font-weight="600" letter-spacing="2" text-anchor="middle">THUMBNAIL PLACEHOLDER · 16:9</text>
+  <rect x="2" y="2" width="636" height="356" rx="18" fill="none" stroke="#92E82A" stroke-width="3" stroke-dasharray="10 12" opacity="0.5"/>
+</svg>

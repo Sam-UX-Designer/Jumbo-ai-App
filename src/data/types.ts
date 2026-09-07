@@ -120,6 +120,11 @@ export interface Goal {
 export interface Profile {
   name: string
   phone: string
+  /**
+   * The photo shown top right on every screen. A downscaled data URL held
+   * only on this device — it is never sent to the server or to the AI.
+   */
+  photo?: string | null
 }
 
 /** Times Jumbo will nudge, in 24h "HH:MM". Empty string means off. */

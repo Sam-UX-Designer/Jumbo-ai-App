@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
+import { AvatarButton } from '../components/Asset'
 import { Rings, MiniRing, RING_DEFS } from '../components/Rings'
 import { Sparkline } from '../components/Charts'
 import { Confidence, DemoBadge, Empty, SectionHead, SetupNotice } from '../components/UI'
@@ -29,11 +30,17 @@ export function Today({ onNavigate }: { onNavigate: (r: Route) => void }) {
     <div className="stack stack-14">
       {/* ────────────────────────────────── How am I doing? */}
       <header className="stack stack-3">
-        <div className="row row--between">
-          <p className="eyebrow">{prettyDateLong(day.date)}</p>
-          {state.dataMode === 'demo' && <DemoBadge inline />}
+        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+          <div className="stack stack-3" style={{ minWidth: 0 }}>
+            <div className="row" style={{ gap: 'var(--s-2)' }}>
+              <p className="eyebrow">{prettyDateLong(day.date)}</p>
+              {state.dataMode === 'demo' && <DemoBadge inline />}
+            </div>
+            <h1 className="t-display">{greeting}{firstName ? `, ${firstName}` : ''}.</h1>
+          </div>
+          {/* The profile photo lives here on Home, and only here. */}
+          <AvatarButton size={44} />
         </div>
-        <h1 className="t-display">{greeting}{firstName ? `, ${firstName}` : ''}.</h1>
         <p className="t-body dim" style={{ maxWidth: '32ch' }}>{describeDay(progress)}</p>
       </header>
 
