@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AiOrb, Icon } from '../components/Icon'
+import { AssetImage } from '../components/Asset'
 import {
   Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice, Sheet, useToast,
 } from '../components/UI'
@@ -219,10 +220,11 @@ function VideoRow({
         style={{ gap: 'var(--s-3)', background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}
       >
         <span style={{ position: 'relative', flex: 'none' }}>
-          {video.thumbnail
-            ? <img src={video.thumbnail} alt="" width={100} height={72}
-                style={{ width: 100, height: 72, objectFit: 'cover', borderRadius: 'var(--r-input)' }} loading="lazy" />
-            : <span style={{ width: 100, height: 72, borderRadius: 'var(--r-input)', background: 'var(--surface-3)', display: 'block' }} />}
+          {/* YouTube's own thumbnail when the API gave one, Jumbo's placeholder when it did not. */}
+          <AssetImage
+            asset="videoThumbnail" src={video.thumbnail} alt="" width={100} height={72}
+            rounded="tile" style={{ width: 100, height: 72 }}
+          />
           <span style={{
             position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
             color: '#fff', background: 'rgba(0,0,0,.28)', borderRadius: 'var(--r-input)',

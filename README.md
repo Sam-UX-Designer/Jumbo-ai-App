@@ -26,6 +26,7 @@ dishonest about.
 | **YouTube** | Real YouTube Data API v3 search, channels, durations and view counts, with an embedded player. Requires `YOUTUBE_API_KEY`. Jumbo never invents a creator or a video. |
 | **Reminders** | Real Notification API, scheduled in-page. A browser cannot fire a notification while it is closed, and Profile says so rather than promising otherwise. |
 | **Sample data** | A deterministic six-month history so the product is explorable immediately. **Always labelled "Sample data"** and never presented as a health record. |
+| **Artwork** | **Placeholders.** The mascot, avatars, illustrations, brand mark and source logos are marked stand-ins in `public/assets/`, sized to the slots they will fill. Replacing one is a file copy — see `docs/ASSETS.md`. |
 
 Nothing is faked to look connected. Every capability that is not configured
 shows a specific notice naming the environment variable it needs and linking
@@ -58,6 +59,7 @@ Every variable is documented in `.env.example`. The short version:
 |---|---|
 | Meal analysis, insights, future scenarios | `ANTHROPIC_API_KEY` |
 | Explore | `YOUTUBE_API_KEY` |
+| Serving artwork from somewhere other than `public/assets` | `VITE_ASSET_BASE_URL` |
 | A health source | `<PROVIDER>_CLIENT_ID` and `<PROVIDER>_CLIENT_SECRET`, and register `{PUBLIC_URL}/api/oauth/callback/{provider}` as the redirect URI |
 
 Garmin issues its Health API endpoints with programme approval, so
@@ -155,6 +157,13 @@ principles.
 - **Accessibility.** Body text at or above 4.5:1 in both themes, every control at
   least 44pt, focus trapping in sheets, labelled charts, and a live region on
   every asynchronous state.
+- **The profile photo is always top right** on every top-level screen, and
+  never on the left. Tapping it opens You; tapping it there changes the photo,
+  which is cropped and kept on the device alone.
+- **Artwork has reserved slots, not improvised ones.** Every image is declared
+  once in `src/lib/assets.ts`, drawn into a slot with a fixed size and aspect
+  ratio, and collapses to a plain surface if the file is missing. Finished
+  artwork drops in without moving a single pixel of layout.
 
 ---
 

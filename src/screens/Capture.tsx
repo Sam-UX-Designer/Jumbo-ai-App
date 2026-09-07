@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import '../styles/capture.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
+import { AssetImage } from '../components/Asset'
 import { Empty, ScreenHead, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
 import { MealCapture } from './MealCapture'
 import { useStore } from '../state/store'
@@ -37,18 +38,24 @@ export function Capture() {
   const logged = [
     ...today.meals.map((m) => ({
       id: m.id, icon: 'plate' as IconName, colour: 'var(--nutrition)',
+      /**
+       * The photograph slot for this meal. Meals are not storing their
+       * picture yet, so the reserved placeholder stands in — see
+       * src/lib/assets.ts.
+       */
+      photo: null as string | null,
       title: `${m.slot} · ${mealTotals(m.items).kcal} kcal`,
       sub: `${m.items.length} items · ${m.method === 'camera' ? 'from a photo' : m.method === 'manual' ? 'entered by hand' : 'imported'}`,
       remove: m.method !== 'imported' ? () => dispatch({ type: 'removeMeal', date: today.date, mealId: m.id }) : undefined,
     })),
     ...(today.workout ? [{
-      id: today.workout.id, icon: 'training' as IconName, colour: 'var(--training)',
+      id: today.workout.id, icon: 'training' as IconName, colour: 'var(--training)', photo: undefined,
       title: `${today.workout.type} · ${today.workout.minutes} min`,
       sub: `${['easy', 'moderate', 'hard'][today.workout.intensity - 1]}${today.workout.perceivedEffort ? ` · felt ${today.workout.perceivedEffort}/10` : ''}`,
       remove: today.workout.source === 'manual' ? () => dispatch({ type: 'removeWorkout', date: today.date }) : undefined,
     }] : []),
     ...(today.notes ? [{
-      id: 'note', icon: 'note' as IconName, colour: 'var(--sleep)',
+      id: 'note', icon: 'note' as IconName, colour: 'var(--sleep)', photo: undefined,
       title: 'Note', sub: today.notes,
       remove: () => dispatch({ type: 'setNote', date: today.date, note: '' }),
     }] : []),
@@ -106,12 +113,19 @@ export function Capture() {
           <ul className="stack stack-3">
             {logged.map((row) => (
               <li className="card row" key={row.id} style={{ gap: 'var(--s-3)' }}>
-                <span style={{
-                  width: 40, height: 40, borderRadius: 'var(--r-tile)', flex: 'none',
-                  display: 'grid', placeItems: 'center', background: 'var(--surface-2)', color: row.colour,
-                }}>
-                  <Icon name={row.icon} size={19} />
-                </span>
+                {row.photo !== undefined ? (
+                  <AssetImage
+                    asset="mealPhoto" src={row.photo} alt="" width={40} height={40}
+                    rounded="tile" style={{ width: 40, height: 40 }}
+                  />
+                ) : (
+                  <span style={{
+                    width: 40, height: 40, borderRadius: 'var(--r-tile)', flex: 'none',
+                    display: 'grid', placeItems: 'center', background: 'var(--surface-2)', color: row.colour,
+                  }}>
+                    <Icon name={row.icon} size={19} />
+                  </span>
+                )}
                 <div className="grow stack" style={{ gap: 1, minWidth: 0 }}>
                   <span className="t-callout strong">{row.title}</span>
                   <span className="t-caption dim2" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</span>

@@ -4,6 +4,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, type IconName } from './Icon'
+import { AvatarButton } from './Asset'
 import { haptic } from '../lib/feedback'
 import { uid } from '../lib/util'
 
@@ -261,11 +262,20 @@ export function SectionHead({
 /* ============================================================
    Screen header
    ============================================================ */
+/**
+ * The profile photo sits in the top right of every top-level screen. It is
+ * part of the header, not something each screen remembers to add.
+ */
 export function ScreenHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
   return (
     <header className="stack stack-2" style={{ marginBottom: 'var(--s-8)' }}>
-      {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-      <h1 className="t-title1">{title}</h1>
+      <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+        <div className="stack stack-2" style={{ minWidth: 0 }}>
+          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+          <h1 className="t-title1">{title}</h1>
+        </div>
+        <AvatarButton />
+      </div>
       {sub && <p className="t-callout dim" style={{ maxWidth: '48ch' }}>{sub}</p>}
     </header>
   )

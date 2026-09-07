@@ -1,0 +1,142 @@
+/* ============================================================
+   Image slots
+
+   Artwork is still in production, so these rules have to look
+   deliberate while the placeholders are in place and stay correct once
+   the finished files land. Everything is sized and clipped by the slot,
+   never by the file.
+   ============================================================ */
+
+.asset {
+  display: block;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.asset--none   { border-radius: 0; background: none; }
+.asset--tile   { border-radius: var(--r-tile); }
+.asset--card   { border-radius: var(--r-card); }
+.asset--circle { border-radius: 50%; }
+
+/* A file that never arrived. Calm, not broken. */
+.asset--missing {
+  display: block;
+  background: var(--surface-2);
+  border: 1px dashed var(--hairline-firm);
+}
+
+/* The wordmark keeps its own proportions and never stretches to its column. */
+.brand-wordmark {
+  width: auto;
+  align-self: flex-start;
+  object-fit: contain;
+  background: none;
+}
+
+/* ------------------------------------------------------------ avatar */
+.avatar {
+  border: 1px solid var(--hairline-firm);
+  background: var(--surface-3);
+  flex: none;
+}
+
+.avatar-btn {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  flex: none;
+  transition: transform var(--d-fast) var(--ease), box-shadow var(--d-fast) var(--ease);
+}
+.avatar-btn:hover  { box-shadow: 0 0 0 2px var(--brand-line); }
+.avatar-btn:active { transform: scale(0.94); }
+.avatar-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ mascot
+   The circular area the design reserves for the mascot. It holds its
+   size whether the artwork is a square PNG, a transparent SVG, or
+   nothing at all yet. */
+.mascot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--brand-line);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 38%, var(--brand-dim), transparent 70%),
+    var(--surface-2);
+  box-shadow: var(--shadow-brand);
+}
+
+button.mascot { cursor: pointer; }
+button.mascot:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+button.mascot:active { transform: scale(0.96); }
+
+/* A gentle float, and a little more life while the AI is working. */
+@media (prefers-reduced-motion: no-preference) {
+  .mascot            { animation: mascot-float 4.2s var(--ease) infinite; }
+  .mascot.is-thinking { animation-duration: 2.1s; }
+  .mascot.is-thinking::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--brand);
+    opacity: 0.5;
+    animation: orb-ring 1.6s var(--ease) infinite;
+  }
+}
+
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0) }
+  50%      { transform: translateY(-7px) }
+}
+
+/* ------------------------------------------------------- source logos */
+.source-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-tile);
+  flex: none;
+  background: var(--surface-3);
+  object-fit: contain;
+}
+
+/* --------------------------------------------------- profile photo edit */
+.photo-edit {
+  position: relative;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex: none;
+}
+.photo-edit:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+.photo-edit__badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-ink);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .38);
+}
+
+/* ------------------------------------------------- screen banner slot */
+.future-banner {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  max-height: 200px;
+  object-fit: cover;
+}

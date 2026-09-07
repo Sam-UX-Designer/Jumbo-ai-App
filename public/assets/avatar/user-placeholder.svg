@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Profile photo placeholder">
+  <title>Profile photo — placeholder</title>
+  <!-- No opaque plate: the slot's own surface colour shows through, so this
+       reads correctly in both the dark and the light theme. -->
+  <circle cx="128" cy="104" r="38" fill="#8A8F88"/>
+  <path d="M56 214c10-40 37-62 72-62s62 22 72 62" fill="#8A8F88"/>
+  <rect x="2" y="2" width="252" height="252" rx="126" fill="none" stroke="#92E82A" stroke-width="3" stroke-dasharray="10 12" opacity="0.6"/>
+</svg>

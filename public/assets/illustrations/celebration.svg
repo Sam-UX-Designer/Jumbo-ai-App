@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800" role="img" aria-label="Celebration illustration placeholder">
+  <title>Setup celebration — placeholder artwork</title>
+  <circle cx="400" cy="400" r="180" fill="#92E82A"/>
+  <path d="M312 402l62 62 122-134" stroke="#0B1500" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <g opacity="0.95">
+    <rect x="122" y="150" width="34" height="14" rx="7" fill="#6E7BFF" transform="rotate(-24 139 157)"/>
+    <rect x="636" y="196" width="34" height="14" rx="7" fill="#FFA53D" transform="rotate(32 653 203)"/>
+    <rect x="182" y="596" width="34" height="14" rx="7" fill="#B57BFF" transform="rotate(14 199 603)"/>
+    <rect x="606" y="588" width="34" height="14" rx="7" fill="#2ED8A7" transform="rotate(-38 623 595)"/>
+    <circle cx="248" cy="238" r="11" fill="#FF5C7A"/>
+    <circle cx="566" cy="600" r="11" fill="#46C8F5"/>
+    <circle cx="118" cy="428" r="9" fill="#92E82A"/>
+    <circle cx="688" cy="396" r="9" fill="#FFA53D"/>
+  </g>
+  <circle cx="400" cy="400" r="374" fill="none" stroke="#92E82A" stroke-width="4" stroke-dasharray="14 16" opacity="0.4"/>
+  <text x="400" y="762" fill="#7C817B" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="24" font-weight="600" letter-spacing="3" text-anchor="middle">CELEBRATION PLACEHOLDER · 1:1</text>
+</svg>

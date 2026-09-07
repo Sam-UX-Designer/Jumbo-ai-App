@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon, type IconName } from '../components/Icon'
+import { ProfilePhotoPicker, SourceLogo } from '../components/Asset'
 import {
   DemoBadge, Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice,
   Switch, useConfirm, useToast,
@@ -50,9 +51,10 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
       {/* ------------------------------------------------------ identity */}
       <section className="card stack stack-5">
         <div className="row" style={{ gap: 'var(--s-4)' }}>
-          <span className="mark" style={{ width: 52, height: 52, borderRadius: 17, fontSize: 21 }} aria-hidden="true">
-            {(state.profile.name.trim()[0] ?? 'J').toUpperCase()}
-          </span>
+          <ProfilePhotoPicker
+            size={64}
+            onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
+          />
           <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
             <span className="t-title3">{state.profile.name || 'Add your name'}</span>
             <span className="t-caption dim">
@@ -395,14 +397,10 @@ function Sources({
             return (
               <li key={p.id} className="card stack stack-3">
                 <div className="row" style={{ gap: 'var(--s-3)' }}>
-                  <span style={{
-                    width: 44, height: 44, borderRadius: 'var(--r-tile)', flex: 'none',
-                    display: 'grid', placeItems: 'center',
-                    background: connected ? 'var(--brand-dim)' : 'var(--surface-2)',
-                    color: connected ? 'var(--brand)' : 'var(--ink-3)',
-                  }} aria-hidden="true">
-                    <Icon name={SOURCE_ICON[p.id] ?? 'link'} size={21} />
-                  </span>
+                  <SourceLogo
+                    providerId={p.id} connected={connected}
+                    fallbackIcon={SOURCE_ICON[p.id] ?? 'link'} size={44}
+                  />
                   <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
                     <span className="t-callout strong">{p.name}</span>
                     <span className="t-caption dim2">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
-import { Sidebar, TabBar, type Route } from './components/Nav'
+import { NavProvider, Sidebar, TabBar, type Route } from './components/Nav'
 import { ToastProvider, useToast } from './components/UI'
 import { Onboarding } from './onboarding/Onboarding'
 import { Today } from './screens/Today'
@@ -43,21 +43,23 @@ function Shell() {
   if (!state.onboarded) return <Onboarding />
 
   return (
-    <div className="app">
-      <a className="skip-link" href="#main">Skip to content</a>
-      <div className="shell">
-        <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
-        <main className="main" id="main" key={route} tabIndex={-1}>
-          {route === 'today' && <Today onNavigate={setRoute} />}
-          {route === 'future' && <Future />}
-          {route === 'capture' && <Capture />}
-          {route === 'explore' && <Explore />}
-          {route === 'measurements' && <Measurements />}
-          {route === 'you' && <You onNavigate={setRoute} />}
-        </main>
+    <NavProvider navigate={setRoute}>
+      <div className="app">
+        <a className="skip-link" href="#main">Skip to content</a>
+        <div className="shell">
+          <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
+          <main className="main" id="main" key={route} tabIndex={-1}>
+            {route === 'today' && <Today onNavigate={setRoute} />}
+            {route === 'future' && <Future />}
+            {route === 'capture' && <Capture />}
+            {route === 'explore' && <Explore />}
+            {route === 'measurements' && <Measurements />}
+            {route === 'you' && <You onNavigate={setRoute} />}
+          </main>
+        </div>
+        <TabBar route={route} onNavigate={setRoute} />
       </div>
-      <TabBar route={route} onNavigate={setRoute} />
-    </div>
+    </NavProvider>
   )
 }
 
