@@ -77,10 +77,20 @@ button.mascot { cursor: pointer; }
 button.mascot:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 button.mascot:active { transform: scale(0.96); }
 
-/* A gentle float, and a little more life while the AI is working. */
+/*
+ * A gentle float at rest. While Jumbo is working, three things run together
+ * and nothing writes a word about it: the float quickens, a ring expands
+ * outward on a loop, and the mark itself breathes a soft brand glow. Subtle
+ * enough to sit under a conversation, alive enough to read as activity.
+ */
 @media (prefers-reduced-motion: no-preference) {
   .mascot            { animation: mascot-float 4.2s var(--ease) infinite; }
-  .mascot.is-thinking { animation-duration: 2.1s; }
+
+  .mascot.is-thinking {
+    animation: mascot-float 2.1s var(--ease) infinite,
+               mascot-breathe 2.1s var(--ease) infinite;
+  }
+  /* The expanding ring. */
   .mascot.is-thinking::after {
     content: '';
     position: absolute;
@@ -90,6 +100,29 @@ button.mascot:active { transform: scale(0.96); }
     opacity: 0.5;
     animation: orb-ring 1.6s var(--ease) infinite;
   }
+  /* A second, half a beat behind, so the pulse never reads as a single blip. */
+  .mascot.is-thinking::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--brand);
+    opacity: 0.32;
+    animation: orb-ring 1.6s var(--ease) 0.8s infinite;
+  }
+}
+
+/* The state still has to read with motion turned down: a steady ring, no
+   movement. */
+@media (prefers-reduced-motion: reduce) {
+  .mascot.is-thinking {
+    box-shadow: 0 0 0 1.5px var(--brand-line), 0 0 18px -4px var(--brand-glow);
+  }
+}
+
+@keyframes mascot-breathe {
+  0%, 100% { box-shadow: 0 0 16px -6px var(--brand-glow) }
+  50%      { box-shadow: 0 0 26px -2px var(--brand-glow) }
 }
 
 @keyframes mascot-float {

@@ -70,6 +70,12 @@ export interface MealEntry {
   method: 'camera' | 'manual' | 'imported'
   /** True once a human has reviewed and confirmed the AI's proposal. */
   confirmed: boolean
+  /**
+   * A small JPEG data URL of the photograph this meal was read from, kept so
+   * the entry shows what was actually analysed. Downscaled before it is
+   * stored — the full capture would exhaust localStorage within a few meals.
+   */
+  photo?: string
   photoSeed?: number
 }
 

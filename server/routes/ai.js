@@ -20,10 +20,21 @@ export const ai = Router()
 const MEAL_SCHEMA = {
   type: 'object',
   properties: {
-    dish: { type: 'string', description: 'A short name for the plate as a whole.' },
-    readable: {
-      type: 'boolean',
-      description: 'False when the photo is too dark, blurred or cropped to identify food reliably.',
+    dish: { type: 'string', description: 'A short name for the plate as a whole. Empty when the verdict is not "food".' },
+    verdict: {
+      type: 'string',
+      enum: ['food', 'not_food', 'unclear'],
+      description:
+        '"food" when you can identify what is on the plate. '
+        + '"not_food" when the photograph shows something that is not a meal at all — a person, a laptop, a room, a street. '
+        + '"unclear" when there is food but you cannot identify it or its portions: too dark, blurred, too far away, or obscured.',
+    },
+    message: {
+      type: 'string',
+      description:
+        'One friendly sentence for the person, used when the verdict is not "food". '
+        + 'Say what you saw and what would help. Never apologise for an error — nothing has gone wrong. '
+        + 'Empty string when the verdict is "food".',
     },
     caveat: {
       type: 'string',
@@ -53,7 +64,7 @@ const MEAL_SCHEMA = {
       },
     },
   },
-  required: ['dish', 'readable', 'caveat', 'alternatives', 'items'],
+  required: ['dish', 'verdict', 'message', 'caveat', 'alternatives', 'items'],
 }
 
 const MEAL_SYSTEM = `You estimate the nutritional content of a meal from a single photograph for Jumbo, a wellness companion.
@@ -62,9 +73,19 @@ Rules you must follow:
 - Identify only what you can actually see. Never add a food because it commonly accompanies another.
 - Portion size from one photograph is genuinely uncertain. Say so through the confidence values rather than by guessing precisely.
 - Oils, butter, dressings and sauces are usually invisible. If you include one, give it a low confidence and mention it in the caveat.
-- If the image is dark, blurred, heavily cropped, or does not contain food, set readable to false and return an empty items array.
+- Classify the photograph before anything else:
+  - "food": you can identify what is on the plate. Fill in items.
+  - "not_food": the photograph is not of food at all — a person, a laptop, a shoe, a building, a document, the sky. This is a normal outcome, not a failure. Return an empty items array and a friendly message inviting them to photograph their meal.
+  - "unclear": there is something that may be food, but you cannot identify it or judge portions — too dark, blurred, too distant, or obscured. Return an empty items array and a message saying what specifically was in the way, so the next photograph fixes it.
+- Never force a guess to avoid returning "not_food" or "unclear". Both are correct answers and the person is offered a retake.
 - Confidence is per item and must reflect real uncertainty. A clear, unambiguous food may be above 0.9. A food you are inferring from shape or colour alone should be below 0.6.
 - The person reviews and corrects everything you return before it is saved, so an honest low-confidence answer is more useful than a confident wrong one.`
+
+/** Used only when the model classifies but returns no sentence of its own. */
+const DEFAULT_MESSAGE = {
+  not_food: 'This doesn’t look like a food photo. Try taking a photo of your meal.',
+  unclear: 'I can see something that may be food, but I can’t identify it clearly. Try a closer, brighter photo.',
+}
 
 ai.post('/food', async (req, res) => {
   if (!aiConfigured()) return aiUnavailable(res, 'meal photo analysis')
@@ -95,7 +116,12 @@ ai.post('/food', async (req, res) => {
       vision: true,
     })
 
-    const items = (data.items ?? []).map((i, idx) => ({
+    const verdict = ['food', 'not_food', 'unclear'].includes(data.verdict) ? data.verdict : 'unclear'
+    // A "food" verdict with nothing in it is really an unclear one.
+    const rawItems = Array.isArray(data.items) ? data.items : []
+    const settled = verdict === 'food' && rawItems.length === 0 ? 'unclear' : verdict
+
+    const items = (settled === 'food' ? rawItems : []).map((i, idx) => ({
       id: `ai-${Date.now()}-${idx}`,
       name: i.name,
       portion: i.portion,
@@ -110,8 +136,9 @@ ai.post('/food', async (req, res) => {
     res.json({
       source: 'openrouter',
       model,
-      dish: data.dish,
-      readable: data.readable !== false,
+      dish: data.dish || '',
+      verdict: settled,
+      message: settled === 'food' ? null : (data.message || DEFAULT_MESSAGE[settled]),
       caveat: data.caveat || null,
       alternatives: (data.alternatives ?? []).slice(0, 3),
       items,

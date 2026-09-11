@@ -13,14 +13,16 @@
 .chat {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - var(--tab-h) - env(safe-area-inset-bottom));
+  /* A fixed height, not a minimum: the thread inside needs something to
+     scroll within, and the composer stays put while it does. */
+  height: calc(100dvh - var(--tab-h) - env(safe-area-inset-bottom));
   margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1)
           calc(-1 * (var(--tab-h) + var(--s-10) + env(safe-area-inset-bottom)));
 }
 @media (min-width: 768px) { .chat { margin-inline: calc(var(--s-8) * -1); } }
 @media (min-width: 1024px) {
   .chat {
-    min-height: calc(100dvh - var(--s-10));
+    height: calc(100dvh - var(--s-10));
     margin: calc(var(--s-10) * -1) calc(var(--s-8) * -1) calc(var(--s-18) * -1);
   }
 }
@@ -35,8 +37,14 @@
   border-bottom: 1px solid var(--hairline);
 }
 
+/* The conversation is the scroll container, so the newest turn can be
+   brought into view without moving the page under the header and composer. */
 .chat__body {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column; gap: var(--s-5);
   padding: var(--s-5) var(--s-4) var(--s-6);
 }
@@ -54,7 +62,23 @@
   justify-content: center;
   max-width: 460px;
 }
-.chat__prompts--inline { justify-content: flex-start; }
+
+/* Next-action chips under an answer stay on one line and scroll sideways,
+   however many come back and however narrow the phone is. */
+.chat__prompts--inline {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.chat__prompts--inline::-webkit-scrollbar { display: none; }
+.chat__prompts--inline > li { flex: 0 0 auto; }
+.chat__prompts--inline .chip { white-space: nowrap; }
 .chip--sm { min-height: 34px; padding: 0 var(--s-3); font-size: var(--t-caption); }
 
 /* ------------------------------------------------------------ thread */
@@ -90,26 +114,13 @@
   border-bottom-left-radius: 6px;
 }
 
-/* Jumbo is writing. Three dots, and nothing else moving on the screen. */
-.typing { display: inline-flex; gap: 5px; padding: var(--s-1) 0; }
-.typing i {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--ink-3);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .typing i { animation: typing 1.25s var(--ease) infinite; }
-  .typing i:nth-child(2) { animation-delay: .16s; }
-  .typing i:nth-child(3) { animation-delay: .32s; }
-}
-@keyframes typing {
-  0%, 60%, 100% { opacity: .3; transform: translateY(0) }
-  30%           { opacity: 1;  transform: translateY(-3px) }
-}
+/* Jumbo working. The mascot beside the row carries it — see
+   .mascot.is-thinking in assets.css. No dots, no narration. */
+.working { display: flex; justify-content: center; padding: var(--s-2) 0; }
 
 /* ---------------------------------------------------------- composer */
 .chat__composer {
-  position: sticky;
-  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  flex: none;
   z-index: 20;
   display: flex; align-items: flex-end; gap: var(--s-2);
   padding: var(--s-3) var(--s-4);
@@ -151,6 +162,4 @@
 /* Sits above the composer, so the disclaimer is never orphaned below it. */
 .chat__foot { padding: 0 var(--s-4) var(--s-3); text-align: center; }
 
-@media (min-width: 1024px) {
-  .chat__composer { bottom: 0; }
-}
+

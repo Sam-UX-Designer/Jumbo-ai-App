@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Icon } from '../components/Icon'
-import { AssetImage } from '../components/Asset'
-import { AiOrb } from '../components/Icon'
+import { AiOrb, Icon } from '../components/Icon'
+import { AssetImage, Mascot } from '../components/Asset'
 import { Camera, type Capture } from '../components/Camera'
 import { Confidence, ErrorNotice, Sheet, Stepper, UnavailableNotice, useToast } from '../components/UI'
 import { useStore } from '../state/store'
@@ -9,9 +8,10 @@ import { api, type FoodAnalysis } from '../lib/api'
 import { FOODS, FOOD_KEYS, makeFoodItem, mealTotals, rescaleItem } from '../data/foods'
 import type { FoodItem, MealEntry } from '../data/types'
 import { celebrate, haptic } from '../lib/feedback'
+import { makeThumbnail } from '../lib/thumbnail'
 import { uid } from '../lib/util'
 
-type Phase = 'camera' | 'analysing' | 'review' | 'saved'
+type Phase = 'camera' | 'analysing' | 'review' | 'retake' | 'saved'
 
 interface Failure { kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string }
 
@@ -57,8 +57,11 @@ export function MealCapture({
     if (r.ok) {
       setResult(r.data)
       setItems(r.data.items)
-      setPhase('review')
-      haptic('impactLight')
+      // 'not_food' and 'unclear' are answers, not errors: the photograph
+      // arrived and was read. The person is shown what Jumbo saw and offered
+      // another go, with no error surface anywhere.
+      setPhase(r.data.verdict === 'food' ? 'review' : 'retake')
+      haptic(r.data.verdict === 'food' ? 'impactLight' : 'selection')
       return
     }
 
@@ -80,8 +83,10 @@ export function MealCapture({
 
   const totals = mealTotals(items)
 
-  const save = () => {
+  const save = async () => {
     if (!items.length) return
+    // Only a downscaled copy is kept; the full capture never reaches storage.
+    const photo = shot ? await makeThumbnail(shot.dataUrl) : undefined
     const meal: MealEntry = {
       id: `meal-${uid()}`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
@@ -89,6 +94,7 @@ export function MealCapture({
       items,
       method: result ? 'camera' : 'manual',
       confirmed: true,
+      ...(photo ? { photo } : {}),
     }
     dispatch({ type: 'addMeal', date, meal })
     dispatch({ type: 'awardMilestone', id: 'first-meal' })
@@ -113,7 +119,8 @@ export function MealCapture({
       title={
         phase === 'camera' ? 'Photograph your meal'
           : phase === 'review' && !shot ? 'Build your meal'
-          : phase === 'analysing' ? 'Reading the plate'
+          : phase === 'analysing' ? 'Your photo'
+          : phase === 'retake' ? 'Have another go'
           : phase === 'saved' ? 'Saved'
           : failure ? 'Build the meal' : 'Check before saving'
       }
@@ -128,7 +135,7 @@ export function MealCapture({
             <button className="btn btn--secondary" onClick={() => { setPhase('camera'); setResult(null); setItems([]); setFailure(null) }}>
               Retake
             </button>
-            <button className="btn btn--primary grow" onClick={save} disabled={!items.length}>
+            <button className="btn btn--primary grow" onClick={() => void save()} disabled={!items.length}>
               Save meal
             </button>
           </>
@@ -148,17 +155,51 @@ export function MealCapture({
               <img src={shot.dataUrl} alt="The meal you just photographed" />
             </div>
           )}
-          <div className="row" style={{ gap: 'var(--s-4)' }}>
-            <AiOrb working label="Jumbo is analysing your photo" />
-            <div className="stack stack-1 grow">
-              <span className="t-callout strong">Identifying what’s on the plate</span>
-              <span className="t-caption dim">
-                {'Jumbo is reading the photograph. You correct anything it gets wrong.'}
-              </span>
-            </div>
+          {/* The mascot's own working state carries this. Nothing narrates
+              what Jumbo is supposedly doing. */}
+          <div className="working" role="status" aria-label="Working">
+            <Mascot size={64} thinking />
           </div>
           <div className="stack stack-2">
             {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 52 }} />)}
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------ read, but not a meal */}
+      {phase === 'retake' && result && (
+        <div className="stack stack-5">
+          {shot && (
+            <div className="shot-preview">
+              <img src={shot.dataUrl} alt="The photo you just took" />
+            </div>
+          )}
+          <div className="stack stack-3" style={{ textAlign: 'center', alignItems: 'center' }}>
+            <Icon
+              name={result.verdict === 'not_food' ? 'image' : 'camera'}
+              size={26}
+              style={{ color: 'var(--nutrition)' }}
+            />
+            <p className="t-body" style={{ maxWidth: '34ch' }}>
+              {result.message
+                ?? (result.verdict === 'not_food'
+                  ? 'This doesn’t look like a food photo. Try taking a photo of your meal.'
+                  : 'I can see something that may be food, but I can’t identify it clearly. Try a closer, brighter photo.')}
+            </p>
+          </div>
+          <div className="row" style={{ gap: 'var(--s-3)' }}>
+            <button
+              className="btn btn--primary grow"
+              onClick={() => { haptic('selection'); setPhase('camera'); setResult(null); setShot(null) }}
+            >
+              <Icon name="camera" size={16} /> Retake photo
+            </button>
+            <button
+              className="btn btn--secondary"
+              onClick={() => { setPhase('review'); setResult(null); setAdding(true) }}
+            >
+              Add by hand
+            </button>
           </div>
         </div>
       )}
@@ -195,15 +236,7 @@ export function MealCapture({
             />
           )}
 
-          {result && !result.readable && (
-            <ErrorNotice
-              title="Jumbo could not read that photo"
-              message={result.caveat ?? 'The plate was not clear enough to identify. Retake it in better light, or add the items by hand.'}
-              onRetry={() => setPhase('camera')}
-            />
-          )}
-
-          {result?.caveat && result.readable && (
+          {result?.caveat && (
             <div className="notice notice--setup" role="note">
               <Icon name="info" size={18} style={{ color: 'var(--nutrition)', flex: 'none', marginTop: 2 }} />
               <div className="stack stack-1">

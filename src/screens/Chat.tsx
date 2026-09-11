@@ -23,6 +23,7 @@ export function Chat({
   const chat = useChat()
   const [draft, setDraft] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
+  const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const sentInitial = useRef(false)
 
@@ -35,8 +36,15 @@ export function Chat({
     chat.send(initialQuestion)
   }, [initialQuestion, chat])
 
+  /**
+   * Keep the newest turn in view by scrolling the conversation itself.
+   * scrollIntoView would walk up to the document and move the whole page,
+   * taking the header and the composer with it.
+   */
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    const thread = threadRef.current
+    if (!thread) return
+    thread.scrollTo({ top: thread.scrollHeight, behavior: 'smooth' })
   }, [chat.messages])
 
   // Arriving with nothing to ask yet: put the caret in the field so the
@@ -69,9 +77,7 @@ export function Chat({
         <Mascot size={32} thinking={chat.generating} />
         <div className="stack" style={{ gap: 0, minWidth: 0 }}>
           <span className="t-body strong">Ask Jumbo</span>
-          <span className="t-caption dim2">
-            {chat.generating ? 'Thinking…' : 'Grounded in your own data'}
-          </span>
+          <span className="t-caption dim2">Grounded in your own data</span>
         </div>
         <div className="grow" />
         {chat.messages.length > 0 && (
@@ -80,7 +86,7 @@ export function Chat({
         <AvatarButton size={36} />
       </header>
 
-      <div className="chat__body">
+      <div className="chat__body" ref={threadRef}>
         {!chat.ready && (
           <UnavailableNotice
             title="Jumbo can’t answer right now"
@@ -112,15 +118,15 @@ export function Chat({
           <ul className="chat__thread">
             {chat.messages.map((m) => (
               <li key={m.id} className={`bubble-row bubble-row--${m.role}`}>
-                {m.role === 'jumbo' && !m.error && <Mascot size={34} thinking={m.pending} />}
+                {m.role === 'jumbo' && !m.error && (
+                  <Mascot size={m.pending ? 44 : 34} thinking={m.pending} />
+                )}
 
                 <div className="stack stack-3" style={{ minWidth: 0, maxWidth: '100%' }}>
                   {m.pending ? (
-                    <div className="bubble bubble--jumbo">
-                      <span className="typing" aria-label="Jumbo is writing an answer">
-                        <i /><i /><i />
-                      </span>
-                    </div>
+                    // The mascot beside this row is already in its working
+                    // state. Nothing else is needed, and nothing narrates it.
+                    <span className="sr-only" role="status">Working on your question</span>
                   ) : m.error ? (
                     <ErrorNotice
                       title="That answer did not come back"

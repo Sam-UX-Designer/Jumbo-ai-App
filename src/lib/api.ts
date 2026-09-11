@@ -106,10 +106,17 @@ export interface SyncedDay {
 }
 
 export interface FoodAnalysis {
-  source: 'gemini'
+  source: 'openrouter'
   model: string
   dish: string
-  readable: boolean
+  /**
+   * What the photograph turned out to be. 'not_food' and 'unclear' are
+   * successful analyses with a normal outcome, not failures — the request
+   * returns 200 and the screen offers a retake rather than an error.
+   */
+  verdict: 'food' | 'not_food' | 'unclear'
+  /** One friendly sentence, set when the verdict is not 'food'. */
+  message: string | null
   caveat: string | null
   alternatives: string[]
   confidence: number
@@ -133,7 +140,7 @@ export interface AiInsight {
 }
 
 export interface FutureNarrative {
-  source: 'gemini'
+  source: 'openrouter'
   model: string
   headline: string
   lifeStory: string[]
@@ -143,7 +150,7 @@ export interface FutureNarrative {
 }
 
 export interface ChatAnswer {
-  source: 'gemini'
+  source: 'openrouter'
   model: string
   answer: string
   followUps: string[]

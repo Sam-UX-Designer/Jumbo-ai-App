@@ -60,11 +60,11 @@ export function Capture() {
     ...today.meals.map((m) => ({
       id: m.id, icon: 'plate' as IconName, colour: 'var(--nutrition)',
       /**
-       * The photograph slot for this meal. Meals are not storing their
-       * picture yet, so the reserved placeholder stands in — see
-       * src/lib/assets.ts.
+       * The photograph this meal was read from, when there is one. Meals
+       * added by hand, and those saved before photographs were kept, fall
+       * back to the reserved placeholder — see src/lib/assets.ts.
        */
-      photo: null as string | null,
+      photo: (m.photo ?? null) as string | null,
       title: `${m.slot} · ${mealTotals(m.items).kcal} kcal`,
       time: m.time,
       sub: m.items.slice(0, 3).map((i) => i.name).join(', ') || `${m.items.length} items`,

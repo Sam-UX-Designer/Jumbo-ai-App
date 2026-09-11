@@ -46,12 +46,28 @@ const list = (raw, fallback) => {
   return parsed.length ? parsed : fallback
 }
 
+/**
+ * Model families known to accept image input. A meal photograph sent to a
+ * text-only model does not fail loudly — the model simply describes nothing
+ * and the analysis comes back empty — so the override is filtered rather
+ * than trusted, and the vision defaults stand in if it leaves nothing.
+ */
+const VISION_CAPABLE = /(gemini|gpt-4o|gpt-4\.1|o4-|claude-3|pixtral|llama-3\.2-(11|90)b-vision|qwen.*-vl|internvl)/i
+
 export const textModels = () => list(env.openrouterModels, DEFAULT_TEXT_MODELS)
+
 export const visionModels = () => {
   const override = list(env.openrouterModels, null)
-  // An override is a deliberate choice; honour it for images too, but keep
-  // the vision default when there is none.
-  return override ?? DEFAULT_VISION_MODELS
+  if (!override) return DEFAULT_VISION_MODELS
+
+  const usable = override.filter((m) => VISION_CAPABLE.test(m))
+  const dropped = override.filter((m) => !VISION_CAPABLE.test(m))
+  if (dropped.length) {
+    console.warn(`[ai] ignoring text-only model(s) for image analysis: ${dropped.join(', ')}`)
+  }
+  // An override that names no image-capable model would leave meal
+  // photographs with nothing to run on, so the defaults carry it.
+  return usable.length ? usable : DEFAULT_VISION_MODELS
 }
 
 export const aiConfigured = () => has(env.openrouterKey)
