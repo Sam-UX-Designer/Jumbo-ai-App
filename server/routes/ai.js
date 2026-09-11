@@ -92,7 +92,7 @@ ai.post('/food', async (req, res) => {
         ],
       }],
       schema: MEAL_SCHEMA,
-      maxOutputTokens: 3000,
+      maxOutputTokens: 8192,
       temperature: 0.4,
     })
 
@@ -189,7 +189,7 @@ ai.post('/insights', async (req, res) => {
         parts: [text(`A statistical summary of this person's own data:\n${JSON.stringify(summary, null, 2)}`)],
       }],
       schema: INSIGHT_SCHEMA,
-      maxOutputTokens: 3000,
+      maxOutputTokens: 8192,
       temperature: 0.5,
     })
 
@@ -263,7 +263,7 @@ ai.post('/future', async (req, res) => {
         ].join('\n\n'))],
       }],
       schema: FUTURE_SCHEMA,
-      maxOutputTokens: 2500,
+      maxOutputTokens: 8192,
       temperature: 0.7,
     })
 
@@ -366,7 +366,7 @@ ai.post('/chat', async (req, res) => {
       system: CHAT_SYSTEM,
       contents,
       schema: CHAT_SCHEMA,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
     })
 
     res.json({
@@ -380,6 +380,72 @@ ai.post('/chat', async (req, res) => {
     sendAiError(res, err, 'Ask Jumbo')
   }
 })
+
+/* ========================================================= selftest */
+
+/**
+ * A live round trip, for checking a deployment from a browser.
+ *
+ * It reports which stage failed and the upstream reason, because a
+ * deployment that will not answer is impossible to diagnose from the
+ * product's own wording — which is deliberately vague. It sends a
+ * three-word prompt, returns no user data, and never reports the key or
+ * any part of it.
+ */
+ai.get('/selftest', async (_req, res) => {
+  const started = Date.now()
+  if (!geminiConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      stage: 'configuration',
+      model: env.geminiModel,
+      reason: 'No API key is present in this environment.',
+      hint: 'Set GEMINI_API_KEY in the deployment’s environment variables and redeploy.',
+    })
+  }
+
+  try {
+    const data = await generateJson({
+      system: 'You are a health check. Reply with the single word ok.',
+      contents: [{ role: 'user', parts: [text('Say ok.')] }],
+      schema: {
+        type: 'OBJECT',
+        properties: { status: { type: 'STRING' } },
+        required: ['status'],
+      },
+      maxOutputTokens: 2048,
+      temperature: 0,
+      timeoutMs: 25_000,
+    })
+    res.json({
+      ok: true,
+      stage: 'complete',
+      model: env.geminiModel,
+      ms: Date.now() - started,
+      reply: String(data.status ?? '').slice(0, 40),
+    })
+  } catch (err) {
+    res.status(err.status ?? 502).json({
+      ok: false,
+      stage: 'generation',
+      model: env.geminiModel,
+      ms: Date.now() - started,
+      code: err.code ?? 'unknown',
+      reason: err.message,
+      hint: HINTS[err.code] ?? 'See the deployment’s runtime logs for the upstream detail.',
+    })
+  }
+})
+
+const HINTS = {
+  bad_key: 'The key was rejected. Check it is the Generative Language API key, that the API is enabled for its project, and that no referrer or IP restriction blocks server-side calls.',
+  rate_limited: 'The project is over its quota for this model.',
+  timeout: 'The model did not respond in time. A smaller model or a shorter prompt will help.',
+  truncated: 'The model spent its output budget without producing an answer.',
+  empty: 'The model returned no content.',
+  unparsable: 'The model returned something that was not the requested JSON.',
+  declined: 'The model declined the prompt on safety grounds.',
+}
 
 /* =========================================================== shared */
 

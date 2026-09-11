@@ -52,9 +52,14 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
     ok: false,
     kind: 'error',
     status: res.status,
-    message: res.status >= 500
-      ? 'Something went wrong on Jumbo’s side. Please try again.'
-      : (b.message as string) ?? 'That didn’t go through. Please try again.',
+    // The server's own wording is already product-level and is the only
+    // thing that tells the person what actually happened. Use it whenever it
+    // is there; the generic sentence is for responses that carry none —
+    // a gateway error, a crash, an HTML error page.
+    message: (b.message as string)
+      ?? (res.status >= 500
+        ? 'Something went wrong on Jumbo’s side. Please try again.'
+        : 'That didn’t go through. Please try again.'),
   }
 }
 

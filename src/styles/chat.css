@@ -61,7 +61,9 @@
 .chat__thread { display: flex; flex-direction: column; gap: var(--s-5); }
 
 .bubble-row {
-  display: flex; align-items: flex-end; gap: var(--s-2);
+  /* Jumbo's mark sits beside the top of what it said, not beside whatever
+     happens to be last — follow-up chips would otherwise push it down. */
+  display: flex; align-items: flex-start; gap: var(--s-2);
   max-width: 100%;
 }
 .bubble-row--you { justify-content: flex-end; }

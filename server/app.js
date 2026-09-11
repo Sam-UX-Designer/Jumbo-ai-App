@@ -27,7 +27,18 @@ if (env.isProduction) {
 }
 
 app.use(cookieParser())
-app.use(express.json({ limit: '12mb' }))
+
+/**
+ * Some serverless runtimes, Vercel's among them, read and parse the request
+ * body before the handler is called. Running body-parser over the consumed
+ * stream would replace that body with an empty object, so it only runs when
+ * nothing has parsed one already.
+ */
+const json = express.json({ limit: '12mb' })
+app.use((req, res, next) => {
+  if (req.body !== undefined && req.body !== null) return next()
+  return json(req, res, next)
+})
 
 /**
  * The capability report. The client uses this to decide what it can honestly
@@ -49,6 +60,13 @@ app.get('/api/config', (_req, res) => {
     },
     providers: listProviders(),
     publicUrl: env.publicUrl,
+    // Which build answered. Vercel sets these itself; they name a commit,
+    // never a credential, and they make "is the latest deploy live?"
+    // answerable from a browser.
+    build: {
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || null,
+      env: process.env.VERCEL_ENV || (env.isProduction ? 'production' : 'development'),
+    },
   })
 })
 
