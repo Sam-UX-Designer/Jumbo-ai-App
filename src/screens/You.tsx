@@ -209,7 +209,7 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
             <p className="t-caption dim">
               Records, meals and notes are stored on this device. When Jumbo’s AI is turned on, a
               statistical summary of your data, never your name, phone number, notes or photos,
-              is sent to Anthropic’s Claude to write insights. Meal photos are sent for analysis at the
+              is sent to Jumbo’s AI provider to write insights. Meal photos are sent for analysis at the
               moment you take them and are not stored afterwards.
             </p>
           </div>

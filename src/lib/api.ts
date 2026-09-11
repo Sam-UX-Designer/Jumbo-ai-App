@@ -78,11 +78,9 @@ export interface ProviderInfo {
 
 export interface ServerConfig {
   ok: true
-  /** Ask Jumbo. */
-  ai: { configured: boolean; model: string | null; missing: string[] }
-  /** Meal photo analysis, pattern insights and the written Future scenario. */
-  analysis?: { configured: boolean; model: string | null; missing: string[] }
-  youtube: { configured: boolean; searchEnabled?: boolean; missing: string[] }
+  /** Every AI feature: Ask Jumbo, meal photos, insights and Future. */
+  ai: { configured: boolean; model: string | null }
+  youtube: { configured: boolean; searchEnabled?: boolean }
   providers: Omit<ProviderInfo, 'connection'>[]
   publicUrl: string
 }
@@ -103,7 +101,7 @@ export interface SyncedDay {
 }
 
 export interface FoodAnalysis {
-  source: 'claude'
+  source: 'gemini'
   model: string
   dish: string
   readable: boolean
@@ -130,7 +128,7 @@ export interface AiInsight {
 }
 
 export interface FutureNarrative {
-  source: 'claude'
+  source: 'gemini'
   model: string
   headline: string
   lifeStory: string[]
@@ -140,7 +138,7 @@ export interface FutureNarrative {
 }
 
 export interface ChatAnswer {
-  source: 'claude'
+  source: 'gemini'
   model: string
   answer: string
   followUps: string[]

@@ -3,7 +3,11 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { env } from './env.js'
 
-const DATA_DIR = process.env.DATA_DIR || join(process.cwd(), '.data')
+// A serverless filesystem is read-only apart from /tmp, and that is wiped
+// between cold starts. Sessions still work within an instance; persistence is
+// best-effort and its absence is never fatal.
+const DATA_DIR = process.env.DATA_DIR
+  || (process.env.VERCEL ? '/tmp/jumbo-data' : join(process.cwd(), '.data'))
 const FILE = join(DATA_DIR, 'sessions.json')
 
 /**

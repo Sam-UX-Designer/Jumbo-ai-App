@@ -11,7 +11,7 @@ import { haptic } from '../lib/feedback'
 /**
  * Ask Jumbo.
  *
- * A real conversation: every reply is a Claude call grounded in a summary of
+ * A real conversation: every reply comes from Jumbo's AI, grounded in a summary of
  * this person's own records. Nothing here is scripted, so when the API is not
  * configured the screen says so instead of answering.
  */

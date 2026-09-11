@@ -9,7 +9,7 @@ import { haptic } from './feedback'
 /**
  * Asking Jumbo a question.
  *
- * Every answer is a real Claude call grounded in a statistical summary of the
+ * Every answer is a real call to Jumbo's AI, grounded in a statistical summary of the
  * person's own records — never a canned reply. When the API is not configured
  * the send is refused with the reason rather than answered by a script, and
  * the failed turn stays on screen with a retry.
@@ -97,10 +97,10 @@ export function useChat() {
  */
 export const FUTURE_PROMPTS: Array<{ text: string; icon: IconName; colour: string }> = [
   { text: 'How can I improve my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
-  { text: 'What is my longevity outlook?', icon: 'heart', colour: 'var(--training)' },
-  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
-  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--movement)' },
+  { text: 'What is my longevity looking like?', icon: 'heart', colour: 'var(--training)' },
   { text: 'What should I improve first?', icon: 'sparkles', colour: 'var(--brand)' },
+  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--recovery)' },
+  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
 ]
 
 /** The example questions the spec asks onboarding and Future to offer. */

@@ -306,7 +306,7 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
 
 
 /**
- * The statistical summary handed to Claude. It contains derived figures only —
+ * The statistical summary handed to Jumbo's AI. It contains derived figures only —
  * no meal photos, no notes, no name, no phone number — so the model sees the
  * shape of the person's data and nothing that identifies them.
  */

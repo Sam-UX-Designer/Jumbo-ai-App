@@ -146,7 +146,7 @@ export function Future() {
   }
 
   return (
-    <div className="stack stack-8">
+    <div className="stack stack-6">
       <header className="stack stack-4" style={{ marginBottom: 'calc(var(--s-8) * -1)' }}>
         <div className="scr-head">
           <div style={{ minWidth: 0 }}>
@@ -468,7 +468,7 @@ export function Future() {
         <SectionHead
           title="What Jumbo noticed"
           sub={
-            insights.engine === 'claude' ? `Read by Jumbo’s AI${insights.model ? ` · ${insights.model}` : ''}`
+            insights.engine === 'jumbo-ai' ? 'Read by Jumbo’s AI'
               : insights.engine === 'on-device' ? 'Computed on this device from your own records'
               : 'Pattern analysis is off in your settings'
           }
@@ -562,7 +562,7 @@ function useNarrative({
   const [nonce, setNonce] = useState(0)
   const cache = useRef(new Map<string, FutureNarrative>())
 
-  const configured = Boolean(state.server?.analysis?.configured)
+  const configured = Boolean(state.server?.ai.configured)
 
   useEffect(() => {
     if (!configured) {

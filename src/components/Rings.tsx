@@ -22,7 +22,7 @@ export const RING_DEFS = [
  * then tracks state.
  */
 export function Rings({
-  progress, size = 232, children,
+  progress, size = 212, children,
 }: {
   progress: DailyProgress
   size?: number
@@ -34,8 +34,8 @@ export function Rings({
     return () => window.clearTimeout(t)
   }, [])
 
-  const stroke = size * 0.057
-  const gap = stroke * 0.42
+  const stroke = size * 0.049
+  const gap = stroke * 0.62
   const cx = size / 2
   const step = stroke + gap
 

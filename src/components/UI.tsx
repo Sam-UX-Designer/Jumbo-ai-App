@@ -421,39 +421,6 @@ export function useConfirm() {
    rather than a simulated success.
    ============================================================ */
 
-/** Setup guidance. Never rendered in the product surface — see UnavailableNotice. */
-export function SetupNotice({
-  title, message, missing, docs, compact = false,
-}: {
-  title: string
-  message: string
-  missing?: string[]
-  docs?: string
-  compact?: boolean
-}) {
-  return (
-    <div className="notice notice--setup" role="note">
-      <Icon name="lock" size={18} style={{ color: 'var(--nutrition)', flex: 'none', marginTop: 2 }} />
-      <div className="stack stack-2" style={{ minWidth: 0 }}>
-        <span className="t-callout strong">{title}</span>
-        <p className="t-caption dim">{message}</p>
-        {missing && missing.length > 0 && (
-          <p className="t-caption dim2">
-            Needs: {missing.map((m, i) => (
-              <span key={m}>{i > 0 && ', '}<code>{m}</code></span>
-            ))}
-          </p>
-        )}
-        {docs && !compact && (
-          <a className="t-caption strong" href={docs} target="_blank" rel="noreferrer">
-            Provider docs <Icon name="external" size={12} style={{ display: 'inline', verticalAlign: -1 }} />
-          </a>
-        )}
-      </div>
-    </div>
-  )
-}
-
 /**
  * Jumbo's AI cannot answer right now.
  *

@@ -153,7 +153,7 @@ export function MealCapture({
             <div className="stack stack-1 grow">
               <span className="t-callout strong">Identifying what’s on the plate</span>
               <span className="t-caption dim">
-                {state.server?.analysis?.model ? `Running on ${state.server.analysis.model}.` : 'Analysing on Jumbo’s server.'}
+                {'Jumbo is reading the photograph. You correct anything it gets wrong.'}
               </span>
             </div>
           </div>

@@ -71,9 +71,9 @@ export function Today() {
   const firstName = state.profile.name.trim().split(' ')[0]
 
   return (
-    <div className="stack stack-6">
+    <div className="stack stack-5">
       {/* ─────────────────────────── greeting left, bell and profile right */}
-      <header className="stack stack-5">
+      <header className="stack stack-4">
         <div className="scr-head">
           <div className="stack stack-1" style={{ minWidth: 0 }}>
             <p className="greet__hello">{greeting},</p>
@@ -114,7 +114,7 @@ export function Today() {
         </h2>
 
         <div className="score-card">
-          <Rings progress={progress} size={232}>
+          <Rings progress={progress} size={212}>
             <span className="score__num num">{Math.round(progress.overall * 100)}</span>
             <span className="score__cap">Health<br />Score</span>
           </Rings>

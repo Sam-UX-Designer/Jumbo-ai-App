@@ -5,20 +5,39 @@ import 'dotenv/config'
  * pretends to work: if a variable is missing, the feature that needs it
  * reports "setup required" to the client rather than faking a connection.
  */
+/**
+ * Where this deployment actually lives.
+ *
+ * On Vercel the web app and the API share one origin, and Vercel supplies the
+ * hostname, so nothing has to be hard-coded per environment. PUBLIC_URL and
+ * WEB_ORIGIN still win when set, which is how a custom domain is configured.
+ */
+const isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL)
+
+// VERCEL_PROJECT_PRODUCTION_URL is the stable production hostname; VERCEL_URL
+// is the per-deployment one, which is what a preview build should use.
+const vercelHost = process.env.VERCEL_ENV === 'production'
+  ? (process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL)
+  : process.env.VERCEL_URL
+const vercelUrl = vercelHost ? `https://${vercelHost}` : ''
+
+const localUrl = `http://localhost:${process.env.PORT || 8787}`
+
 export const env = {
+  isProduction,
   port: Number(process.env.PORT || 8787),
-  publicUrl: process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 8787}`,
-  webOrigin: process.env.WEB_ORIGIN || 'http://localhost:5173',
+  publicUrl: process.env.PUBLIC_URL || vercelUrl || localUrl,
+  // In production the browser is on the same origin as the API, so there is
+  // no separate web origin to name unless a custom one is configured.
+  webOrigin: process.env.WEB_ORIGIN || vercelUrl || 'http://localhost:5173',
   sessionSecret: process.env.SESSION_SECRET || '',
 
-  anthropicKey: process.env.ANTHROPIC_API_KEY || '',
-  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
-
-  // Ask Jumbo. Server-side only: never returned by /api/config and never
-  // reachable from the browser.
+  // Jumbo's only AI provider. Server-side: never returned by /api/config,
+  // never present in the client bundle, never logged.
   geminiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
 
+  // Optional. Explore reads the curated creators' public feeds without it.
   youtubeKey: process.env.YOUTUBE_API_KEY || '',
 
   providers: {

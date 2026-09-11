@@ -4,21 +4,21 @@ import { api, type AiInsight } from './api'
 import { buildInsights, buildSummary } from './analytics'
 import type { Insight } from '../data/types'
 
-export type InsightEngine = 'claude' | 'on-device' | 'off'
+export type InsightEngine = 'jumbo-ai' | 'on-device' | 'off'
 
 export interface InsightState {
   engine: InsightEngine
   model: string | null
   insights: Insight[]
   loading: boolean
-  /** Set when Claude was expected but could not run. Shown, never hidden. */
+  /** Set when Jumbo's AI was expected but could not run. Shown, never hidden. */
   problem: { kind: 'setup' | 'error'; message: string; missing?: string[] } | null
   refresh: () => void
 }
 
 /**
  * Insights come from one of two real analyses, and the UI always says which:
- *   'claude'    — the Claude API reading a summary of the person's own data.
+ *   'jumbo-ai'  — Jumbo's AI reading a summary of the person's own data.
  *   'on-device' — Jumbo's own statistics, computed in the browser.
  * Neither is scripted, and neither runs when the person has turned pattern
  * analysis off.
@@ -31,7 +31,7 @@ export function useInsights(): InsightState {
   const [nonce, setNonce] = useState(0)
   const inFlight = useRef(false)
 
-  const aiConfigured = Boolean(state.server?.analysis?.configured)
+  const aiConfigured = Boolean(state.server?.ai.configured)
   const enabled = state.settings.aiPatterns
 
   const local = useMemo(
@@ -79,8 +79,8 @@ export function useInsights(): InsightState {
 
   if (remote?.length) {
     return {
-      engine: 'claude',
-      model: state.server?.analysis?.model ?? null,
+      engine: 'jumbo-ai',
+      model: state.server?.ai.model ?? null,
       insights: remote as unknown as Insight[],
       loading,
       problem,
