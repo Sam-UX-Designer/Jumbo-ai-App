@@ -30,14 +30,6 @@ const PICK: Record<ProjMetric, (p: Projected) => number> = {
 
 const HORIZON_LABEL: Record<Horizon, string> = { 12: '1 year', 36: '3 years', 60: '5 years' }
 
-/** The questions the spec asks Future to offer, each sent as a real question. */
-const FUTURE_PROMPTS: Array<{ text: string; icon: IconName; colour: string }> = [
-  { text: 'How can I improve my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
-  { text: 'What is my longevity outlook?', icon: 'heart', colour: 'var(--training)' },
-  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
-  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--movement)' },
-]
-
 export function Future() {
   const { state, dispatch } = useStore()
   const base = state.baseline
@@ -162,13 +154,6 @@ export function Future() {
             <p className="scr-head__sub">Ask. Learn. Live longer.</p>
           </div>
           <div className="scr-head__actions">
-            <button
-              className="round-btn"
-              aria-label="Ask Jumbo"
-              onClick={() => { haptic('selection'); navigate('chat') }}
-            >
-              <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
-            </button>
             <AvatarButton size={42} />
           </div>
         </div>
@@ -198,22 +183,6 @@ export function Future() {
             </p>
           </div>
         </div>
-
-        <ul className="qrow" aria-label="Ask Jumbo a common question">
-          {FUTURE_PROMPTS.map((q) => (
-            <li key={q.text}>
-              <button className="qchip" onClick={() => { haptic('selection'); navigate('chat', q.text) }}>
-                <Icon name={q.icon} size={15} style={{ color: q.colour }} />
-                {q.text}
-              </button>
-            </li>
-          ))}
-          <li>
-            <button className="qchip" onClick={() => { haptic('selection'); navigate('chat') }}>
-              More <Icon name="chevron" size={14} />
-            </button>
-          </li>
-        </ul>
       </section>
 
       {/* ────────────────────────────── the numbers Jumbo actually holds */}
@@ -530,17 +499,6 @@ export function Future() {
         )}
       </section>
 
-      {/* ────────────────────────────── the way in, always available */}
-      <button className="ask-bar" onClick={() => { haptic('selection'); navigate('chat') }}>
-        <Icon name="sparkles" size={18} style={{ color: 'var(--brand)', flex: 'none' }} />
-        <span className="grow t-callout dim" style={{ textAlign: 'left' }}>
-          Ask me anything about your health…
-        </span>
-        <span className="ask-bar__go" aria-hidden="true">
-          <Icon name="arrow-up" size={17} strokeWidth={2.2} />
-        </span>
-      </button>
-
       {/* ────────────────────────────── how this is built */}
       <section className="section">
         <SectionHead title="How this is built" />
@@ -604,7 +562,7 @@ function useNarrative({
   const [nonce, setNonce] = useState(0)
   const cache = useRef(new Map<string, FutureNarrative>())
 
-  const configured = Boolean(state.server?.ai.configured)
+  const configured = Boolean(state.server?.analysis?.configured)
 
   useEffect(() => {
     if (!configured) {

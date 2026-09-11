@@ -31,7 +31,7 @@ export function useInsights(): InsightState {
   const [nonce, setNonce] = useState(0)
   const inFlight = useRef(false)
 
-  const aiConfigured = Boolean(state.server?.ai.configured)
+  const aiConfigured = Boolean(state.server?.analysis?.configured)
   const enabled = state.settings.aiPatterns
 
   const local = useMemo(
@@ -80,7 +80,7 @@ export function useInsights(): InsightState {
   if (remote?.length) {
     return {
       engine: 'claude',
-      model: state.server?.ai.model ?? null,
+      model: state.server?.analysis?.model ?? null,
       insights: remote as unknown as Insight[],
       loading,
       problem,

@@ -126,7 +126,18 @@
 
 /* ── Health score card ──────────────────────────────────────────────── */
 .rings { position: relative; flex: none; }
-.rings__fill { transition: stroke-dashoffset var(--d-story) var(--ease); }
+/* A whisper of the ring's own colour behind it, so the arcs read as lit
+   rather than printed. `color` is set per ring, and the shadow is small
+   enough to add depth without tipping into neon. */
+.rings__fill {
+  transition: stroke-dashoffset var(--d-story) var(--ease);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 30%, transparent));
+}
+/* The light theme paints on white, where a glow only muddies the edge. */
+:root[data-theme="light"] .rings__fill { filter: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .rings__fill { filter: none; }
+}
 @media (prefers-reduced-motion: reduce) { .rings__fill { transition: none; } }
 
 .rings__centre {

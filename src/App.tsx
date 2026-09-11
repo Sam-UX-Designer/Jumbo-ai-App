@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
 import { NavProvider, Sidebar, TabBar, type Route } from './components/Nav'
+import { AskDock } from './components/AskDock'
 import { ToastProvider, useToast } from './components/UI'
 import { Onboarding } from './onboarding/Onboarding'
 import { Today } from './screens/Today'
@@ -26,10 +27,14 @@ function Shell() {
   const [route, setRoute] = useState<Route>('today')
   // A question handed to the chat from another screen, asked once on arrival.
   const [handover, setHandover] = useState<string | undefined>()
+  // Where Ask Jumbo was opened from, so closing it returns you there rather
+  // than dropping you on Today.
+  const [origin, setOrigin] = useState<Route>('today')
   const toast = useToast()
 
   const navigate = (next: Route, question?: string) => {
     setHandover(next === 'chat' ? question : undefined)
+    if (next === 'chat' && route !== 'chat') setOrigin(route)
     setRoute(next)
   }
 
@@ -59,16 +64,20 @@ function Shell() {
         <a className="skip-link" href="#main">Skip to content</a>
         <div className="shell">
           <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
-          <main className="main" id="main" key={route} tabIndex={-1}>
+          <main
+            className={`main${route === 'chat' ? '' : ' main--dock'}`}
+            id="main" key={route} tabIndex={-1}
+          >
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
             {route === 'capture' && <Capture />}
             {route === 'explore' && <Explore />}
             {route === 'measurements' && <Measurements />}
-            {route === 'chat' && <Chat initialQuestion={handover} />}
+            {route === 'chat' && <Chat initialQuestion={handover} onClose={() => navigate(origin)} />}
             {route === 'you' && <You onNavigate={setRoute} />}
           </main>
         </div>
+        {route !== 'chat' && <AskDock chips={route === 'future'} />}
         <TabBar route={route} onNavigate={setRoute} />
       </div>
     </NavProvider>

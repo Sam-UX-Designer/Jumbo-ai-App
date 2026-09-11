@@ -3,9 +3,8 @@ import '../styles/explore.css'
 import { AiOrb, Icon } from '../components/Icon'
 import { AssetImage, AvatarButton } from '../components/Asset'
 import {
-  Empty, ErrorNotice, SectionHead, Segmented, Sheet, UnavailableNotice, useToast,
+  Empty, SectionHead, Segmented, Sheet, UnavailableNotice, useToast,
 } from '../components/UI'
-import { useNavigate } from '../components/Nav'
 import { useStore } from '../state/store'
 import { api, compactCount, isoDurationMinutes, type YoutubeVideo } from '../lib/api'
 import type { GoalKey } from '../data/types'
@@ -42,7 +41,6 @@ const SORTS: Array<{ value: Sort; label: string }> = [
 
 export function Explore() {
   const { state, dispatch } = useStore()
-  const navigate = useNavigate()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('for-you')
   const [query, setQuery] = useState('')
@@ -51,6 +49,9 @@ export function Explore() {
   const [problem, setProblem] = useState<{ kind: 'setup' | 'error'; message: string; missing?: string[]; docs?: string } | null>(null)
   const [open, setOpen] = useState<YoutubeVideo | null>(null)
   const [resolvedQuery, setResolvedQuery] = useState('')
+  // True when the results came from the curated creators' own channel feeds
+  // rather than a live search. Explore says which, rather than implying one.
+  const [curated, setCurated] = useState(false)
   const [topic, setTopic] = useState('for-you')
   const [sort, setSort] = useState<Sort>('relevant')
   const [showFilters, setShowFilters] = useState(false)
@@ -63,11 +64,12 @@ export function Explore() {
   )
   const personalise = state.settings.creatorPersonalisation
 
-  const load = useCallback(async (q?: string) => {
+  const load = useCallback(async (q?: string, topicId?: string) => {
     setLoading(true)
     setProblem(null)
     const r = await api.youtube({
       q: q || undefined,
+      topic: topicId && topicId !== 'for-you' ? topicId : undefined,
       goals: personalise && !q ? goals : undefined,
       limit: 14,
     })
@@ -75,12 +77,13 @@ export function Explore() {
     if (r.ok) {
       setVideos(r.data.videos)
       setResolvedQuery(r.data.query)
+      setCurated(r.data.source === 'curated')
     } else {
       setVideos([])
       setProblem(
         r.kind === 'setup'
           ? { kind: 'setup', message: r.message, missing: r.missing, docs: r.docs }
-          : { kind: 'error', message: r.kind === 'offline' ? 'Jumbo’s API is not reachable, so nothing can be fetched from YouTube.' : r.message },
+          : { kind: 'error', message: r.message },
       )
     }
   }, [goals, personalise])
@@ -113,8 +116,8 @@ export function Explore() {
     haptic('selection')
     setTopic(t.id)
     setTab('for-you')
-    setQuery(t.query ?? '')
-    void load(t.query ?? undefined)
+    setQuery('')
+    void load(undefined, t.id)
   }
 
   return (
@@ -127,13 +130,6 @@ export function Explore() {
           </p>
         </div>
         <div className="scr-head__actions">
-          <button
-            className="round-btn"
-            aria-label="Ask Jumbo"
-            onClick={() => { haptic('selection'); navigate('chat') }}
-          >
-            <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
-          </button>
           <AvatarButton size={42} />
         </div>
       </header>
@@ -221,16 +217,22 @@ export function Explore() {
         />
       )}
       {problem?.kind === 'error' && (
-        <ErrorNotice title="Could not reach YouTube" message={problem.message} onRetry={() => void load(query.trim())} />
+        <UnavailableNotice
+          title="Videos couldn’t load"
+          message="Explore needs a connection to fetch the latest from your creators. Anything you have saved is still here."
+          onRetry={() => void load(query.trim(), topic)}
+        />
       )}
 
       {tab === 'for-you' && !problem && (
         <div className="row row--top card card--brand" style={{ gap: 'var(--s-3)' }}>
           <AiOrb size="sm" />
           <p className="t-callout">
-            {personalise
-              ? <>Searched for <span className="strong">“{resolvedQuery || query}”</span> because your goals are {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}.</>
-              : <>Personalisation is off, so this is a general search. Turn it on in Profile to match your goals.</>}
+            {curated
+              ? <>The latest from creators Jumbo follows for {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}. Pulled from their own channels just now.</>
+              : personalise
+                ? <>Searched for <span className="strong">“{resolvedQuery || query}”</span> because your goals are {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}.</>
+                : <>Personalisation is off, so this is a general search. Turn it on in Profile to match your goals.</>}
           </p>
         </div>
       )}

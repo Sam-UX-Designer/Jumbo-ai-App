@@ -1,16 +1,17 @@
 import { Router } from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import { env, has } from '../lib/env.js'
+import { GeminiError, generateJson, geminiConfigured } from '../lib/gemini.js'
 
 export const ai = Router()
 
 const client = has(env.anthropicKey) ? new Anthropic({ apiKey: env.anthropicKey }) : null
 
-const setupRequired = (res, feature) =>
+const setupRequired = (res, feature, missing = ['ANTHROPIC_API_KEY']) =>
   res.status(501).json({
     error: 'setup_required',
     feature,
-    missing: ['ANTHROPIC_API_KEY'],
+    missing,
     message:
       'Jumbo’s AI runs on the Claude API. Set ANTHROPIC_API_KEY on the server to turn it on. Until then this feature is off — it is not being simulated.',
     docs: 'https://platform.claude.com/docs',
@@ -288,35 +289,32 @@ ai.post('/future', async (req, res) => {
 
 /* ================================================================== chat */
 
-const CHAT_TOOL = {
-  name: 'answer',
-  description: 'Answer one question from a person about their own health data.',
-  strict: true,
-  input_schema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      answer: {
-        type: 'string',
-        description:
-          'The reply, in plain prose. Lead with the useful conclusion, then the reasoning. '
-          + 'Where the question warrants it, work through what you noticed, why it may matter, '
-          + 'what the data shows, what they could try, and that the choice is theirs. '
-          + 'Do not print those as headings unless the answer is long enough to need them.',
-      },
-      followUps: {
-        type: 'array',
-        description: 'Up to three short questions this person might naturally ask next. Empty when none fit.',
-        items: { type: 'string' },
-      },
-      groundedIn: {
-        type: 'array',
-        description: 'The figures from the summary you actually used. Empty when the answer needed none.',
-        items: { type: 'string' },
-      },
+/**
+ * Ask Jumbo's answer shape. Gemini is asked for JSON against this schema, so
+ * the conversation UI always receives the same three fields.
+ */
+const CHAT_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    answer: {
+      type: 'STRING',
+      description:
+        'The reply, in plain prose. Lead with the useful conclusion, then the reasoning. '
+        + 'Two or three short paragraphs, separated by a blank line. No headings, no bullet lists.',
     },
-    required: ['answer', 'followUps', 'groundedIn'],
+    followUps: {
+      type: 'ARRAY',
+      description: 'Up to three short questions this person might naturally ask next. Empty when none fit.',
+      items: { type: 'STRING' },
+    },
+    groundedIn: {
+      type: 'ARRAY',
+      description: 'The figures from the summary you actually used. Empty when the answer needed none.',
+      items: { type: 'STRING' },
+    },
   },
+  required: ['answer', 'followUps', 'groundedIn'],
+  propertyOrdering: ['answer', 'followUps', 'groundedIn'],
 }
 
 const CHAT_SYSTEM = `You are Jumbo, a wellness and longevity companion, talking with one person about their own health data. You are not a clinician and Jumbo is not a medical device.
@@ -326,11 +324,12 @@ You are given a statistical summary of this person's data. It contains no name, 
 How to answer:
 - Lead with the useful conclusion. Explanation comes after it, not before.
 - Every figure you state must come from the summary you were given. If the summary does not contain what the question needs, say plainly which data is missing and what would fill the gap.
-- Never invent a health record, a measurement, or a history. Never imply data exists when it does not.
+- Never invent a health record, a measurement, or a history. Never imply data exists when it does not. If the summary is silent on something, say so rather than reasoning from a typical person.
 - Separate what was measured from what research suggests in general from what Jumbo estimated. Say which you are doing.
 - Show uncertainty where it exists. A weak signal described confidently is a failure.
 - Offer options, not orders, and make clear the choice is theirs.
 - Be warm and brief. Two or three short paragraphs is usually right. This is a conversation, not a report.
+- Write prose. Separate paragraphs with a blank line. Do not use headings or bullet points.
 
 Hard limits:
 - No diagnosis, no disease prediction, no claims about life expectancy or how long someone will live.
@@ -338,7 +337,7 @@ Hard limits:
 - If someone describes symptoms that worry them, tell them plainly to speak to a clinician. Do not attempt to reassure them out of it.`
 
 ai.post('/chat', async (req, res) => {
-  if (!client) return setupRequired(res, 'Ask Jumbo')
+  if (!geminiConfigured()) return setupRequired(res, 'Ask Jumbo', ['GEMINI_API_KEY'])
 
   const { question, summary, history, goals } = req.body ?? {}
   if (typeof question !== 'string' || !question.trim()) {
@@ -348,55 +347,48 @@ ai.post('/chat', async (req, res) => {
   // The conversation is replayed so Jumbo keeps context, capped so a long
   // session cannot grow the request without bound.
   const turns = Array.isArray(history) ? history.slice(-10) : []
-  const messages = [
+  const contents = [
     ...turns
       .filter((t) => typeof t?.text === 'string' && t.text.trim())
       .map((t) => ({
-        role: t.role === 'jumbo' ? 'assistant' : 'user',
-        content: String(t.text).slice(0, 4000),
+        role: t.role === 'jumbo' ? 'model' : 'user',
+        parts: [{ text: String(t.text).slice(0, 4000) }],
       })),
     {
       role: 'user',
-      content: [
-        goals?.length ? `Their stated goals: ${goals.join(', ')}.` : 'They have not set any goals yet.',
-        `A statistical summary of their data:\n${JSON.stringify(summary ?? {}, null, 2)}`,
-        `Their question: ${question.slice(0, 2000)}`,
-      ].join('\n\n'),
+      parts: [{
+        text: [
+          goals?.length ? `Their stated goals: ${goals.join(', ')}.` : 'They have not set any goals yet.',
+          `A statistical summary of their data:\n${JSON.stringify(summary ?? {}, null, 2)}`,
+          `Their question: ${question.slice(0, 2000)}`,
+        ].join('\n\n'),
+      }],
     },
   ]
 
-  // The first turn must come from the person, or the API rejects the thread.
-  while (messages.length > 1 && messages[0].role !== 'user') messages.shift()
+  // The thread has to open on the person's turn.
+  while (contents.length > 1 && contents[0].role !== 'user') contents.shift()
 
   try {
-    const response = await client.messages.create({
-      model: env.anthropicModel,
-      max_tokens: 2000,
+    const data = await generateJson({
       system: CHAT_SYSTEM,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: 'medium' },
-      tools: [CHAT_TOOL],
-      tool_choice: { type: 'tool', name: CHAT_TOOL.name },
-      messages,
+      contents,
+      schema: CHAT_SCHEMA,
+      maxOutputTokens: 2048,
     })
-
-    if (response.stop_reason === 'refusal') {
-      return res.status(422).json({
-        error: 'declined',
-        message: response.stop_details?.explanation || 'Jumbo declined to answer that.',
-      })
-    }
-    const block = response.content.find((b) => b.type === 'tool_use')
-    if (!block) throw new Error('The model did not return an answer.')
 
     res.json({
-      source: 'claude',
-      model: env.anthropicModel,
-      answer: block.input.answer,
-      followUps: (block.input.followUps ?? []).slice(0, 3),
-      groundedIn: (block.input.groundedIn ?? []).slice(0, 6),
+      source: 'gemini',
+      model: env.geminiModel,
+      answer: String(data.answer ?? '').trim(),
+      followUps: (data.followUps ?? []).slice(0, 3),
+      groundedIn: (data.groundedIn ?? []).slice(0, 6),
     })
   } catch (err) {
+    if (err instanceof GeminiError) {
+      console.error('[ai:Ask Jumbo]', err.code)
+      return res.status(err.status).json({ error: err.code, message: err.message })
+    }
     handleAiError(res, err, 'Ask Jumbo')
   }
 })

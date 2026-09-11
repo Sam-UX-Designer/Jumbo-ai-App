@@ -475,3 +475,83 @@ a { color: var(--accent-text); }
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   Ask Jumbo dock
+
+   The entry into the conversation, on every screen. It sits directly
+   above the tab bar and is shaped like the composer it opens, so the
+   gesture is already familiar: tap the field, start typing.
+   ============================================================ */
+.askdock {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
+  padding: var(--s-10) var(--s-5) var(--s-3);
+  /* Solid behind the controls, fading out above them, so content scrolling
+     under the dock is never half-legible behind a chip. */
+  background: linear-gradient(to top, var(--bg) 0, var(--bg) 76%, transparent 100%);
+  pointer-events: none;
+}
+.askdock > * { pointer-events: auto; width: 100%; max-width: 600px; }
+@media (min-width: 768px) {
+  .askdock { padding-inline: var(--s-8); }
+  .askdock > * { max-width: 656px; }
+}
+
+/* One row, always: it scrolls sideways rather than wrapping. */
+.askdock__chips {
+  display: flex; flex-wrap: nowrap; gap: var(--s-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.askdock__chips::-webkit-scrollbar { display: none; }
+.askdock__chips > li { flex: none; }
+
+.askdock__field {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: 7px 7px 7px var(--s-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-firm);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  cursor: pointer; text-align: left;
+  transition: border-color var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
+}
+.askdock__field:hover  { border-color: var(--brand-line); }
+.askdock__field:active { transform: scale(0.99); }
+.askdock__field:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.askdock__placeholder {
+  flex: 1; min-width: 0;
+  font-size: var(--t-body);
+  color: var(--ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.askdock__go {
+  flex: none; width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--brand); color: var(--brand-ink);
+}
+
+/* Screens carrying the dock need room for it under their last element. */
+.main--dock { padding-bottom: calc(var(--tab-h) + var(--s-24) + env(safe-area-inset-bottom)); }
+
+/* Once the sidebar takes over there is no tab bar to sit above, and the
+   field belongs over the content column rather than the whole window. */
+@media (min-width: 1024px) {
+  .askdock {
+    bottom: 0;
+    left: 50%; right: auto;
+    transform: translateX(-50%);
+    width: min(100%, var(--maxw));
+    align-items: flex-start;
+    padding: var(--s-6) var(--s-8) var(--s-5) calc(248px + var(--s-8) * 2);
+  }
+  .askdock > * { max-width: 100%; }
+  .main--dock { padding-bottom: var(--s-24); }
+}

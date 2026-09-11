@@ -4,7 +4,6 @@ import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AssetImage, AvatarButton } from '../components/Asset'
 import { DateRail } from '../components/DateRail'
 import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
-import { useNavigate } from '../components/Nav'
 import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
 import { useStore } from '../state/store'
@@ -38,7 +37,6 @@ export function Capture() {
   const [modal, setModal] = useState<Modal>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
-  const navigate = useNavigate()
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
 
@@ -100,13 +98,6 @@ export function Capture() {
             </p>
           </div>
           <div className="scr-head__actions">
-            <button
-              className="round-btn"
-              aria-label="Ask Jumbo"
-              onClick={() => { haptic('selection'); navigate('chat') }}
-            >
-              <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
-            </button>
             <AvatarButton size={42} />
           </div>
         </div>

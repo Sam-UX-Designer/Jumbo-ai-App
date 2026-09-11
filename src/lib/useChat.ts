@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react'
+import type { IconName } from '../components/Icon'
 import { useStore } from '../state/store'
 import { api } from './api'
 import { buildSummary } from './analytics'
@@ -89,6 +90,18 @@ export function useChat() {
     generating: state.chat.some((m) => m.pending),
   }
 }
+
+/**
+ * The questions offered above the Ask Jumbo field on AI Future. Each is a
+ * real question, sent as typed.
+ */
+export const FUTURE_PROMPTS: Array<{ text: string; icon: IconName; colour: string }> = [
+  { text: 'How can I improve my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
+  { text: 'What is my longevity outlook?', icon: 'heart', colour: 'var(--training)' },
+  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
+  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--movement)' },
+  { text: 'What should I improve first?', icon: 'sparkles', colour: 'var(--brand)' },
+]
 
 /** The example questions the spec asks onboarding and Future to offer. */
 export const QUICK_PROMPTS = [

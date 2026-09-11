@@ -47,15 +47,6 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
       <ScreenHead
         title="You"
         sub="Your profile, your goals and what Jumbo is allowed to do with your data."
-        actions={
-          <button
-            className="round-btn"
-            aria-label="Ask Jumbo"
-            onClick={() => { haptic('selection'); onNavigate('chat') }}
-          >
-            <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
-          </button>
-        }
       />
 
       {state.dataMode === 'demo' && <DemoBadge />}

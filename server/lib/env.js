@@ -14,6 +14,11 @@ export const env = {
   anthropicKey: process.env.ANTHROPIC_API_KEY || '',
   anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
 
+  // Ask Jumbo. Server-side only: never returned by /api/config and never
+  // reachable from the browser.
+  geminiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+
   youtubeKey: process.env.YOUTUBE_API_KEY || '',
 
   providers: {

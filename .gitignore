@@ -4,5 +4,8 @@ dist
 *.local
 tsconfig.tsbuildinfo
 
+# Secrets. Never commit a key.
 .env
+.env.*
+!.env.example
 .data

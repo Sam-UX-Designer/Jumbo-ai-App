@@ -78,8 +78,11 @@ export interface ProviderInfo {
 
 export interface ServerConfig {
   ok: true
+  /** Ask Jumbo. */
   ai: { configured: boolean; model: string | null; missing: string[] }
-  youtube: { configured: boolean; missing: string[] }
+  /** Meal photo analysis, pattern insights and the written Future scenario. */
+  analysis?: { configured: boolean; model: string | null; missing: string[] }
+  youtube: { configured: boolean; searchEnabled?: boolean; missing: string[] }
   providers: Omit<ProviderInfo, 'connection'>[]
   publicUrl: string
 }
@@ -198,12 +201,15 @@ export const api = {
     history: Array<{ role: 'you' | 'jumbo'; text: string }>
   }) => call<ChatAnswer>('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
 
-  youtube: (params: { q?: string; goals?: string[]; limit?: number }) => {
+  youtube: (params: { q?: string; topic?: string; goals?: string[]; limit?: number }) => {
     const qs = new URLSearchParams()
     if (params.q) qs.set('q', params.q)
+    if (params.topic) qs.set('topic', params.topic)
     if (params.goals?.length) qs.set('goals', params.goals.join(','))
     if (params.limit) qs.set('limit', String(params.limit))
-    return call<{ query: string; videos: YoutubeVideo[] }>(`/youtube/search?${qs}`)
+    return call<{ source: 'youtube' | 'curated'; query: string; videos: YoutubeVideo[] }>(
+      `/youtube/search?${qs}`,
+    )
   },
 
   channel: (id: string) =>

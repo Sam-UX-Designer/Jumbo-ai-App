@@ -42,21 +42,21 @@
      Named by the specification and matched to the reference:
      sleep violet · movement mint · food amber · recovery sky.
      These four also colour their metric cards and focus rows. */
-  --sleep:      #A78BFA;  --sleep-dim:      rgba(167, 139, 250, 0.14);
-  --movement:   #34D399;  --movement-dim:   rgba(52, 211, 153, 0.14);
-  --nutrition:  #FB923C;  --nutrition-dim:  rgba(251, 146, 60, 0.14);
-  --recovery:   #38BDF8;  --recovery-dim:   rgba(56, 189, 248, 0.14);
+  --sleep:      #A45CFF;  --sleep-dim:      rgba(164, 92, 255, 0.20);
+  --movement:   #00E58A;  --movement-dim:   rgba(0, 229, 138, 0.20);
+  --nutrition:  #FF8A16;  --nutrition-dim:  rgba(255, 138, 22, 0.20);
+  --recovery:   #14AEFF;  --recovery-dim:   rgba(20, 174, 255, 0.20);
 
   /* Secondary categories, kept away from the ring four. */
-  --training:   #FB7185;  --training-dim:   rgba(251, 113, 133, 0.14);
-  --measure:    #38BDF8;  --measure-dim:    rgba(56, 189, 248, 0.14);
-  --meal:       #E879F9;  --meal-dim:       rgba(232, 121, 249, 0.14);
-  --note:       #FBBF24;  --note-dim:       rgba(251, 191, 36, 0.14);
-  --ai:         #8B7CF8;  --ai-dim:         rgba(139, 124, 248, 0.14);
+  --training:   #FF4D6A;  --training-dim:   rgba(255, 77, 106, 0.20);
+  --measure:    #14AEFF;  --measure-dim:    rgba(20, 174, 255, 0.20);
+  --meal:       #F45BFF;  --meal-dim:       rgba(244, 91, 255, 0.20);
+  --note:       #FFC72E;  --note-dim:       rgba(255, 199, 46, 0.20);
+  --ai:         #9B6BFF;  --ai-dim:         rgba(155, 107, 255, 0.20);
 
-  --positive: #4ADE80;
-  --caution:  #FB923C;
-  --critical: #FB7185;
+  --positive: #2EE07A;
+  --caution:  #FF8A16;
+  --critical: #FF4D6A;
 
   /* ── Elevation ───────────────────────────────────────────────── */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .5);
@@ -130,20 +130,20 @@
   --hairline:      rgba(17, 19, 17, 0.09);
   --hairline-firm: rgba(17, 19, 17, 0.18);
 
-  --sleep:     #7C3AED;  --sleep-dim:     rgba(124, 58, 237, 0.12);
-  --movement:  #059669;  --movement-dim:  rgba(5, 150, 105, 0.12);
-  --nutrition: #EA580C;  --nutrition-dim: rgba(234, 88, 12, 0.14);
-  --recovery:  #0284C7;  --recovery-dim:  rgba(2, 132, 199, 0.12);
+  --sleep:     #8B2FF5;  --sleep-dim:     rgba(139, 47, 245, 0.16);
+  --movement:  #00A862;  --movement-dim:  rgba(0, 168, 98, 0.16);
+  --nutrition: #F06A00;  --nutrition-dim: rgba(240, 106, 0, 0.16);
+  --recovery:  #0090E0;  --recovery-dim:  rgba(0, 144, 224, 0.16);
 
-  --training:  #BE123C;  --training-dim:  rgba(190, 18, 60, 0.12);
-  --measure:   #0284C7;  --measure-dim:   rgba(2, 132, 199, 0.12);
-  --meal:      #A21CAF;  --meal-dim:      rgba(162, 28, 175, 0.12);
-  --note:      #B45309;  --note-dim:      rgba(180, 83, 9, 0.12);
-  --ai:        #6D28D9;  --ai-dim:        rgba(109, 40, 217, 0.12);
+  --training:  #E4194B;  --training-dim:  rgba(228, 25, 75, 0.16);
+  --measure:   #0090E0;  --measure-dim:   rgba(0, 144, 224, 0.16);
+  --meal:      #C81ADB;  --meal-dim:      rgba(200, 26, 219, 0.16);
+  --note:      #D98200;  --note-dim:      rgba(217, 130, 0, 0.16);
+  --ai:        #7B2BEE;  --ai-dim:        rgba(123, 43, 238, 0.16);
 
-  --positive: #15803D;
-  --caution:  #C2410C;
-  --critical: #BE123C;
+  --positive: #00A862;
+  --caution:  #F06A00;
+  --critical: #E4194B;
 
   --shadow-1: 0 1px 2px rgba(17, 19, 17, .06);
   --shadow-2: 0 10px 28px rgba(17, 19, 17, .09);

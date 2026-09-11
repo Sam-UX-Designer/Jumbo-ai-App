@@ -55,7 +55,7 @@ export function Rings({
               {/* The unfilled track: the ring's own colour, well back. */}
               <circle
                 cx={cx} cy={cx} r={r} fill="none" stroke={ring.colour}
-                strokeWidth={stroke} opacity={0.14}
+                strokeWidth={stroke} opacity={0.18}
               />
               <circle
                 className="rings__fill"
@@ -63,7 +63,7 @@ export function Rings({
                 strokeWidth={stroke} strokeLinecap="round"
                 strokeDasharray={c}
                 strokeDashoffset={shown ? c * (1 - pct) : c}
-                style={{ transitionDelay: `${i * 90}ms` }}
+                style={{ transitionDelay: `${i * 90}ms`, color: ring.colour }}
               />
             </g>
           )
@@ -96,7 +96,7 @@ export function MiniRing({
       <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
         {track && (
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colour}
-            strokeWidth={stroke} opacity={0.18} />
+            strokeWidth={stroke} opacity={0.22} />
         )}
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colour} strokeWidth={stroke}

@@ -15,7 +15,9 @@ import { haptic } from '../lib/feedback'
  * this person's own records. Nothing here is scripted, so when the API is not
  * configured the screen says so instead of answering.
  */
-export function Chat({ initialQuestion }: { initialQuestion?: string }) {
+export function Chat({
+  initialQuestion, onClose,
+}: { initialQuestion?: string; onClose?: () => void }) {
   const { state } = useStore()
   const navigate = useNavigate()
   const chat = useChat()
@@ -37,6 +39,14 @@ export function Chat({ initialQuestion }: { initialQuestion?: string }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [chat.messages])
 
+  // Arriving with nothing to ask yet: put the caret in the field so the
+  // person can type straight away.
+  useEffect(() => {
+    if (initialQuestion || !chat.ready) return
+    const t = window.setTimeout(() => inputRef.current?.focus(), 260)
+    return () => window.clearTimeout(t)
+  }, [initialQuestion, chat.ready])
+
   const submit = () => {
     if (!draft.trim() || !chat.ready) return
     chat.send(draft)
@@ -53,7 +63,7 @@ export function Chat({ initialQuestion }: { initialQuestion?: string }) {
   return (
     <div className="chat">
       <header className="chat__head">
-        <button className="icon-btn" aria-label="Back" onClick={() => navigate('today')}>
+        <button className="icon-btn" aria-label="Back" onClick={() => (onClose ? onClose() : navigate('today'))}>
           <Icon name="back" size={20} />
         </button>
         <Mascot size={32} thinking={chat.generating} />
