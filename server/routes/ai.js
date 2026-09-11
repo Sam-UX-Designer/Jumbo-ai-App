@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { env } from '../lib/env.js'
 import {
-  PRESETS, aiConfigured, aiUnavailable, generateJson, image, sendAiError, text,
+  PRESET, aiConfigured, aiUnavailable, generateJson, image, sendAiError, text,
 } from '../lib/ai.js'
 
 export const ai = Router()
@@ -113,7 +113,6 @@ ai.post('/food', async (req, res) => {
       schema: MEAL_SCHEMA,
       maxOutputTokens: 4096,
       temperature: 0.4,
-      vision: true,
     })
 
     const verdict = ['food', 'not_food', 'unclear'].includes(data.verdict) ? data.verdict : 'unclear'
@@ -412,7 +411,8 @@ How to answer:
 - Show uncertainty where it exists. A weak signal described confidently is a failure.
 - Offer options, not orders, and make clear the choice is theirs.
 - Be warm and brief. Two or three short paragraphs is usually right. This is a conversation, not a report.
-- Write prose. Separate paragraphs with a blank line. Do not use headings or bullet points.
+- Write in light Markdown. Separate paragraphs with a blank line. Use "###" headings only when an answer is long enough to have real sections, **bold** for a figure worth spotting, and a short bullet or numbered list when the content is genuinely a list. Most answers need none of it — a couple of plain paragraphs is usually right.
+- Never write raw HTML. Never draw a chart out of characters. Keep any table to a few rows, and prefer a visualization when the data is numeric.
 
 Showing data:
 - When the question is about numbers over time, a comparison, a composition, or a list of their records, add a visualization object and let Jumbo draw it. Otherwise leave it out entirely — most questions do not need one.
@@ -496,7 +496,7 @@ ai.get('/selftest', async (_req, res) => {
     return res.status(503).json({
       ok: false,
       stage: 'configuration',
-      presets: [PRESETS.text, PRESETS.vision],
+      preset: PRESET,
       reason: 'No API key is present in this environment.',
       hint: 'Set OPENROUTER_API_KEY in the deployment’s environment variables and redeploy.',
     })
@@ -515,20 +515,33 @@ ai.get('/selftest', async (_req, res) => {
       temperature: 0,
       timeoutMs: 25_000,
     })
+    // Meal photographs use the same preset, so the preset has to accept an
+    // image. A model that cannot see one does not fail loudly, it just
+    // answers about nothing — so this is probed rather than assumed.
+    const vision = await probeImageInput()
+
     res.json({
       ok: true,
       stage: 'complete',
       // The preset asked for, and what OpenRouter actually routed it to.
-      preset: PRESETS.text,
+      preset: PRESET,
       answeredBy: model,
       ms: Date.now() - started,
       reply: String(data.status ?? '').slice(0, 40),
+      imageInput: vision.ok ? 'accepted' : 'rejected',
+      ...(vision.ok ? {} : {
+        imageInputReason: vision.reason,
+        imageInputHint:
+          'Meal photographs go through the same preset, so every model in '
+          + '@preset/jumbo-ai must accept image input. Remove any text-only '
+          + 'model from the preset in the OpenRouter dashboard.',
+      }),
     })
   } catch (err) {
     res.status(err.status ?? 502).json({
       ok: false,
       stage: 'generation',
-      preset: PRESETS.text,
+      preset: PRESET,
       ms: Date.now() - started,
       code: err.code ?? 'unknown',
       reason: err.message,
@@ -540,12 +553,54 @@ ai.get('/selftest', async (_req, res) => {
 const HINTS = {
   bad_key: 'OpenRouter rejected the key. Check it is a valid OPENROUTER_API_KEY and that the account is active.',
   no_credit: 'The OpenRouter account has no credit left for these models.',
-  preset_missing: 'The preset was not found on this OpenRouter account. Check that @preset/jumbo-ai and @preset/jumbo-vision both exist and are enabled for this key.',
+  preset_missing: 'The preset was not found on this OpenRouter account. Check that @preset/jumbo-ai exists and is enabled for this key.',
   rate_limited: 'The project is over its quota for this model.',
   timeout: 'The model did not respond in time. A smaller model or a shorter prompt will help.',
   empty: 'The model returned no content.',
   unparsable: 'Every model in the chain returned something that was not the requested JSON.',
   declined: 'The model declined the prompt on safety grounds.',
+}
+
+/**
+ * Asks the preset to read a one-pixel image.
+ *
+ * A model that cannot see an image rarely says so: it answers about nothing
+ * and the meal analysis comes back empty, which looks like a bad photograph
+ * rather than a misconfigured preset. Sending a trivial image and asking what
+ * colour it is turns that into a plain yes or no.
+ */
+// A 1x1 pure-red PNG. Small enough to cost nothing, specific enough that a
+// model which genuinely saw it can say so.
+const ONE_RED_PIXEL =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+async function probeImageInput() {
+  try {
+    const { data } = await generateJson({
+      system: 'You are a health check. Report the dominant colour of the image you are given.',
+      contents: [{
+        role: 'user',
+        parts: [image(ONE_RED_PIXEL, 'image/png'), text('What colour is this image?')],
+      }],
+      schema: {
+        type: 'object',
+        properties: {
+          sawImage: { type: 'boolean', description: 'True only if an image was actually provided to you.' },
+          colour: { type: 'string' },
+        },
+        required: ['sawImage', 'colour'],
+      },
+      maxOutputTokens: 1024,
+      temperature: 0,
+      timeoutMs: 25_000,
+    })
+    if (data.sawImage === false) {
+      return { ok: false, reason: 'The model reported that no image reached it.' }
+    }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, reason: err.code === 'unparsable' ? 'The model could not describe the image.' : err.message }
+  }
 }
 
 /* ================================================== visualization */

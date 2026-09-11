@@ -3,6 +3,7 @@ import '../styles/chat.css'
 import { Icon } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
 import { DataViz } from '../components/DataViz'
+import { Markdown } from '../components/Markdown'
 import { ErrorNotice, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useChat, QUICK_PROMPTS } from '../lib/useChat'
@@ -136,9 +137,11 @@ export function Chat({
                     />
                   ) : (
                     <div className={`bubble bubble--${m.role}`}>
-                      {m.text.split('\n\n').filter(Boolean).map((para, i) => (
-                        <p key={i} className="t-body">{para}</p>
-                      ))}
+                      {m.role === 'jumbo'
+                        ? <Markdown text={m.text} />
+                        : m.text.split('\n\n').filter(Boolean).map((para, i) => (
+                          <p key={i} className="t-body">{para}</p>
+                        ))}
                       {m.visualization && <DataViz viz={m.visualization} />}
                     </div>
                   )}

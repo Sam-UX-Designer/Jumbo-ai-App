@@ -16,21 +16,21 @@ import { env, has } from './env.js'
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 /**
- * The presets Jumbo asks for. These are the only model identifiers in the
- * application, and neither names a model.
+ * The one preset Jumbo asks for. This is the only model identifier in the
+ * application, and it does not name a model.
  *
- * Which models each resolves to, in what order, on which providers and with
+ * Which models it resolves to, in what order, on which providers and with
  * what routing, is configured in the OpenRouter dashboard. That is the point:
  * a model being retired, or a better one arriving, is a change there and not
  * a deploy here. The application never learns what answered it.
+ *
+ * Every route uses it, meal photographs included. What differs between a
+ * question and a photograph is the shape of the request — a photograph
+ * carries an image part — not which models may answer it. That does mean
+ * every model in the preset has to accept image input; /api/ai/selftest
+ * probes exactly that and says so.
  */
-const PRESET_TEXT = '@preset/jumbo-ai'
-const PRESET_VISION = '@preset/jumbo-vision'
-
-/** Which preset a request belongs to. Nothing else decides. */
-const presetFor = (vision) => (vision ? PRESET_VISION : PRESET_TEXT)
-
-export const PRESETS = { text: PRESET_TEXT, vision: PRESET_VISION }
+export const PRESET = '@preset/jumbo-ai'
 
 export const aiConfigured = () => has(env.openrouterKey)
 
@@ -163,8 +163,8 @@ async function attempt({ preset, messages, maxOutputTokens, temperature, signal 
 /**
  * One structured generation, through a preset.
  *
- * The request names a preset, not a model, so OpenRouter resolves which model
- * runs and walks its own fallback chain. There is no model loop here: a
+ * The request names the preset, not a model, so OpenRouter resolves which
+ * model runs and walks its own fallback chain. There is no model loop here: a
  * provider being down or a model being retired is handled upstream, where it
  * can be reconfigured without a deploy.
  *
@@ -183,13 +183,12 @@ export async function generateJson({
   maxOutputTokens = 4096,
   temperature = 0.6,
   timeoutMs = 45_000,
-  vision = false,
 }) {
   if (!aiConfigured()) {
     throw new AiError('Jumbo’s AI is not available.', { status: 501, code: 'setup_required' })
   }
 
-  const preset = presetFor(vision)
+  const preset = PRESET
   const messages = toMessages(`${system}\n\n${schemaInstruction(schema)}`, contents)
 
   const controller = new AbortController()

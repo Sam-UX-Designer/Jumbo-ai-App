@@ -50,7 +50,7 @@ Set these in **Vercel → Project → Settings → Environment Variables**:
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | Yes | Every AI feature, through OpenRouter. Server-side only. |
-| — | — | Model selection is configured in the OpenRouter dashboard against `@preset/jumbo-ai` and `@preset/jumbo-vision`, not here. |
+| — | — | Model selection is configured in the OpenRouter dashboard against `@preset/jumbo-ai`, not here. Every model in it must accept image input, since meal photographs use the same preset. |
 | `YOUTUBE_API_KEY` | No | Adds live search. Explore works without it. |
 | `SESSION_SECRET` | For OAuth | Any long random string. |
 | `PUBLIC_URL`, `WEB_ORIGIN` | Only for a custom domain | Otherwise derived from the Vercel deployment hostname. |

@@ -245,3 +245,67 @@
 }
 .viz__slices li { display: flex; align-items: center; gap: 7px; }
 .viz__slices .num { color: var(--ink); font-weight: 620; font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Jumbo's answers
+
+   Light Markdown, rendered as React elements — never as markup
+   from the model. Spacing is tuned for a conversation, not a
+   document: headings sit close to what they introduce.
+   ============================================================ */
+.md { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.md__p {
+  font-size: var(--t-body);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.md__h3,
+.md__h4 {
+  margin: var(--s-2) 0 calc(var(--s-3) * -1 + 2px);
+  font-weight: 660;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.md__h3 { font-size: var(--t-title3); }
+.md__h4 { font-size: var(--t-callout); color: var(--ink-2); }
+.md > .md__h3:first-child,
+.md > .md__h4:first-child { margin-top: 0; }
+
+.md__ul,
+.md__ol {
+  margin: 0;
+  padding-left: 1.15em;
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: var(--t-body); line-height: 1.45;
+}
+.md__ul { list-style: disc; }
+.md__ol { list-style: decimal; }
+.md__ul li::marker { color: var(--brand); }
+.md__ol li::marker { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.md strong { font-weight: 660; color: var(--ink); }
+.md em { font-style: italic; color: var(--ink-2); }
+
+.md__code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* A table in prose stays small and scrolls rather than squashing. */
+.md__table-wrap { overflow-x: auto; scrollbar-width: none; }
+.md__table-wrap::-webkit-scrollbar { display: none; }
+.md__table { width: 100%; border-collapse: collapse; font-size: var(--t-caption); }
+.md__table th,
+.md__table td {
+  text-align: left; padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.md__table th { color: var(--ink-3); font-weight: 620; }
+.md__table tr:last-child td { border-bottom: 0; }
