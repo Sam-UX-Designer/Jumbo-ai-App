@@ -1,3 +1,4 @@
+import type { Viz } from '../components/DataViz'
 /**
  * The one place the client talks to the Jumbo API.
  *
@@ -154,6 +155,12 @@ export interface ChatAnswer {
   model: string
   answer: string
   followUps: string[]
+  /**
+   * Numbers and labels for a chart, table or metric row, when the question
+   * warranted one. Validated server-side; null when it did not. Jumbo draws
+   * it — the model never supplies markup.
+   */
+  visualization: Viz | null
   /** The figures Jumbo says it actually used. Shown, so a claim can be checked. */
   groundedIn: string[]
 }

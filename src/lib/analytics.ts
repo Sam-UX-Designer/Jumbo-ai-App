@@ -360,6 +360,44 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
       hrvMorningAfterRest: round(mean(w28.filter((_, i) => i > 0 && w28[i - 1].restDay).map((d) => d.hrv)), 1),
       hrvMorningAfterTraining: round(mean(w28.filter((_, i) => i > 0 && !w28[i - 1].restDay).map((d) => d.hrv)), 1),
     },
+    /**
+     * The day-by-day records behind the averages above. Aggregates cannot
+     * answer "what did I eat today" or draw a trend, so the underlying rows
+     * travel too — bounded to a fortnight to keep the request small.
+     */
+    dailyRecords: lastN(days, 14).map((d) => ({
+      date: d.date,
+      sleepHours: round(d.sleepHours, 2),
+      sleepEfficiency: d.sleepEfficiency,
+      steps: d.steps,
+      activeMinutes: d.activeMinutes,
+      restingHR: d.restingHR,
+      hrvMs: d.hrv,
+      proteinG: Math.round(dayProtein(d)),
+      kcal: Math.round(dayKcal(d)),
+      restDay: d.restDay,
+      workout: d.workout
+        ? { type: d.workout.type, minutes: d.workout.minutes, intensity: d.workout.intensity }
+        : null,
+    })),
+
+    /**
+     * The meals themselves, most recent first, with what was in them. Three
+     * days is enough to answer what someone ate without sending a month of
+     * food to the model.
+     */
+    recentMeals: lastN(days, 3).flatMap((d) => d.meals.map((m) => ({
+      date: d.date,
+      time: m.time,
+      slot: m.slot,
+      kcal: mealTotals(m.items).kcal,
+      proteinG: mealTotals(m.items).protein,
+      items: m.items.slice(0, 12).map((i) => ({
+        name: i.name, portion: i.portion, grams: i.grams,
+        kcal: i.kcal, proteinG: i.protein,
+      })),
+    }))).reverse(),
+
     measurements: {
       vo2maxFirst: vo2[0] ? { value: vo2[0].value, date: vo2[0].date } : null,
       vo2maxLatest: vo2.length ? { value: vo2[vo2.length - 1].value, date: vo2[vo2.length - 1].date } : null,

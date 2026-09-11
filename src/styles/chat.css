@@ -163,3 +163,85 @@
 .chat__foot { padding: 0 var(--s-4) var(--s-3); text-align: center; }
 
 
+
+/* ============================================================
+   Visualizations
+
+   Drawn by Jumbo from numbers the model supplied. Nothing the
+   model wrote reaches the screen as markup.
+   ============================================================ */
+.viz {
+  margin: var(--s-2) 0 0;
+  padding: var(--s-4);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--hairline);
+  background: var(--bg);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+
+.viz__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.viz__title { font-size: var(--t-caption); font-weight: 620; color: var(--ink); }
+.viz__unit  { font-size: var(--t-micro); color: var(--ink-3); white-space: nowrap; }
+
+.viz__note { font-size: var(--t-micro); color: var(--ink-3); line-height: 1.4; margin: 0; }
+
+.viz__legend {
+  display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3);
+  font-size: var(--t-micro); color: var(--ink-2);
+}
+.viz__legend li { display: inline-flex; align-items: center; gap: 5px; }
+.viz__swatch { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+
+/* Anything wider than the bubble scrolls rather than squashing. */
+.viz__scroll { position: relative; overflow-x: auto; scrollbar-width: none; }
+.viz__scroll::-webkit-scrollbar { display: none; }
+
+.viz__svg { display: block; width: 100%; min-width: 260px; height: auto; overflow: visible; }
+.viz__tick { fill: var(--ink-3); font-size: 9px; }
+.viz__max {
+  position: absolute; top: 0; right: 0;
+  font-size: var(--t-micro); color: var(--ink-4);
+}
+
+/* ------------------------------------------------------------- metrics */
+.viz__metrics { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+.viz__metric { display: flex; flex-direction: column; gap: 1px; min-width: 84px; }
+.viz__metric-value { font-size: var(--t-title2); font-weight: 680; letter-spacing: -0.03em; color: var(--ink); }
+.viz__metric-label { font-size: var(--t-micro); color: var(--ink-2); }
+.viz__metric-note  { font-size: var(--t-micro); color: var(--ink-4); }
+
+/* --------------------------------------------------------------- table */
+.viz__table { width: 100%; border-collapse: collapse; font-size: var(--t-micro); }
+.viz__table th,
+.viz__table td {
+  text-align: left; padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.viz__table th { color: var(--ink-3); font-weight: 620; }
+.viz__table td { color: var(--ink); }
+.viz__table td.num { font-variant-numeric: tabular-nums; }
+.viz__table tr:last-child td { border-bottom: 0; }
+
+/* ---------------------------------------------------------------- bars */
+.viz__bars { display: flex; align-items: flex-end; gap: var(--s-2); height: 130px; }
+.viz__bar-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; height: 100%; }
+.viz__bar-stack {
+  flex: 1; display: flex; align-items: stretch; gap: 2px;
+  min-height: 0;
+}
+.viz__bar { border-radius: 3px; min-height: 2px; transition: transform var(--d-slow) var(--ease); }
+.viz__tick-label {
+  font-size: 9px; color: var(--ink-3); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- donut */
+.viz__donut { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.viz__slices {
+  flex: 1 1 140px; min-width: 0;
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: var(--t-micro); color: var(--ink-2);
+}
+.viz__slices li { display: flex; align-items: center; gap: 7px; }
+.viz__slices .num { color: var(--ink); font-weight: 620; font-variant-numeric: tabular-nums; }

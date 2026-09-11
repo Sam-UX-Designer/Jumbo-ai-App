@@ -34,11 +34,10 @@ export const env = {
 
   // Jumbo's only AI provider. Server-side: never returned by /api/config,
   // never present in the client bundle, never logged.
+  // The only AI credential. Which models run, in what order, on which
+  // providers, is configured in the OpenRouter dashboard against the presets
+  // named in lib/ai.js — deliberately not here, and not in the code.
   openrouterKey: process.env.OPENROUTER_API_KEY || '',
-  // Optional. A comma-separated chain overrides the built-in fallback list,
-  // so a model that OpenRouter stops serving can be swapped without a
-  // deploy. Left unset, the defaults in lib/ai.js apply.
-  openrouterModels: process.env.OPENROUTER_MODELS || '',
 
   // Optional. Explore reads the curated creators' public feeds without it.
   youtubeKey: process.env.YOUTUBE_API_KEY || '',

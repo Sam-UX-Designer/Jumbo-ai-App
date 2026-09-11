@@ -50,7 +50,7 @@ Set these in **Vercel → Project → Settings → Environment Variables**:
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | Yes | Every AI feature, through OpenRouter. Server-side only. |
-| `OPENROUTER_MODELS` | No | Comma-separated model chain. Overrides the built-in fallback list. |
+| — | — | Model selection is configured in the OpenRouter dashboard against `@preset/jumbo-ai` and `@preset/jumbo-vision`, not here. |
 | `YOUTUBE_API_KEY` | No | Adds live search. Explore works without it. |
 | `SESSION_SECRET` | For OAuth | Any long random string. |
 | `PUBLIC_URL`, `WEB_ORIGIN` | Only for a custom domain | Otherwise derived from the Vercel deployment hostname. |
@@ -119,7 +119,7 @@ server/                 Express API. Credentials live here and never reach the b
   lib/providers.js      The integration registry, including what each one still needs
   routes/oauth.js       Real OAuth 2.0 with PKCE, signed state, token refresh
   routes/health.js      Per-provider adapters and normalisation
-  routes/ai.js          Every AI feature, on OpenRouter (validated JSON, model fallback)
+  routes/ai.js          Every AI feature, on OpenRouter presets (validated JSON)
   routes/youtube.js     YouTube Data API v3
 
 src/

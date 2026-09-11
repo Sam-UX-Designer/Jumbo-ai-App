@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import '../styles/chat.css'
 import { Icon } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
+import { DataViz } from '../components/DataViz'
 import { ErrorNotice, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useChat, QUICK_PROMPTS } from '../lib/useChat'
@@ -138,6 +139,7 @@ export function Chat({
                       {m.text.split('\n\n').filter(Boolean).map((para, i) => (
                         <p key={i} className="t-body">{para}</p>
                       ))}
+                      {m.visualization && <DataViz viz={m.visualization} />}
                     </div>
                   )}
 

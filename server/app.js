@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { env, has } from './lib/env.js'
-import { aiConfigured, aiModels } from './lib/ai.js'
+import { PRESETS, aiConfigured } from './lib/ai.js'
 import { listProviders } from './lib/providers.js'
 import { oauth } from './routes/oauth.js'
 import { health } from './routes/health.js'
@@ -51,9 +51,9 @@ app.get('/api/config', (_req, res) => {
     ok: true,
     ai: {
       configured: aiConfigured(),
-      // The model that leads the chain, for the interface to name if it
-      // wants to. Never a key, and never any part of one.
-      model: aiConfigured() ? aiModels()[0] : null,
+      // The preset, not a model: which model answers is OpenRouter's to
+      // decide. Never a key, and never any part of one.
+      model: aiConfigured() ? PRESETS.text : null,
     },
     youtube: {
       // Explore works either way: with a key it searches all of YouTube,
@@ -95,7 +95,7 @@ app.use('/api', (err, _req, res, _next) => {
 /** What is switched on, for the local startup line. Never values. */
 export function configuredSummary() {
   return [
-    aiConfigured() && `OpenRouter (${aiModels().length} models)`,
+    aiConfigured() && `OpenRouter (${PRESETS.text}, ${PRESETS.vision})`,
     has(env.youtubeKey) && 'YouTube search',
     ...Object.entries(env.providers)
       .filter(([, c]) => has(c.clientId) && has(c.clientSecret))

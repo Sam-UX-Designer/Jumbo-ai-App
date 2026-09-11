@@ -1,6 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode,
 } from 'react'
+import type { Viz } from '../components/DataViz'
 import type {
   Baseline, DayRecord, GoalKey, InsightDecision, MealEntry, Measurement, Profile,
   Reminders, WorkoutEntry,
@@ -36,6 +37,11 @@ export interface ChatMessage {
   text: string
   /** Follow-ups Jumbo offered after this answer. */
   followUps?: string[]
+  /**
+   * A chart, table or metric row Jumbo asked for alongside the words. The
+   * model supplies the numbers; Jumbo draws it. See components/DataViz.
+   */
+  visualization?: Viz
   /** Set when this turn failed, so the UI can offer a retry. */
   error?: string
   pending?: boolean
@@ -141,7 +147,7 @@ export type Action =
   | { type: 'setPermission'; key: string; value: boolean }
   | { type: 'selectDate'; date: string }
   | { type: 'chatSend'; id: string; text: string }
-  | { type: 'chatReply'; id: string; text: string; followUps: string[] }
+  | { type: 'chatReply'; id: string; text: string; followUps: string[]; visualization?: Viz | null }
   | { type: 'chatFail'; id: string; message: string }
   | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
@@ -310,7 +316,14 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         chat: state.chat.map((m) => (m.id === action.id
-          ? { ...m, text: action.text, followUps: action.followUps, pending: false, error: undefined }
+          ? {
+            ...m,
+            text: action.text,
+            followUps: action.followUps,
+            visualization: action.visualization ?? undefined,
+            pending: false,
+            error: undefined,
+          }
           : m)),
       }
     case 'chatFail':

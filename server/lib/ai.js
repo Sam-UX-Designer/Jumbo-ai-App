@@ -16,64 +16,23 @@ import { env, has } from './env.js'
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 /**
- * The fallback chain, tried in order until one returns a valid answer.
+ * The presets Jumbo asks for. These are the only model identifiers in the
+ * application, and neither names a model.
  *
- * Chosen for structured JSON, quick turnaround and low cost, and deliberately
- * spread across provider families so the chain does not all fail together:
- * two Google generations, OpenAI, then Meta. Anthropic is not in the list.
- *
- * A model id that OpenRouter no longer serves simply fails its attempt and
- * the next one runs, which is the failure mode that took the app down when
- * one model was hard-wired. OPENROUTER_MODELS overrides the list without a
- * code change if one needs swapping in a hurry.
+ * Which models each resolves to, in what order, on which providers and with
+ * what routing, is configured in the OpenRouter dashboard. That is the point:
+ * a model being retired, or a better one arriving, is a change there and not
+ * a deploy here. The application never learns what answered it.
  */
-const DEFAULT_TEXT_MODELS = [
-  'google/gemini-2.5-flash',
-  'openai/gpt-4o-mini',
-  'google/gemini-2.0-flash-001',
-  'meta-llama/llama-3.3-70b-instruct',
-]
+const PRESET_TEXT = '@preset/jumbo-ai'
+const PRESET_VISION = '@preset/jumbo-vision'
 
-/** The same idea for meal photographs, limited to models that read images. */
-const DEFAULT_VISION_MODELS = [
-  'google/gemini-2.5-flash',
-  'openai/gpt-4o-mini',
-  'google/gemini-2.0-flash-001',
-]
+/** Which preset a request belongs to. Nothing else decides. */
+const presetFor = (vision) => (vision ? PRESET_VISION : PRESET_TEXT)
 
-const list = (raw, fallback) => {
-  const parsed = String(raw || '').split(',').map((m) => m.trim()).filter(Boolean)
-  return parsed.length ? parsed : fallback
-}
-
-/**
- * Model families known to accept image input. A meal photograph sent to a
- * text-only model does not fail loudly — the model simply describes nothing
- * and the analysis comes back empty — so the override is filtered rather
- * than trusted, and the vision defaults stand in if it leaves nothing.
- */
-const VISION_CAPABLE = /(gemini|gpt-4o|gpt-4\.1|o4-|claude-3|pixtral|llama-3\.2-(11|90)b-vision|qwen.*-vl|internvl)/i
-
-export const textModels = () => list(env.openrouterModels, DEFAULT_TEXT_MODELS)
-
-export const visionModels = () => {
-  const override = list(env.openrouterModels, null)
-  if (!override) return DEFAULT_VISION_MODELS
-
-  const usable = override.filter((m) => VISION_CAPABLE.test(m))
-  const dropped = override.filter((m) => !VISION_CAPABLE.test(m))
-  if (dropped.length) {
-    console.warn(`[ai] ignoring text-only model(s) for image analysis: ${dropped.join(', ')}`)
-  }
-  // An override that names no image-capable model would leave meal
-  // photographs with nothing to run on, so the defaults carry it.
-  return usable.length ? usable : DEFAULT_VISION_MODELS
-}
+export const PRESETS = { text: PRESET_TEXT, vision: PRESET_VISION }
 
 export const aiConfigured = () => has(env.openrouterKey)
-
-/** The chain in use, for the capability report. Never the key. */
-export const aiModels = () => textModels()
 
 export class AiError extends Error {
   constructor(message, { status = 502, code = 'upstream' } = {}) {
@@ -157,7 +116,7 @@ function validate(value, schema) {
   return true
 }
 
-async function attempt({ model, messages, maxOutputTokens, temperature, signal }) {
+async function attempt({ preset, messages, maxOutputTokens, temperature, signal }) {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     signal,
@@ -170,7 +129,8 @@ async function attempt({ model, messages, maxOutputTokens, temperature, signal }
       'X-Title': 'Jumbo',
     },
     body: JSON.stringify({
-      model,
+      // A preset, never a model. OpenRouter resolves the rest.
+      model: preset,
       messages,
       response_format: { type: 'json_object' },
       max_tokens: maxOutputTokens,
@@ -195,19 +155,26 @@ async function attempt({ model, messages, maxOutputTokens, temperature, signal }
     err.declined = true
     throw err
   }
-  return choice?.message?.content ?? ''
+  // OpenRouter reports which model it actually routed to; useful in a log
+  // and in the self-test, and never a configuration the app depends on.
+  return { content: choice?.message?.content ?? '', model: body?.model ?? null }
 }
 
 /**
- * One structured generation, with the fallback chain behind it.
+ * One structured generation, through a preset.
  *
- * Returns `{ data, model }` — the object, and which model actually produced
- * it, so a response can name the model that answered rather than the one at
- * the head of the list. A model that
- * is gone, rate limited, slow, or simply cannot produce the shape costs one
- * attempt. When every model has failed, the reason from the last attempt
- * decides what the person is told — nothing is invented in place of an
- * answer.
+ * The request names a preset, not a model, so OpenRouter resolves which model
+ * runs and walks its own fallback chain. There is no model loop here: a
+ * provider being down or a model being retired is handled upstream, where it
+ * can be reconfigured without a deploy.
+ *
+ * The one retry that remains is for a reply that is not the JSON the route
+ * needs. That is not a provider failure — the preset may route the second
+ * attempt elsewhere — so it is worth asking once more before giving up.
+ * Nothing is invented in place of an answer.
+ *
+ * Returns `{ data, model }`, where `model` is whatever OpenRouter reports it
+ * actually used, for logging and the self-test.
  */
 export async function generateJson({
   system,
@@ -222,67 +189,72 @@ export async function generateJson({
     throw new AiError('Jumbo’s AI is not available.', { status: 501, code: 'setup_required' })
   }
 
+  const preset = presetFor(vision)
   const messages = toMessages(`${system}\n\n${schemaInstruction(schema)}`, contents)
-  const models = vision ? visionModels() : textModels()
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
-  let last = { code: 'upstream', message: 'Jumbo’s AI could not answer.', status: 502 }
-
   try {
-    for (const model of models) {
+    for (let tryNo = 1; tryNo <= 2; tryNo += 1) {
+      let raw
+      let model
       try {
-        const raw = await attempt({
-          model, messages, maxOutputTokens, temperature, signal: controller.signal,
-        })
-        const parsed = extractJson(raw)
-        if (!parsed) {
-          console.warn(`[ai] ${model}: reply was not JSON, trying the next model`)
-          last = { code: 'unparsable', message: 'Jumbo’s AI returned nothing usable.', status: 502 }
-          continue
-        }
-        if (!validate(parsed, schema)) {
-          console.warn(`[ai] ${model}: reply did not match the expected shape, trying the next model`)
-          last = { code: 'unparsable', message: 'Jumbo’s AI returned nothing usable.', status: 502 }
-          continue
-        }
-        if (model !== models[0]) console.warn(`[ai] answered by fallback model ${model}`)
-        return { data: parsed, model }
+        ;({ content: raw, model } = await attempt({
+          preset, messages, maxOutputTokens, temperature, signal: controller.signal,
+        }))
       } catch (err) {
-        if (err.name === 'AbortError') {
-          // The whole budget is spent; further models cannot help.
-          throw new AiError('That took too long to come back.', { status: 504, code: 'timeout' })
-        }
-        if (err.declined) {
-          last = { code: 'declined', message: 'Jumbo could not answer that one.', status: 422 }
-          console.warn(`[ai] ${model}: declined`)
-          continue
-        }
-        const status = err.status ?? 0
-        console.warn(`[ai] ${model} failed (${status || 'network'}): ${err.message}`)
-        if (status === 401 || status === 403) {
-          last = { code: 'bad_key', message: 'Jumbo’s AI is not available.', status: 502 }
-          // A rejected key fails identically on every model; stop here.
-          break
-        }
-        if (status === 429) {
-          last = { code: 'rate_limited', message: 'Too many requests at once. Try again shortly.', status: 429 }
-          continue
-        }
-        if (status === 402) {
-          last = { code: 'no_credit', message: 'Jumbo’s AI is not available.', status: 502 }
-          break
-        }
-        last = { code: 'upstream', message: 'Jumbo’s AI could not answer.', status: 502 }
+        throw toAiError(err, preset)
       }
+
+      const parsed = extractJson(raw)
+      if (parsed && validate(parsed, schema)) {
+        return { data: parsed, model: model || preset }
+      }
+
+      console.warn(
+        `[ai] ${preset}${model ? ` (${model})` : ''}: reply was not the expected JSON`
+        + (tryNo === 1 ? ', asking once more' : ''),
+      )
     }
   } finally {
     clearTimeout(timer)
   }
 
-  console.error(`[ai] every model failed. last reason: ${last.code}`)
-  throw new AiError(last.message, { status: last.status, code: last.code })
+  throw new AiError('Jumbo’s AI returned nothing usable.', { status: 502, code: 'unparsable' })
+}
+
+/** Turns a transport or provider failure into what the person is told. */
+function toAiError(err, preset) {
+  if (err instanceof AiError) return err
+  if (err.name === 'AbortError') {
+    console.warn(`[ai] ${preset}: timed out`)
+    return new AiError('That took too long to come back.', { status: 504, code: 'timeout' })
+  }
+  if (err.declined) {
+    console.warn(`[ai] ${preset}: declined by the provider`)
+    return new AiError('Jumbo could not answer that one.', { status: 422, code: 'declined' })
+  }
+
+  const status = err.status ?? 0
+  console.warn(`[ai] ${preset} failed (${status || 'network'}): ${err.message}`)
+
+  if (status === 401 || status === 403) {
+    return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'bad_key' })
+  }
+  if (status === 402) {
+    return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'no_credit' })
+  }
+  if (status === 404) {
+    // The preset name did not resolve. Worth saying plainly in the log,
+    // because no amount of retrying fixes it.
+    console.error(`[ai] ${preset} was not found on this OpenRouter account`)
+    return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'preset_missing' })
+  }
+  if (status === 429) {
+    return new AiError('Too many requests at once. Try again shortly.', { status: 429, code: 'rate_limited' })
+  }
+  return new AiError('Jumbo’s AI could not answer.', { status: 502, code: 'upstream' })
 }
 
 /**

@@ -48,7 +48,13 @@ export function useChat() {
     inFlight.current.delete(id)
 
     if (result.ok) {
-      dispatch({ type: 'chatReply', id, text: result.data.answer, followUps: result.data.followUps })
+      dispatch({
+        type: 'chatReply',
+        id,
+        text: result.data.answer,
+        followUps: result.data.followUps,
+        visualization: result.data.visualization,
+      })
       haptic('impactLight')
     } else {
       dispatch({ type: 'chatFail', id, message: result.message })

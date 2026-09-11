@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { env } from '../lib/env.js'
 import {
-  aiConfigured, aiModels, aiUnavailable, generateJson, image, sendAiError, text,
+  PRESETS, aiConfigured, aiUnavailable, generateJson, image, sendAiError, text,
 } from '../lib/ai.js'
 
 export const ai = Router()
@@ -326,6 +326,72 @@ const CHAT_SCHEMA = {
       description: 'The figures from the summary you actually used. Empty when the answer needed none.',
       items: { type: 'string' },
     },
+    visualization: {
+      type: 'object',
+      description:
+        'Optional. Include ONLY when the question is about numbers over time, a comparison, a '
+        + 'composition, or a list of records, and seeing it would genuinely help. Omit it entirely '
+        + 'for ordinary conversation. Every value must come from the summary you were given.',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['line', 'bar', 'stacked_bar', 'donut', 'table', 'metrics'],
+          description:
+            'line for a trend over time. bar to compare values. stacked_bar when the parts add up '
+            + 'to the whole. donut only for a genuine part-to-whole split. table for detailed '
+            + 'records. metrics for two to four standout figures.',
+        },
+        title: { type: 'string', description: 'A short, plain title. No units in it.' },
+        unit: { type: 'string', description: 'The unit shared by the values, e.g. "g", "kcal", "steps". Empty when mixed.' },
+        categories: {
+          type: 'array',
+          description:
+            'The x-axis labels for line, bar and stacked_bar; the slice labels for donut; the '
+            + 'column headings for table. Keep labels short — a date as "Mon 9" rather than a full date.',
+          items: { type: 'string' },
+        },
+        series: {
+          type: 'array',
+          description:
+            'One entry per line or bar group, each with one value per category, in the same order. '
+            + 'A donut takes exactly one series. Not used by table or metrics.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              values: { type: 'array', items: { type: 'number' } },
+            },
+            required: ['name', 'values'],
+          },
+        },
+        rows: {
+          type: 'array',
+          description: 'Table rows only. Each row has one cell per category, in the same order.',
+          items: {
+            type: 'object',
+            properties: {
+              cells: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['cells'],
+          },
+        },
+        metrics: {
+          type: 'array',
+          description: 'Metrics only. Two to four standout figures.',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string' },
+              value: { type: 'string' },
+              note: { type: 'string' },
+            },
+            required: ['label', 'value'],
+          },
+        },
+        note: { type: 'string', description: 'One short line under the visual, when a caveat is needed. Otherwise empty.' },
+      },
+      required: ['type', 'title'],
+    },
   },
   required: ['answer', 'followUps', 'groundedIn'],
 }
@@ -347,6 +413,14 @@ How to answer:
 - Offer options, not orders, and make clear the choice is theirs.
 - Be warm and brief. Two or three short paragraphs is usually right. This is a conversation, not a report.
 - Write prose. Separate paragraphs with a blank line. Do not use headings or bullet points.
+
+Showing data:
+- When the question is about numbers over time, a comparison, a composition, or a list of their records, add a visualization object and let Jumbo draw it. Otherwise leave it out entirely — most questions do not need one.
+- Never draw anything yourself. No ASCII charts, no bars made of characters, no tables in the prose, no HTML, no markdown tables. You supply the numbers; Jumbo renders them.
+- Every value in it must come from the summary you were given. The daily records and the meals are there for exactly this. Never interpolate a missing day, never round a gap away, and never invent a figure to complete a series.
+- If the data needed for the chart they asked for is not in the summary, say so plainly in the answer and leave the visualization out. A short honest explanation beats an invented chart.
+- Categories and each series' values must be the same length and in the same order.
+- The answer text should still stand on its own. The visual supports it; it does not replace it.
 
 Hard limits:
 - No diagnosis, no disease prediction, no claims about life expectancy or how long someone will live.
@@ -398,6 +472,7 @@ ai.post('/chat', async (req, res) => {
       answer: String(data.answer ?? '').trim(),
       followUps: (data.followUps ?? []).slice(0, 3),
       groundedIn: (data.groundedIn ?? []).slice(0, 6),
+      visualization: cleanVisualization(data.visualization),
     })
   } catch (err) {
     sendAiError(res, err, 'Ask Jumbo')
@@ -421,7 +496,7 @@ ai.get('/selftest', async (_req, res) => {
     return res.status(503).json({
       ok: false,
       stage: 'configuration',
-      models: aiModels(),
+      presets: [PRESETS.text, PRESETS.vision],
       reason: 'No API key is present in this environment.',
       hint: 'Set OPENROUTER_API_KEY in the deployment’s environment variables and redeploy.',
     })
@@ -443,9 +518,9 @@ ai.get('/selftest', async (_req, res) => {
     res.json({
       ok: true,
       stage: 'complete',
-      // Which model answered, and the whole chain behind it.
+      // The preset asked for, and what OpenRouter actually routed it to.
+      preset: PRESETS.text,
       answeredBy: model,
-      models: aiModels(),
       ms: Date.now() - started,
       reply: String(data.status ?? '').slice(0, 40),
     })
@@ -453,7 +528,7 @@ ai.get('/selftest', async (_req, res) => {
     res.status(err.status ?? 502).json({
       ok: false,
       stage: 'generation',
-      models: aiModels(),
+      preset: PRESETS.text,
       ms: Date.now() - started,
       code: err.code ?? 'unknown',
       reason: err.message,
@@ -465,11 +540,80 @@ ai.get('/selftest', async (_req, res) => {
 const HINTS = {
   bad_key: 'OpenRouter rejected the key. Check it is a valid OPENROUTER_API_KEY and that the account is active.',
   no_credit: 'The OpenRouter account has no credit left for these models.',
+  preset_missing: 'The preset was not found on this OpenRouter account. Check that @preset/jumbo-ai and @preset/jumbo-vision both exist and are enabled for this key.',
   rate_limited: 'The project is over its quota for this model.',
   timeout: 'The model did not respond in time. A smaller model or a shorter prompt will help.',
   empty: 'The model returned no content.',
   unparsable: 'Every model in the chain returned something that was not the requested JSON.',
   declined: 'The model declined the prompt on safety grounds.',
+}
+
+/* ================================================== visualization */
+
+const VIZ_TYPES = ['line', 'bar', 'stacked_bar', 'donut', 'table', 'metrics']
+
+/**
+ * Makes a visualization safe to render, or drops it.
+ *
+ * A model can return a plausible-looking object that the renderer cannot
+ * draw — a series longer than its categories, a table with no rows, a chart
+ * with no numbers. Rather than let a half-formed visual reach the screen,
+ * anything that does not hold together is discarded and the answer stands on
+ * its prose. Values are coerced to numbers here so the renderer never has to
+ * guess, and strings are capped so a runaway reply cannot bloat the payload.
+ */
+function cleanVisualization(v) {
+  if (!v || typeof v !== 'object' || !VIZ_TYPES.includes(v.type)) return null
+
+  const str = (x, n = 80) => (typeof x === 'string' ? x.slice(0, n) : '')
+  const categories = Array.isArray(v.categories) ? v.categories.slice(0, 40).map((c) => str(c, 24)) : []
+
+  const base = {
+    type: v.type,
+    title: str(v.title, 90),
+    unit: str(v.unit, 16),
+    note: str(v.note, 180),
+    categories,
+  }
+
+  if (v.type === 'metrics') {
+    const metrics = (Array.isArray(v.metrics) ? v.metrics : [])
+      .filter((m) => m && typeof m === 'object' && str(m.label) && str(m.value))
+      .slice(0, 4)
+      .map((m) => ({ label: str(m.label, 40), value: str(m.value, 24), note: str(m.note, 60) }))
+    return metrics.length ? { ...base, metrics } : null
+  }
+
+  if (v.type === 'table') {
+    const rows = (Array.isArray(v.rows) ? v.rows : [])
+      .filter((r) => r && Array.isArray(r.cells) && r.cells.length)
+      .slice(0, 30)
+      .map((r) => ({ cells: r.cells.slice(0, categories.length || 6).map((c) => str(c, 60)) }))
+    return categories.length && rows.length ? { ...base, rows } : null
+  }
+
+  // Every chart needs labels and at least one series whose values line up
+  // with them. A series that does not is dropped rather than padded.
+  const series = (Array.isArray(v.series) ? v.series : [])
+    .slice(0, 5)
+    .map((sr) => ({
+      name: str(sr?.name, 40) || 'Value',
+      // A missing record stays missing. Number(null) is 0, which would turn
+      // a day with nothing logged into a day with a real zero — the one
+      // thing a chart of someone's own data must never do.
+      values: (Array.isArray(sr?.values) ? sr.values : [])
+        .slice(0, categories.length)
+        .map((n) => (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))
+          ? null
+          : Number(n))),
+    }))
+    .filter((sr) => sr.values.length === categories.length && sr.values.some((n) => n !== null))
+
+  if (!categories.length || !series.length) return null
+  // A donut is one series of parts; more than one is a different chart.
+  if (v.type === 'donut' && series.length !== 1) return null
+
+  return { ...base, series }
 }
 
 /* =========================================================== shared */
