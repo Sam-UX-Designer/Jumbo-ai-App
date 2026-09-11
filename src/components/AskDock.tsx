@@ -1,6 +1,6 @@
 import { Icon } from './Icon'
-import { useNavigate } from './Nav'
-import { FUTURE_PROMPTS } from '../lib/useChat'
+import { useNavigate, type Route } from './Nav'
+import { QUICK_ACTIONS } from '../lib/useChat'
 import { haptic } from '../lib/feedback'
 
 /**
@@ -12,27 +12,28 @@ import { haptic } from '../lib/feedback'
  * conversation with its composer focused, which is one keyboard rather than
  * two and keeps the thread in one place.
  *
- * `chips` puts a single horizontally scrolling row of questions directly
- * above the field. AI Future uses it; nothing else needs to.
+ * Above it, one row of quick actions chosen for the screen you are on:
+ * Today asks about today, Capture about food, Explore about what to watch.
+ * Tapping one opens the conversation with that question already asked. There
+ * is one Ask Jumbo behind all of them, not five.
  */
-export function AskDock({ chips = false }: { chips?: boolean }) {
+export function AskDock({ screen }: { screen: Route }) {
   const navigate = useNavigate()
+  const chips = QUICK_ACTIONS[screen] ?? QUICK_ACTIONS.today
   const open = (question?: string) => { haptic('selection'); navigate('chat', question) }
 
   return (
     <div className="askdock">
-      {chips && (
-        <ul className="askdock__chips" aria-label="Ask Jumbo a common question">
-          {FUTURE_PROMPTS.map((q) => (
-            <li key={q.text}>
-              <button className="qchip" onClick={() => open(q.text)}>
-                <Icon name={q.icon} size={15} style={{ color: q.colour }} />
-                {q.text}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="askdock__chips" aria-label="Ask Jumbo about this screen">
+        {chips.map((q) => (
+          <li key={q.text}>
+            <button className="qchip" onClick={() => open(q.text)}>
+              <Icon name={q.icon} size={15} style={{ color: q.colour }} />
+              {q.text}
+            </button>
+          </li>
+        ))}
+      </ul>
 
       <button className="askdock__field" onClick={() => open()}>
         <Icon name="sparkles" size={18} style={{ color: 'var(--brand)', flex: 'none' }} />

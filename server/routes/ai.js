@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { env } from '../lib/env.js'
 import {
-  aiUnavailable, generateJson, geminiConfigured, image, sendAiError, text,
-} from '../lib/gemini.js'
+  aiConfigured, aiModels, aiUnavailable, generateJson, image, sendAiError, text,
+} from '../lib/ai.js'
 
 export const ai = Router()
 
@@ -18,44 +18,42 @@ export const ai = Router()
 /* ================================================== meal photographs */
 
 const MEAL_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
-    dish: { type: 'STRING', description: 'A short name for the plate as a whole.' },
+    dish: { type: 'string', description: 'A short name for the plate as a whole.' },
     readable: {
-      type: 'BOOLEAN',
+      type: 'boolean',
       description: 'False when the photo is too dark, blurred or cropped to identify food reliably.',
     },
     caveat: {
-      type: 'STRING',
+      type: 'string',
       description: 'A plain-language reason the estimate is uncertain, or an empty string when it is not.',
     },
     alternatives: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'Up to three plausible alternative readings, phrased as "X instead of Y".',
-      items: { type: 'STRING' },
+      items: { type: 'string' },
     },
     items: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'One entry per distinguishable food. Empty when nothing edible is visible.',
       items: {
-        type: 'OBJECT',
+        type: 'object',
         properties: {
-          name: { type: 'STRING' },
-          portion: { type: 'STRING', description: 'How the portion was judged, e.g. "about 150 g" or "1 medium".' },
-          grams: { type: 'NUMBER' },
-          kcal: { type: 'NUMBER' },
-          protein: { type: 'NUMBER' },
-          carbs: { type: 'NUMBER' },
-          fat: { type: 'NUMBER' },
-          confidence: { type: 'NUMBER', description: '0 to 1. Be honest and do not inflate.' },
+          name: { type: 'string' },
+          portion: { type: 'string', description: 'How the portion was judged, e.g. "about 150 g" or "1 medium".' },
+          grams: { type: 'number' },
+          kcal: { type: 'number' },
+          protein: { type: 'number' },
+          carbs: { type: 'number' },
+          fat: { type: 'number' },
+          confidence: { type: 'number', description: '0 to 1. Be honest and do not inflate.' },
         },
         required: ['name', 'portion', 'grams', 'kcal', 'protein', 'carbs', 'fat', 'confidence'],
-        propertyOrdering: ['name', 'portion', 'grams', 'kcal', 'protein', 'carbs', 'fat', 'confidence'],
       },
     },
   },
   required: ['dish', 'readable', 'caveat', 'alternatives', 'items'],
-  propertyOrdering: ['dish', 'readable', 'caveat', 'alternatives', 'items'],
 }
 
 const MEAL_SYSTEM = `You estimate the nutritional content of a meal from a single photograph for Jumbo, a wellness companion.
@@ -69,7 +67,7 @@ Rules you must follow:
 - The person reviews and corrects everything you return before it is saved, so an honest low-confidence answer is more useful than a confident wrong one.`
 
 ai.post('/food', async (req, res) => {
-  if (!geminiConfigured()) return aiUnavailable(res, 'meal photo analysis')
+  if (!aiConfigured()) return aiUnavailable(res, 'meal photo analysis')
 
   const { imageBase64, mediaType = 'image/jpeg', note } = req.body ?? {}
   if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
@@ -80,7 +78,7 @@ ai.post('/food', async (req, res) => {
   }
 
   try {
-    const data = await generateJson({
+    const { data, model } = await generateJson({
       system: MEAL_SYSTEM,
       contents: [{
         role: 'user',
@@ -92,8 +90,9 @@ ai.post('/food', async (req, res) => {
         ],
       }],
       schema: MEAL_SCHEMA,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 4096,
       temperature: 0.4,
+      vision: true,
     })
 
     const items = (data.items ?? []).map((i, idx) => ({
@@ -109,8 +108,8 @@ ai.post('/food', async (req, res) => {
     }))
 
     res.json({
-      source: 'gemini',
-      model: env.geminiModel,
+      source: 'openrouter',
+      model,
       dish: data.dish,
       readable: data.readable !== false,
       caveat: data.caveat || null,
@@ -126,33 +125,32 @@ ai.post('/food', async (req, res) => {
 /* ========================================================= insights */
 
 const INSIGHT_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
     insights: {
-      type: 'ARRAY',
+      type: 'array',
       items: {
-        type: 'OBJECT',
+        type: 'object',
         properties: {
-          id: { type: 'STRING' },
-          domain: { type: 'STRING', enum: ['sleep', 'movement', 'nutrition', 'recovery', 'body'] },
-          changed: { type: 'STRING', description: 'What I noticed: what changed, with the actual numbers from the data.' },
-          why: { type: 'STRING', description: 'Why it may matter to this person, in two sentences at most.' },
+          id: { type: 'string' },
+          domain: { type: 'string', enum: ['sleep', 'movement', 'nutrition', 'recovery', 'body'] },
+          changed: { type: 'string', description: 'What I noticed: what changed, with the actual numbers from the data.' },
+          why: { type: 'string', description: 'Why it may matter to this person, in two sentences at most.' },
           evidence: {
-            type: 'ARRAY',
+            type: 'array',
             description: 'What the data shows: two to four specific figures drawn from the summary provided.',
-            items: { type: 'STRING' },
+            items: { type: 'string' },
           },
-          confidence: { type: 'NUMBER', description: '0 to 1, reflecting how strongly the data supports this.' },
-          limitation: { type: 'STRING', description: 'What this pattern cannot tell them.' },
+          confidence: { type: 'number', description: '0 to 1, reflecting how strongly the data supports this.' },
+          limitation: { type: 'string', description: 'What this pattern cannot tell them.' },
           options: {
-            type: 'ARRAY',
+            type: 'array',
             description: 'What they could try: two or three options, one of which is to do nothing.',
-            items: { type: 'STRING' },
+            items: { type: 'string' },
           },
-          window: { type: 'STRING', description: 'The observation window, e.g. "Last 28 days".' },
+          window: { type: 'string', description: 'The observation window, e.g. "Last 28 days".' },
         },
         required: ['id', 'domain', 'changed', 'why', 'evidence', 'confidence', 'limitation', 'options', 'window'],
-        propertyOrdering: ['id', 'domain', 'changed', 'why', 'evidence', 'confidence', 'limitation', 'options', 'window'],
       },
     },
   },
@@ -175,27 +173,27 @@ Rules:
 - Write plainly. No jargon, no motivational filler.`
 
 ai.post('/insights', async (req, res) => {
-  if (!geminiConfigured()) return aiUnavailable(res, 'pattern analysis')
+  if (!aiConfigured()) return aiUnavailable(res, 'pattern analysis')
   const { summary } = req.body ?? {}
   if (!summary || typeof summary !== 'object') {
     return res.status(400).json({ error: 'bad_summary' })
   }
 
   try {
-    const data = await generateJson({
+    const { data, model } = await generateJson({
       system: INSIGHT_SYSTEM,
       contents: [{
         role: 'user',
         parts: [text(`A statistical summary of this person's own data:\n${JSON.stringify(summary, null, 2)}`)],
       }],
       schema: INSIGHT_SCHEMA,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 4096,
       temperature: 0.5,
     })
 
     res.json({
-      source: 'gemini',
-      model: env.geminiModel,
+      source: 'openrouter',
+      model,
       insights: (data.insights ?? []).slice(0, 5).map((i, idx) => ({
         ...i,
         id: i.id || `ai-${idx}`,
@@ -213,24 +211,23 @@ ai.post('/insights', async (req, res) => {
 /* =========================================================== future */
 
 const FUTURE_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
-    headline: { type: 'STRING', description: 'One line naming the shape of this scenario. Not a promise.' },
+    headline: { type: 'string', description: 'One line naming the shape of this scenario. Not a promise.' },
     lifeStory: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'Two or three short paragraphs describing an ordinary day if this pattern continues.',
-      items: { type: 'STRING' },
+      items: { type: 'string' },
     },
     whatDrivesIt: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'Two to four habits from the scenario that are doing the work, each with the change involved.',
-      items: { type: 'STRING' },
+      items: { type: 'string' },
     },
-    honestly: { type: 'STRING', description: 'What this projection cannot tell them, stated plainly.' },
-    confidence: { type: 'NUMBER', description: '0 to 1, reflecting how much of this rests on measurement rather than model.' },
+    honestly: { type: 'string', description: 'What this projection cannot tell them, stated plainly.' },
+    confidence: { type: 'number', description: '0 to 1, reflecting how much of this rests on measurement rather than model.' },
   },
   required: ['headline', 'lifeStory', 'whatDrivesIt', 'honestly', 'confidence'],
-  propertyOrdering: ['headline', 'lifeStory', 'whatDrivesIt', 'honestly', 'confidence'],
 }
 
 const FUTURE_SYSTEM = `You write the scenario panel in Jumbo's Future screen. You are given someone's measured baseline, the habits in a scenario they are exploring, and a numeric projection produced by Jumbo's own model.
@@ -246,12 +243,12 @@ Rules:
 - Keep each paragraph under 45 words. Warm, precise, never gushing.`
 
 ai.post('/future', async (req, res) => {
-  if (!geminiConfigured()) return aiUnavailable(res, 'future scenarios')
+  if (!aiConfigured()) return aiUnavailable(res, 'future scenarios')
   const { baseline, levers, projection, horizonMonths } = req.body ?? {}
   if (!baseline || !levers || !projection) return res.status(400).json({ error: 'bad_scenario' })
 
   try {
-    const data = await generateJson({
+    const { data, model } = await generateJson({
       system: FUTURE_SYSTEM,
       contents: [{
         role: 'user',
@@ -263,13 +260,13 @@ ai.post('/future', async (req, res) => {
         ].join('\n\n'))],
       }],
       schema: FUTURE_SCHEMA,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 4096,
       temperature: 0.7,
     })
 
     res.json({
-      source: 'gemini',
-      model: env.geminiModel,
+      source: 'openrouter',
+      model,
       headline: data.headline,
       lifeStory: (data.lifeStory ?? []).slice(0, 3),
       whatDrivesIt: (data.whatDrivesIt ?? []).slice(0, 4),
@@ -284,27 +281,26 @@ ai.post('/future', async (req, res) => {
 /* ============================================================= chat */
 
 const CHAT_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
     answer: {
-      type: 'STRING',
+      type: 'string',
       description:
         'The reply, in plain prose. Lead with the useful conclusion, then the reasoning. '
         + 'Two or three short paragraphs separated by a blank line. No headings, no bullet lists.',
     },
     followUps: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'Up to three short questions this person might naturally ask next. Empty when none fit.',
-      items: { type: 'STRING' },
+      items: { type: 'string' },
     },
     groundedIn: {
-      type: 'ARRAY',
+      type: 'array',
       description: 'The figures from the summary you actually used. Empty when the answer needed none.',
-      items: { type: 'STRING' },
+      items: { type: 'string' },
     },
   },
   required: ['answer', 'followUps', 'groundedIn'],
-  propertyOrdering: ['answer', 'followUps', 'groundedIn'],
 }
 
 const CHAT_SYSTEM = `You are Jumbo, a wellness and longevity companion, talking with one person about their own health data. You are not a clinician and Jumbo is not a medical device.
@@ -331,7 +327,7 @@ Hard limits:
 - If someone describes symptoms that worry them, tell them plainly to speak to a clinician. Do not attempt to reassure them out of it.`
 
 ai.post('/chat', async (req, res) => {
-  if (!geminiConfigured()) return aiUnavailable(res, 'Ask Jumbo')
+  if (!aiConfigured()) return aiUnavailable(res, 'Ask Jumbo')
 
   const { question, summary, history, goals } = req.body ?? {}
   if (typeof question !== 'string' || !question.trim()) {
@@ -362,16 +358,16 @@ ai.post('/chat', async (req, res) => {
   while (contents.length > 1 && contents[0].role !== 'user') contents.shift()
 
   try {
-    const data = await generateJson({
+    const { data, model } = await generateJson({
       system: CHAT_SYSTEM,
       contents,
       schema: CHAT_SCHEMA,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 4096,
     })
 
     res.json({
-      source: 'gemini',
-      model: env.geminiModel,
+      source: 'openrouter',
+      model,
       answer: String(data.answer ?? '').trim(),
       followUps: (data.followUps ?? []).slice(0, 3),
       groundedIn: (data.groundedIn ?? []).slice(0, 6),
@@ -394,23 +390,23 @@ ai.post('/chat', async (req, res) => {
  */
 ai.get('/selftest', async (_req, res) => {
   const started = Date.now()
-  if (!geminiConfigured()) {
+  if (!aiConfigured()) {
     return res.status(503).json({
       ok: false,
       stage: 'configuration',
-      model: env.geminiModel,
+      models: aiModels(),
       reason: 'No API key is present in this environment.',
-      hint: 'Set GEMINI_API_KEY in the deployment’s environment variables and redeploy.',
+      hint: 'Set OPENROUTER_API_KEY in the deployment’s environment variables and redeploy.',
     })
   }
 
   try {
-    const data = await generateJson({
+    const { data, model } = await generateJson({
       system: 'You are a health check. Reply with the single word ok.',
       contents: [{ role: 'user', parts: [text('Say ok.')] }],
       schema: {
-        type: 'OBJECT',
-        properties: { status: { type: 'STRING' } },
+        type: 'object',
+        properties: { status: { type: 'string' } },
         required: ['status'],
       },
       maxOutputTokens: 2048,
@@ -420,7 +416,9 @@ ai.get('/selftest', async (_req, res) => {
     res.json({
       ok: true,
       stage: 'complete',
-      model: env.geminiModel,
+      // Which model answered, and the whole chain behind it.
+      answeredBy: model,
+      models: aiModels(),
       ms: Date.now() - started,
       reply: String(data.status ?? '').slice(0, 40),
     })
@@ -428,7 +426,7 @@ ai.get('/selftest', async (_req, res) => {
     res.status(err.status ?? 502).json({
       ok: false,
       stage: 'generation',
-      model: env.geminiModel,
+      models: aiModels(),
       ms: Date.now() - started,
       code: err.code ?? 'unknown',
       reason: err.message,
@@ -438,12 +436,12 @@ ai.get('/selftest', async (_req, res) => {
 })
 
 const HINTS = {
-  bad_key: 'The key was rejected. Check it is the Generative Language API key, that the API is enabled for its project, and that no referrer or IP restriction blocks server-side calls.',
+  bad_key: 'OpenRouter rejected the key. Check it is a valid OPENROUTER_API_KEY and that the account is active.',
+  no_credit: 'The OpenRouter account has no credit left for these models.',
   rate_limited: 'The project is over its quota for this model.',
   timeout: 'The model did not respond in time. A smaller model or a shorter prompt will help.',
-  truncated: 'The model spent its output budget without producing an answer.',
   empty: 'The model returned no content.',
-  unparsable: 'The model returned something that was not the requested JSON.',
+  unparsable: 'Every model in the chain returned something that was not the requested JSON.',
   declined: 'The model declined the prompt on safety grounds.',
 }
 

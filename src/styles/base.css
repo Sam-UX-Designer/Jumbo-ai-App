@@ -496,19 +496,33 @@ a { color: var(--accent-text); }
   pointer-events: none;
 }
 .askdock > * { pointer-events: auto; width: 100%; max-width: 600px; }
+/* The chip row is the one child allowed to run past that width. */
+.askdock > .askdock__chips { max-width: none; }
 @media (min-width: 768px) {
   .askdock { padding-inline: var(--s-8); }
   .askdock > * { max-width: 656px; }
 }
 
-/* One row, always: it scrolls sideways rather than wrapping. */
+/* One row, always. It scrolls sideways and never wraps, however many
+   chips a screen offers or however narrow the phone is. The row runs to
+   both edges so a chip half off-screen invites the swipe. */
 .askdock__chips {
-  display: flex; flex-wrap: nowrap; gap: var(--s-2);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--s-2);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  margin-inline: calc(var(--s-5) * -1);
+  padding-inline: var(--s-5);
+  scroll-padding-inline: var(--s-5);
 }
 .askdock__chips::-webkit-scrollbar { display: none; }
 .askdock__chips > li { flex: none; }
+@media (min-width: 768px) {
+  .askdock__chips { margin-inline: calc(var(--s-8) * -1); padding-inline: var(--s-8); }
+}
 
 .askdock__field {
   display: flex; align-items: center; gap: var(--s-3);

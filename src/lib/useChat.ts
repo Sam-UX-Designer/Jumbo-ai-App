@@ -91,17 +91,51 @@ export function useChat() {
   }
 }
 
+export interface QuickAction { text: string; icon: IconName; colour: string }
+
 /**
- * The questions offered above the Ask Jumbo field on AI Future. Each is a
- * real question, sent as typed.
+ * The quick actions above the Ask Jumbo field, one set per screen.
+ *
+ * Each is a real question, sent as typed, and each carries the colour of the
+ * thing it asks about — sleep violet, movement mint, food amber, recovery
+ * sky — so the row reads as part of the product rather than a list of
+ * suggestions.
  */
-export const FUTURE_PROMPTS: Array<{ text: string; icon: IconName; colour: string }> = [
-  { text: 'How can I improve my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
-  { text: 'What is my longevity looking like?', icon: 'heart', colour: 'var(--training)' },
-  { text: 'What should I improve first?', icon: 'sparkles', colour: 'var(--brand)' },
-  { text: 'How is my recovery?', icon: 'bolt', colour: 'var(--recovery)' },
-  { text: 'How much protein do I need?', icon: 'plate', colour: 'var(--nutrition)' },
-]
+export const QUICK_ACTIONS: Record<string, QuickAction[]> = {
+  today: [
+    { text: 'How am I doing?', icon: 'sparkles', colour: 'var(--brand)' },
+    { text: 'What should I improve today?', icon: 'bolt', colour: 'var(--movement)' },
+    { text: 'How was my sleep?', icon: 'sleep', colour: 'var(--sleep)' },
+    { text: 'How is my recovery?', icon: 'heart', colour: 'var(--recovery)' },
+  ],
+  future: [
+    { text: 'What will happen if I keep this routine?', icon: 'clock', colour: 'var(--brand)' },
+    { text: 'How can I improve my longevity?', icon: 'leaf', colour: 'var(--movement)' },
+    { text: 'What should I change first?', icon: 'sparkles', colour: 'var(--nutrition)' },
+    { text: 'How is my trajectory?', icon: 'future', colour: 'var(--recovery)' },
+  ],
+  capture: [
+    { text: 'What did I eat today?', icon: 'plate', colour: 'var(--nutrition)' },
+    { text: 'How much protein do I need?', icon: 'bolt', colour: 'var(--movement)' },
+    { text: 'What should I log?', icon: 'capture', colour: 'var(--brand)' },
+    { text: 'How does this affect my goals?', icon: 'target', colour: 'var(--recovery)' },
+  ],
+  explore: [
+    { text: 'Find videos about my goals', icon: 'play', colour: 'var(--brand)' },
+    { text: 'Show me sleep science', icon: 'sleep', colour: 'var(--sleep)' },
+    { text: 'Show me fitness research', icon: 'training', colour: 'var(--movement)' },
+    { text: 'What should I learn today?', icon: 'explore', colour: 'var(--nutrition)' },
+  ],
+  you: [
+    { text: 'What does my data say?', icon: 'measure', colour: 'var(--brand)' },
+    { text: 'What are my strongest habits?', icon: 'sprout', colour: 'var(--nutrition)' },
+    { text: 'What should I focus on?', icon: 'target', colour: 'var(--recovery)' },
+    { text: 'Explain my progress', icon: 'sparkles', colour: 'var(--sleep)' },
+  ],
+}
+
+/** AI Future's set, also used by the screen itself. */
+export const FUTURE_PROMPTS = QUICK_ACTIONS.future
 
 /** The example questions the spec asks onboarding and Future to offer. */
 export const QUICK_PROMPTS = [

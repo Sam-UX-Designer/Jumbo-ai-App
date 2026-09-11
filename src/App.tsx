@@ -77,7 +77,7 @@ function Shell() {
             {route === 'you' && <You onNavigate={setRoute} />}
           </main>
         </div>
-        {route !== 'chat' && <AskDock chips={route === 'future'} />}
+        {route !== 'chat' && <AskDock screen={route} />}
         <TabBar route={route} onNavigate={setRoute} />
       </div>
     </NavProvider>

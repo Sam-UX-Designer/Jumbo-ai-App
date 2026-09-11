@@ -391,14 +391,15 @@
 
 .qchip {
   display: inline-flex; align-items: center; gap: 7px;
-  min-height: 40px; padding: 0 var(--s-4);
+  min-height: 38px; padding: 0 14px;
   border-radius: var(--r-pill);
   border: 1px solid var(--hairline-firm);
   background: var(--surface);
   color: var(--ink);
   font-size: var(--t-caption); font-weight: 560;
   white-space: nowrap; cursor: pointer;
-  transition: background var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+  transition: background var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease),
+              transform var(--d-fast) var(--ease);
 }
 .qchip:hover  { background: var(--surface-2); border-color: var(--ink-4); }
 .qchip:active { transform: scale(0.97); }
