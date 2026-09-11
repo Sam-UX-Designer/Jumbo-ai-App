@@ -14,7 +14,9 @@
 .cap-tile:hover { border-color: var(--hairline-firm); background: var(--surface-2); }
 .cap-tile:active { transform: scale(0.985); }
 .cap-tile--primary { border-color: var(--brand-line); background: linear-gradient(155deg, var(--brand-dim), transparent 60%), var(--surface); }
-.cap-tile__icon { width: 42px; height: 42px; border-radius: var(--r-tile); display: grid; place-items: center; }
+.cap-tile__icon { width: 44px; height: 44px; border-radius: var(--r-tile); display: grid; place-items: center; }
+.cap-tile__title { font-size: var(--t-title3); font-weight: 640; letter-spacing: -0.015em; }
+.cap-tile__sub   { font-size: var(--t-caption); color: var(--ink-3); }
 
 /* ---------------------------------------------------------------- camera */
 .camera {

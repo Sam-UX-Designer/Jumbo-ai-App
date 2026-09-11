@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon'
 import { AssetImage } from '../components/Asset'
 import { AiOrb } from '../components/Icon'
 import { Camera, type Capture } from '../components/Camera'
-import { Confidence, ErrorNotice, SetupNotice, Sheet, Stepper, useToast } from '../components/UI'
+import { Confidence, ErrorNotice, Sheet, Stepper, UnavailableNotice, useToast } from '../components/UI'
 import { useStore } from '../state/store'
 import { api, type FoodAnalysis } from '../lib/api'
 import { FOODS, FOOD_KEYS, makeFoodItem, mealTotals, rescaleItem } from '../data/foods'
@@ -182,11 +182,9 @@ export function MealCapture({
           )}
 
           {failure?.kind === 'setup' && (
-            <SetupNotice
-              title="AI analysis is off"
-              message={failure.message}
-              missing={failure.missing}
-              docs={failure.docs}
+            <UnavailableNotice
+              title="Jumbo can’t read this photo right now"
+              message="Photo analysis is unavailable at the moment. You can still add the meal by searching for the foods yourself."
             />
           )}
           {failure?.kind === 'error' && (

@@ -1,149 +1,156 @@
 /* ============================================================
-   Jumbo — design tokens
+   JUMBO — design tokens
 
-   Dark-first by intent, not by fashion: the brand colour is a
-   fluorescent green that reads at 13:1 on near-black and 1.5:1 on white.
-   Light mode exists and is fully supported, but it swaps the green for a
-   darker ink-green wherever the green would carry text.
-
-   One accent. One radius system. 8-point spacing.
+   Measured against the reference screens. The ground is near-black,
+   cards lift barely off it, and the only saturated things on screen
+   are the four ring colours and the brand green.
    ============================================================ */
 
 :root {
   color-scheme: dark;
 
-  /* ── Brand ───────────────────────────────────────────────── */
-  --brand:        #92E82A;   /* the one accent, everywhere */
-  --brand-press:  #7FCE1F;
-  --brand-ink:    #0B1500;   /* text that sits ON the brand colour */
-  --brand-dim:    rgba(146, 232, 42, 0.14);
-  --brand-line:   rgba(146, 232, 42, 0.34);
-  --brand-glow:   rgba(146, 232, 42, 0.22);
-  --on-brand:     var(--brand-ink);
-  --accent-text:  var(--brand);   /* brand used as text colour */
+  /* ── Brand ───────────────────────────────────────────────────
+     #92E82A is the primary action colour: the centre button, the
+     selected day, primary CTAs, positive deltas. Never pink. */
+  --brand:        #92E82A;
+  --brand-press:  #84D625;
+  --brand-ink:    #0A1400;   /* text that sits ON the brand colour */
+  --brand-dim:    rgba(146, 232, 42, 0.12);
+  --brand-line:   rgba(146, 232, 42, 0.30);
+  --brand-glow:   rgba(146, 232, 42, 0.30);
+  --accent-text:  var(--brand);
 
-  /* ── Surfaces ────────────────────────────────────────────── */
-  --bg:         #08090A;
-  --bg-deep:    #050506;
-  --surface:    #101214;
-  --surface-2:  #17191C;
-  --surface-3:  #1E2124;
-  --glass:      rgba(16, 18, 20, 0.72);
+  /* ── Surfaces ────────────────────────────────────────────────
+     The reference sits on near-black with cards only just above it. */
+  --bg:         #050506;
+  --bg-deep:    #000000;
+  --surface:    #121316;
+  --surface-2:  #1A1B1F;
+  --surface-3:  #232429;
+  --glass:      rgba(10, 10, 12, 0.82);
 
-  /* ── Ink ─────────────────────────────────────────────────── */
-  --ink:    #F2F4F1;   /* 17.7:1 on --surface */
-  --ink-2:  #A8ADA6;   /*  8.3:1 on --surface */
-  --ink-3:  #7C817B;   /*  4.8:1 on --surface — lightest text allowed */
-  --ink-4:  #4A4E48;   /* decorative only, never text */
+  /* ── Ink ─────────────────────────────────────────────────────── */
+  --ink:    #FFFFFF;
+  --ink-2:  #9A9CA3;
+  --ink-3:  #6E7079;
+  --ink-4:  #46484F;
 
-  --hairline:      rgba(255, 255, 255, 0.075);
-  --hairline-firm: rgba(255, 255, 255, 0.16);
+  --hairline:      rgba(255, 255, 255, 0.07);
+  --hairline-firm: rgba(255, 255, 255, 0.14);
 
-  /* ── Health dimensions ──────────────────────────────────────
-     The four ring colours are named by the specification: sleep violet,
-     movement mint, food amber, recovery blue. Training keeps the coral so
-     it never reads as a fifth ring. */
-  --sleep:      #A78BFF;  --sleep-dim:      rgba(167, 139, 255, 0.16);
-  --movement:   #2ED8A7;  --movement-dim:   rgba(46, 216, 167, 0.16);
-  --nutrition:  #FFA53D;  --nutrition-dim:  rgba(255, 165, 61, 0.16);
-  --recovery:   #4E8CFF;  --recovery-dim:   rgba(78, 140, 255, 0.16);
-  --training:   #FF5C7A;  --training-dim:   rgba(255, 92, 122, 0.16);
-  --measure:    #46C8F5;  --measure-dim:    rgba(70, 200, 245, 0.16);
+  /* ── The four rings ──────────────────────────────────────────
+     Named by the specification and matched to the reference:
+     sleep violet · movement mint · food amber · recovery sky.
+     These four also colour their metric cards and focus rows. */
+  --sleep:      #A78BFA;  --sleep-dim:      rgba(167, 139, 250, 0.14);
+  --movement:   #34D399;  --movement-dim:   rgba(52, 211, 153, 0.14);
+  --nutrition:  #FB923C;  --nutrition-dim:  rgba(251, 146, 60, 0.14);
+  --recovery:   #38BDF8;  --recovery-dim:   rgba(56, 189, 248, 0.14);
 
-  --positive: #92E82A;
-  --caution:  #FFA53D;
-  --critical: #FF5C7A;
+  /* Secondary categories, kept away from the ring four. */
+  --training:   #FB7185;  --training-dim:   rgba(251, 113, 133, 0.14);
+  --measure:    #38BDF8;  --measure-dim:    rgba(56, 189, 248, 0.14);
+  --meal:       #E879F9;  --meal-dim:       rgba(232, 121, 249, 0.14);
+  --note:       #FBBF24;  --note-dim:       rgba(251, 191, 36, 0.14);
+  --ai:         #8B7CF8;  --ai-dim:         rgba(139, 124, 248, 0.14);
 
-  /* ── Elevation ───────────────────────────────────────────── */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, .48);
-  --shadow-2: 0 8px 28px rgba(0, 0, 0, .46);
-  --shadow-3: 0 28px 64px rgba(0, 0, 0, .62);
-  --shadow-brand: 0 10px 34px -12px var(--brand-glow);
+  --positive: #4ADE80;
+  --caution:  #FB923C;
+  --critical: #FB7185;
 
-  /* ── Radius: one system, documented ──────────────────────
-     interactive controls are pills · cards are 20 · inputs are 12  */
-  --r-input: 12px;
-  --r-card:  20px;
-  --r-sheet: 26px;
+  /* ── Elevation ───────────────────────────────────────────────── */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, .5);
+  --shadow-3: 0 28px 64px rgba(0, 0, 0, .66);
+  --shadow-brand: 0 8px 28px -6px var(--brand-glow);
+
+  /* ── Radius — the reference is generously rounded ───────────── */
+  --r-input: 14px;
+  --r-card:  22px;
+  --r-tile:  16px;
+  --r-sheet: 28px;
   --r-pill:  999px;
-  --r-tile:  14px;
 
-  /* ── 8-point spacing ─────────────────────────────────────── */
+  /* ── 4-point spacing ─────────────────────────────────────────── */
   --s-1: 4px;  --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
   --s-5: 20px; --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
   --s-14: 56px; --s-18: 72px; --s-24: 96px;
 
-  /* ── Type ────────────────────────────────────────────────── */
+  /* ── Type ────────────────────────────────────────────────────── */
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
           "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --t-hero:    3.25rem;   /* 52 */
-  --t-display: 2.5rem;    /* 40 */
-  --t-title1:  1.9375rem; /* 31 */
-  --t-title2:  1.5rem;    /* 24 */
-  --t-title3:  1.1875rem; /* 19 */
-  --t-body:    1.0625rem; /* 17 — platform default */
-  --t-callout: 0.9375rem; /* 15 */
+  --t-hero:    2.75rem;   /* 44 */
+  --t-display: 2.125rem;  /* 34 — screen titles: Capture, Explore, Future AI */
+  --t-title1:  1.75rem;   /* 28 */
+  --t-title2:  1.375rem;  /* 22 — "On track" */
+  --t-title3:  1.0625rem; /* 17 — card titles */
+  --t-body:    1rem;      /* 16 */
+  --t-callout: 0.875rem;  /* 14 */
   --t-caption: 0.8125rem; /* 13 */
-  --t-micro:   0.6875rem; /* 11 — platform minimum, labels only */
+  --t-micro:   0.6875rem; /* 11 */
 
-  /* ── Motion ──────────────────────────────────────────────── */
+  /* ── Motion ──────────────────────────────────────────────────── */
   --ease:        cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.28, 0.48, 1);
   --d-fast: 140ms;
   --d-base: 240ms;
   --d-slow: 420ms;
-  --d-story: 720ms;
+  --d-story: 900ms;
 
-  --tab-h: 66px;
-  --fab:   56px;
+  --tab-h: 64px;
+  --fab:   58px;
   --maxw: 1120px;
 }
 
-/* Light mode: the green stays as a fill, never as text. */
+/* Light: a designed theme, not an inversion. The green stays a fill. */
 :root[data-theme="light"] {
   color-scheme: light;
 
   --brand:        #92E82A;
-  --brand-press:  #7FCE1F;
-  --brand-ink:    #0B1500;
-  --brand-dim:    rgba(146, 232, 42, 0.18);
-  --brand-line:   rgba(88, 150, 10, 0.42);
+  --brand-press:  #84D625;
+  --brand-ink:    #0A1400;
+  --brand-dim:    rgba(146, 232, 42, 0.20);
+  --brand-line:   rgba(88, 150, 10, 0.38);
   --brand-glow:   rgba(146, 232, 42, 0.34);
-  --accent-text:  #3F7A00;   /* 5.3:1 on white — the text-safe green */
+  --accent-text:  #4A8500;   /* text-safe green on white */
 
-  --bg:        #FAFBF8;
-  --bg-deep:   #F1F3EE;
+  --bg:        #F7F8F5;
+  --bg-deep:   #EFF1EC;
   --surface:   #FFFFFF;
-  --surface-2: #F5F7F2;
-  --surface-3: #EDEFE9;
-  --glass:     rgba(255, 255, 255, 0.76);
+  --surface-2: #F0F2EE;
+  --surface-3: #E6E9E1;
+  --glass:     rgba(255, 255, 255, 0.84);
 
-  --ink:   #0B0D0A;
-  --ink-2: #4E524C;
-  --ink-3: #6E7269;   /* 4.9:1 on white */
-  --ink-4: #A7ABA3;
+  --ink:   #111311;
+  --ink-2: #5E635D;
+  --ink-3: #83887F;
+  --ink-4: #AFB4AB;
 
-  --hairline:      rgba(11, 13, 10, 0.09);
-  --hairline-firm: rgba(11, 13, 10, 0.18);
+  --hairline:      rgba(17, 19, 17, 0.09);
+  --hairline-firm: rgba(17, 19, 17, 0.18);
 
-  --sleep:     #6B3FD4;  --sleep-dim:     rgba(107, 63, 212, 0.11);
-  --movement:  #0E8A68;  --movement-dim:  rgba(14, 138, 104, 0.11);
-  --nutrition: #A45B00;  --nutrition-dim: rgba(164, 91, 0, 0.11);
-  --recovery:  #1A5FD0;  --recovery-dim:  rgba(26, 95, 208, 0.11);
-  --training:  #C1304C;  --training-dim:  rgba(193, 48, 76, 0.11);
-  --measure:   #0A6F92;  --measure-dim:   rgba(10, 111, 146, 0.11);
+  --sleep:     #7C3AED;  --sleep-dim:     rgba(124, 58, 237, 0.12);
+  --movement:  #059669;  --movement-dim:  rgba(5, 150, 105, 0.12);
+  --nutrition: #EA580C;  --nutrition-dim: rgba(234, 88, 12, 0.14);
+  --recovery:  #0284C7;  --recovery-dim:  rgba(2, 132, 199, 0.12);
 
-  --positive: #2E7A00;
-  --caution:  #A45B00;
-  --critical: #C1304C;
+  --training:  #BE123C;  --training-dim:  rgba(190, 18, 60, 0.12);
+  --measure:   #0284C7;  --measure-dim:   rgba(2, 132, 199, 0.12);
+  --meal:      #A21CAF;  --meal-dim:      rgba(162, 28, 175, 0.12);
+  --note:      #B45309;  --note-dim:      rgba(180, 83, 9, 0.12);
+  --ai:        #6D28D9;  --ai-dim:        rgba(109, 40, 217, 0.12);
 
-  --shadow-1: 0 1px 2px rgba(11, 13, 10, .06);
-  --shadow-2: 0 8px 26px rgba(11, 13, 10, .09);
-  --shadow-3: 0 26px 60px rgba(11, 13, 10, .16);
-  --shadow-brand: 0 10px 30px -14px rgba(88, 150, 10, .5);
+  --positive: #15803D;
+  --caution:  #C2410C;
+  --critical: #BE123C;
+
+  --shadow-1: 0 1px 2px rgba(17, 19, 17, .06);
+  --shadow-2: 0 10px 28px rgba(17, 19, 17, .09);
+  --shadow-3: 0 26px 60px rgba(17, 19, 17, .16);
+  --shadow-brand: 0 8px 26px -8px rgba(88, 150, 10, .5);
 }
 
 @media (min-width: 768px) {
-  :root { --t-body: 1rem; --t-hero: 3.75rem; }
+  :root { --t-display: 2.5rem; --t-hero: 3.25rem; }
 }

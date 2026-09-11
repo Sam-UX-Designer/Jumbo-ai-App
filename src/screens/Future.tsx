@@ -6,7 +6,7 @@ import { useNavigate } from '../components/Nav'
 import { DayCurve, ProjectionChart } from '../components/Charts'
 import {
   Confidence, Disclosure, Empty, ErrorNotice, ProvenanceTag,
-  SectionHead, Segmented, SetupNotice,
+  SectionHead, Segmented, UnavailableNotice,
 } from '../components/UI'
 import { useStore } from '../state/store'
 import { useInsights } from '../lib/useInsights'
@@ -154,48 +154,63 @@ export function Future() {
   }
 
   return (
-    <div className="stack stack-14">
-      <header className="stack stack-2" style={{ marginBottom: 'calc(var(--s-8) * -1)' }}>
-        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-          <div className="stack stack-1" style={{ minWidth: 0 }}>
-            <p className="eyebrow">AI Future</p>
-            <h1 className="t-title1">Ask. Learn. Live longer.</h1>
+    <div className="stack stack-8">
+      <header className="stack stack-4" style={{ marginBottom: 'calc(var(--s-8) * -1)' }}>
+        <div className="scr-head">
+          <div style={{ minWidth: 0 }}>
+            <h1 className="scr-head__title">AI Future</h1>
+            <p className="scr-head__sub">Ask. Learn. Live longer.</p>
           </div>
-          <AvatarButton />
+          <div className="scr-head__actions">
+            <button
+              className="round-btn"
+              aria-label="Ask Jumbo"
+              onClick={() => { haptic('selection'); navigate('chat') }}
+            >
+              <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
+            </button>
+            <AvatarButton size={42} />
+          </div>
         </div>
+        {state.dataMode === 'demo' && (
+          <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>
+        )}
       </header>
 
       {/* ────────────────────────────── Jumbo greets, and offers a way in.
           The mascot sits in the circular area reserved for its artwork. */}
       <section className="stack stack-4">
-        <div className="row row--top" style={{ gap: 'var(--s-3)' }}>
-          <Mascot
-            size={84}
-            thinking={narrative.loading}
-            onClick={() => navigate('chat')}
-            label="Ask Jumbo"
-          />
+        <div className="ai-hero">
+          <span className="ai-hero__mascot">
+            <Mascot
+              size={82}
+              thinking={narrative.loading}
+              onClick={() => navigate('chat')}
+              label="Ask Jumbo"
+            />
+          </span>
           <div className="speech grow">
-            <p className="t-body">
-              {firstName ? `Hi ${firstName}! ` : 'Hi! '}
-              <span aria-hidden="true">👋</span> I’ve read {base.daysOfHistory} days of your data.
-              What would you like to know?
+            <p className="speech__hi">
+              {firstName ? `Hi ${firstName}!` : 'Hi!'} <span aria-hidden="true">👋</span>
+            </p>
+            <p className="speech__body">
+              I’ve read {base.daysOfHistory} days of your data. What would you like to know?
             </p>
           </div>
         </div>
 
-        <ul className="rail" aria-label="Ask Jumbo a common question">
+        <ul className="qrow" aria-label="Ask Jumbo a common question">
           {FUTURE_PROMPTS.map((q) => (
             <li key={q.text}>
-              <button className="chip" onClick={() => { haptic('selection'); navigate('chat', q.text) }}>
+              <button className="qchip" onClick={() => { haptic('selection'); navigate('chat', q.text) }}>
                 <Icon name={q.icon} size={15} style={{ color: q.colour }} />
                 {q.text}
               </button>
             </li>
           ))}
           <li>
-            <button className="chip" onClick={() => { haptic('selection'); navigate('chat') }}>
-              <Icon name="chevron" size={15} /> More
+            <button className="qchip" onClick={() => { haptic('selection'); navigate('chat') }}>
+              More <Icon name="chevron" size={14} />
             </button>
           </li>
         </ul>
@@ -209,11 +224,11 @@ export function Future() {
         />
         <ul className="metric-grid">
           {vitals.map((v) => (
-            <li key={v.label} className="metric">
-              <Icon name={v.icon} size={20} style={{ color: v.colour }} />
-              <span className="t-caption dim">{v.label}</span>
+            <li key={v.label} className="metric" style={{ cursor: 'default' }}>
+              <Icon name={v.icon} size={22} className="metric__icon" style={{ color: v.colour }} />
+              <span className="metric__label">{v.label}</span>
               <span className="metric__value num">{v.value}</span>
-              <span className="t-caption dim2">{v.unit}</span>
+              <span className="metric__unit">{v.unit}</span>
               <span className={`metric__delta${v.good === true ? ' is-up' : v.good === false ? ' is-down' : ''}`}>
                 {v.note}
               </span>
@@ -232,14 +247,12 @@ export function Future() {
         <SectionHead
           title="Your longevity outlook"
           sub={`Where ${scenarioId === 'current' ? 'your current pattern' : 'this scenario'} points, over ${HORIZON_LABEL[months].toLowerCase()}.`}
-          action={
-            <Segmented
-              ariaLabel="How far ahead"
-              value={months}
-              onChange={(v) => { haptic('selection'); setMonths(v as Horizon) }}
-              options={MONTH_OPTIONS.map((m) => ({ value: m, label: HORIZON_LABEL[m] }))}
-            />
-          }
+        />
+        <Segmented
+          ariaLabel="How far ahead"
+          value={months}
+          onChange={(v) => { haptic('selection'); setMonths(v as Horizon) }}
+          options={MONTH_OPTIONS.map((m) => ({ value: m, label: HORIZON_LABEL[m] }))}
         />
         <div className="card stack stack-4">
           <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
@@ -291,8 +304,8 @@ export function Future() {
                   onClick={() => { haptic('selection'); navigate('chat', r.question) }}
                 >
                   <Icon name={r.icon} size={20} style={{ color: r.colour }} />
-                  <span className="t-callout strong">{r.title}</span>
-                  <span className="t-caption dim2">{r.sub}</span>
+                  <span className="reco__title">{r.title}</span>
+                  <span className="reco__sub">{r.sub}</span>
                 </button>
               </li>
             ))}
@@ -379,10 +392,9 @@ export function Future() {
         )}
 
         {narrative.problem?.kind === 'setup' && (
-          <SetupNotice
-            title="The written scenario is off"
-            message={narrative.problem.message}
-            missing={narrative.problem.missing}
+          <UnavailableNotice
+            title="The written scenario isn’t available"
+            message="The chart and the numbers below are Jumbo’s own model and are unaffected."
             compact
           />
         )}
@@ -495,7 +507,7 @@ export function Future() {
 
         {insights.problem && (
           insights.problem.kind === 'setup'
-            ? <SetupNotice title="Jumbo’s AI is not connected" message={insights.problem.message} missing={insights.problem.missing} compact />
+            ? <UnavailableNotice title="Jumbo’s reading isn’t available" message="What you see below was computed on this device from your own records." compact />
             : <ErrorNotice title="Analysis fell back to this device" message={insights.problem.message} onRetry={insights.refresh} />
         )}
 
@@ -599,8 +611,7 @@ function useNarrative({
       setData(null)
       setProblem({
         kind: 'setup',
-        message: 'The written scenario comes from the Claude API. Set ANTHROPIC_API_KEY on the server to turn it on. The model and the chart below work either way.',
-        missing: ['ANTHROPIC_API_KEY'],
+        message: 'The written scenario isn’t available. The model and the chart below work either way.',
       })
       return
     }

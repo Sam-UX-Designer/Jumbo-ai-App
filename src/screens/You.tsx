@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon, type IconName } from '../components/Icon'
 import { ProfilePhotoPicker, SourceLogo } from '../components/Asset'
 import {
-  DemoBadge, Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, SetupNotice,
+  DemoBadge, Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, UnavailableNotice,
   Switch, useConfirm, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
@@ -43,8 +43,20 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
     dispatch({ type: 'setSetting', key, value })
 
   return (
-    <div className="stack stack-14">
-      <ScreenHead eyebrow="Profile" title="You and your data" />
+    <div className="stack stack-6">
+      <ScreenHead
+        title="You"
+        sub="Your profile, your goals and what Jumbo is allowed to do with your data."
+        actions={
+          <button
+            className="round-btn"
+            aria-label="Ask Jumbo"
+            onClick={() => { haptic('selection'); onNavigate('chat') }}
+          >
+            <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
+          </button>
+        }
+      />
 
       {state.dataMode === 'demo' && <DemoBadge />}
 
@@ -206,7 +218,7 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
             <p className="t-caption dim">
               Records, meals and notes are stored on this device. When Jumbo’s AI is turned on, a
               statistical summary of your data, never your name, phone number, notes or photos,
-              is sent to the Claude API to write insights. Meal photos are sent for analysis at the
+              is sent to Anthropic’s Claude to write insights. Meal photos are sent for analysis at the
               moment you take them and are not stored afterwards.
             </p>
           </div>
@@ -268,12 +280,35 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
               className="btn btn--danger btn--sm"
               onClick={() => confirm({
                 title: 'Clear all Jumbo data?',
-                body: 'Your profile, goals, meals, workouts, measurements and notes are deleted from this device. Connected sources stay connected on the server until you disconnect them. This cannot be undone.',
+                body: 'Your profile, goals, meals, workouts, measurements and notes are deleted from this device. Connected sources stay connected to your Jumbo account until you disconnect them. This cannot be undone.',
                 confirmLabel: 'Delete everything',
                 onConfirm: () => { dispatch({ type: 'resetAll' }); haptic('impactHeavy') },
               })}
             >
               Clear
+            </button>
+          </div>
+
+          <hr className="hairline" />
+
+          <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
+            <div className="stack stack-1" style={{ minWidth: 0 }}>
+              <span className="t-callout strong">Sign out</span>
+              <span className="t-caption dim2">
+                Ends this session. Nothing on this device is deleted, and signing back in brings it
+                all back.
+              </span>
+            </div>
+            <button
+              className="btn btn--secondary btn--sm"
+              onClick={() => confirm({
+                title: 'Sign out of Jumbo?',
+                body: 'Your records stay on this device. You will start again from the welcome screen.',
+                confirmLabel: 'Sign out',
+                onConfirm: () => { dispatch({ type: 'signOut' }); haptic('impactLight') },
+              })}
+            >
+              Sign out
             </button>
           </div>
         </div>
@@ -357,9 +392,9 @@ function Sources({
     return (
       <section className="section">
         <SectionHead title="Connected sources" />
-        <SetupNotice
-          title="Jumbo’s API is not running"
-          message="Connections, AI and YouTube all run through Jumbo’s server. Start it with npm run dev:api, or deploy it, and this list fills in. Until then the app runs on clearly labelled sample data."
+        <UnavailableNotice
+          title="Your sources can’t be reached"
+          message="Jumbo can’t check your connected sources at the moment, so none are shown rather than showing you a stale list. Everything already recorded is still here."
         />
       </section>
     )
@@ -386,7 +421,7 @@ function Sources({
       )}
 
       {state.providers.length === 0 ? (
-        <Empty icon="link" title="Loading sources" body="Asking Jumbo’s server what it can connect to." />
+        <Empty icon="link" title="Loading sources" body="Checking which sources you can connect." />
       ) : (
         <ul className="stack stack-3">
           {state.providers.map((p) => {
@@ -467,19 +502,16 @@ function Sources({
 
                 {/* Why a source cannot connect — always specific, never a dead end. */}
                 {why === p.id && !connected && p.transport === 'native' && !bridge && (
-                  <SetupNotice
+                  <UnavailableNotice
                     title={`${p.name} needs the Jumbo app`}
                     message={`${p.reason ?? ''} ${platform === (p.platform ?? '') ? 'You are on the right platform. Install the Jumbo app to connect it.' : ''}`.trim()}
-                    docs={p.docs}
                     compact
                   />
                 )}
                 {why === p.id && !connected && p.transport === 'oauth' && !p.ready && (
-                  <SetupNotice
-                    title={`${p.name} is not configured on the server`}
-                    message={p.note ?? `Add this provider’s credentials to Jumbo’s server and the connect button starts a real OAuth flow.`}
-                    missing={p.missing}
-                    docs={p.docs}
+                  <UnavailableNotice
+                    title={`${p.name} isn’t available yet`}
+                    message="This source isn’t ready to connect in Jumbo yet. It will appear here as soon as it is."
                     compact
                   />
                 )}

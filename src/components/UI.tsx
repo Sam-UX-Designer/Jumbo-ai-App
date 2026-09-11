@@ -249,9 +249,9 @@ export function SectionHead({
   title, sub, action,
 }: { title: string; sub?: string; action?: ReactNode }) {
   return (
-    <div className="row row--between" style={{ alignItems: 'flex-start', gap: 'var(--s-4)' }}>
+    <div className="sec-head" style={{ alignItems: 'flex-start' }}>
       <div className="stack stack-1" style={{ minWidth: 0 }}>
-        <h2 className="t-title3">{title}</h2>
+        <h2 className="sec-head__title">{title}</h2>
         {sub && <p className="t-caption dim">{sub}</p>}
       </div>
       {action}
@@ -266,17 +266,33 @@ export function SectionHead({
  * The profile photo sits in the top right of every top-level screen. It is
  * part of the header, not something each screen remembers to add.
  */
-export function ScreenHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
+export function ScreenHead({
+  eyebrow, title, sub, actions, sample = false,
+}: {
+  eyebrow?: string
+  title: string
+  sub?: string
+  /** Round controls that sit to the left of the profile photo. */
+  actions?: ReactNode
+  /** Shown when the screen is displaying sample rather than recorded data. */
+  sample?: boolean
+}) {
   return (
-    <header className="stack stack-2" style={{ marginBottom: 'var(--s-8)' }}>
-      <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-        <div className="stack stack-2" style={{ minWidth: 0 }}>
+    <header className="stack stack-4" style={{ marginBottom: 'var(--s-6)' }}>
+      <div className="scr-head">
+        <div style={{ minWidth: 0 }}>
           {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-          <h1 className="t-title1">{title}</h1>
+          <h1 className="scr-head__title">{title}</h1>
+          {sub && <p className="scr-head__sub">{sub}</p>}
         </div>
-        <AvatarButton />
+        <div className="scr-head__actions">
+          {actions}
+          <AvatarButton size={42} />
+        </div>
       </div>
-      {sub && <p className="t-callout dim" style={{ maxWidth: '48ch' }}>{sub}</p>}
+      {sample && (
+        <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>
+      )}
     </header>
   )
 }
@@ -405,7 +421,7 @@ export function useConfirm() {
    rather than a simulated success.
    ============================================================ */
 
-/** A credential is missing on the server. Says exactly what, and links the docs. */
+/** Setup guidance. Never rendered in the product surface — see UnavailableNotice. */
 export function SetupNotice({
   title, message, missing, docs, compact = false,
 }: {
@@ -432,6 +448,40 @@ export function SetupNotice({
           <a className="t-caption strong" href={docs} target="_blank" rel="noreferrer">
             Provider docs <Icon name="external" size={12} style={{ display: 'inline', verticalAlign: -1 }} />
           </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Jumbo's AI cannot answer right now.
+ *
+ * Deliberately says nothing about why in technical terms: no service names,
+ * no settings, no environment. The person is told what they can and cannot
+ * do, and offered the one action that might help.
+ */
+export function UnavailableNotice({
+  title = 'Jumbo can’t answer right now',
+  message = 'Your data is safe and everything else still works. Please try again in a moment.',
+  onRetry,
+  compact = false,
+}: {
+  title?: string
+  message?: string
+  onRetry?: () => void
+  compact?: boolean
+}) {
+  return (
+    <div className={`notice notice--quiet${compact ? ' notice--compact' : ''}`} role="note">
+      <Icon name="info" size={18} style={{ color: 'var(--ink-3)', flex: 'none', marginTop: 2 }} />
+      <div className="stack stack-2 grow" style={{ minWidth: 0 }}>
+        <span className="t-callout strong">{title}</span>
+        <p className="t-caption dim">{message}</p>
+        {onRetry && (
+          <button className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={onRetry}>
+            <Icon name="sync" size={14} /> Try again
+          </button>
         )}
       </div>
     </div>

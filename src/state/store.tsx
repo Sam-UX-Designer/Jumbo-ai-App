@@ -145,6 +145,7 @@ export type Action =
   | { type: 'chatFail'; id: string; message: string }
   | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
+  | { type: 'signOut' }
   | { type: 'resetAll' }
   | { type: 'addMeal'; date: string; meal: MealEntry }
   | { type: 'removeMeal'; date: string; mealId: string }
@@ -284,6 +285,11 @@ function reducer(state: State, action: Action): State {
     case 'setPhoneVerified': return next({ phoneVerified: action.verified })
     case 'setPermission': return next({ permissions: { ...p.permissions, [action.key]: action.value } })
     case 'finishOnboarding': return next({ onboarded: true })
+    /**
+     * Ends the session on this device without deleting anything. Records stay
+     * where they are; the person lands back at the start and signs in again.
+     */
+    case 'signOut': return next({ onboarded: false, phoneVerified: false })
 
     /* Day selection and the conversation live outside `Persisted`, so they are
        patched straight onto state rather than round-tripped through derive(). */

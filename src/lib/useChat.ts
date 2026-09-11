@@ -79,12 +79,13 @@ export function useChat() {
     clear,
     /** False when a send would be refused, with `reason` saying why. */
     ready: configured && reachable,
-    reason: !reachable
-      ? 'Jumbo’s API is not running, so there is nothing to ask. Start it with npm run dev:api.'
-      : !configured
-        ? 'Ask Jumbo runs on the Claude API. Set ANTHROPIC_API_KEY on the server to turn it on.'
-        : null,
-    missing: state.server?.ai.missing ?? ['ANTHROPIC_API_KEY'],
+    /**
+     * Product-level, never technical. The person is told what they can do,
+     * not what a server is missing.
+     */
+    reason: configured && reachable
+      ? null
+      : 'Jumbo’s answers are unavailable at the moment. Everything else in the app still works, and your records are unaffected.',
     generating: state.chat.some((m) => m.pending),
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import '../styles/chat.css'
 import { Icon } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
-import { ErrorNotice, SetupNotice } from '../components/UI'
+import { ErrorNotice, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useChat, QUICK_PROMPTS } from '../lib/useChat'
 import { useNavigate } from '../components/Nav'
@@ -53,9 +53,10 @@ export function Chat({ initialQuestion }: { initialQuestion?: string }) {
   return (
     <div className="chat">
       <header className="chat__head">
-        <button className="icon-btn" aria-label="Back to Future" onClick={() => navigate('future')}>
+        <button className="icon-btn" aria-label="Back" onClick={() => navigate('today')}>
           <Icon name="back" size={20} />
         </button>
+        <Mascot size={32} thinking={chat.generating} />
         <div className="stack" style={{ gap: 0, minWidth: 0 }}>
           <span className="t-body strong">Ask Jumbo</span>
           <span className="t-caption dim2">
@@ -71,9 +72,10 @@ export function Chat({ initialQuestion }: { initialQuestion?: string }) {
 
       <div className="chat__body">
         {!chat.ready && (
-          chat.reason?.includes('API is not running')
-            ? <ErrorNotice title="Jumbo’s API is not running" message={chat.reason} />
-            : <SetupNotice title="Ask Jumbo is not connected" message={chat.reason ?? ''} missing={chat.missing} />
+          <UnavailableNotice
+            title="Jumbo can’t answer right now"
+            message={chat.reason ?? ''}
+          />
         )}
 
         {chat.messages.length === 0 ? (

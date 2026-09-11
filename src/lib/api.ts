@@ -25,7 +25,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
       ...init,
     })
   } catch {
-    return { ok: false, kind: 'offline', message: 'Jumbo’s API is not reachable from this browser.' }
+    // User-facing wording only: nothing here names a service, a port or a key.
+    return { ok: false, kind: 'offline', message: 'Jumbo can’t reach its service right now. Please try again in a moment.' }
   }
 
   let body: unknown = null
@@ -39,7 +40,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
       ok: false,
       kind: 'setup',
       missing: (b.missing as string[]) ?? [],
-      message: (b.message as string) ?? 'This feature needs configuring on the server.',
+      // The server's own wording is deliberately not forwarded to the UI:
+      // it names credentials. Screens supply their own product-level copy.
+      message: 'This part of Jumbo isn’t available yet.',
       docs: b.docs as string | undefined,
       feature: b.feature as string | undefined,
     }
@@ -49,7 +52,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
     ok: false,
     kind: 'error',
     status: res.status,
-    message: (b.message as string) ?? `Request failed with status ${res.status}.`,
+    message: res.status >= 500
+      ? 'Something went wrong on Jumbo’s side. Please try again.'
+      : (b.message as string) ?? 'That didn’t go through. Please try again.',
   }
 }
 

@@ -5,7 +5,7 @@ import { AvatarButton, Mascot } from '../components/Asset'
 import { DateRail } from '../components/DateRail'
 import { Rings, MiniRing } from '../components/Rings'
 import { Sparkline } from '../components/Charts'
-import { Confidence, DemoBadge, SectionHead, SetupNotice, Sheet } from '../components/UI'
+import { Confidence, Sheet, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useInsights } from '../lib/useInsights'
 import { useNavigate } from '../components/Nav'
@@ -25,11 +25,12 @@ const METRIC_EXPLAIN: Record<KeyMetric['key'], string> = {
 }
 
 /**
- * Home.
+ * Today.
  *
- * A day at a glance, in the order the questions actually arrive: which day,
- * how am I doing, what does Jumbo make of it, what are the numbers, and what
- * is worth doing next. Not a dashboard — five answers and one way in.
+ * The order is the order the questions arrive in: who am I, which day, how am
+ * I doing, what does Jumbo make of it, what are the numbers, what is worth
+ * doing next. Greeting and avatar at the top, the week strip under it, the
+ * four rings at the centre of the screen with the score inside them.
  */
 export function Today() {
   const { state, dispatch } = useStore()
@@ -70,20 +71,35 @@ export function Today() {
   const firstName = state.profile.name.trim().split(' ')[0]
 
   return (
-    <div className="stack stack-10">
-      {/* ─────────────────────────────── greeting, and the profile top right */}
+    <div className="stack stack-6">
+      {/* ─────────────────────────── greeting left, bell and profile right */}
       <header className="stack stack-5">
-        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+        <div className="scr-head">
           <div className="stack stack-1" style={{ minWidth: 0 }}>
-            <p className="t-callout dim">{greeting},</p>
-            <h1 className="t-display">{firstName || 'there'} <span aria-hidden="true">👋</span></h1>
+            <p className="greet__hello">{greeting},</p>
+            <h1 className="greet__name">
+              {firstName || 'there'} <span aria-hidden="true">👋</span>
+            </h1>
           </div>
-          <div className="row" style={{ gap: 'var(--s-1)' }}>
-            {state.dataMode === 'demo' && <DemoBadge inline />}
-            {/* The profile photo lives top right on Home, and only there. */}
-            <AvatarButton size={44} />
+          <div className="scr-head__actions">
+            <button
+              className="round-btn"
+              aria-label="Reminders"
+              onClick={() => { haptic('selection'); navigate('you') }}
+            >
+              <Icon name="bell" size={19} />
+              {state.reminders.enabled && <span className="round-btn__dot" />}
+            </button>
+            {/* The profile photo lives top right, on every screen. */}
+            <AvatarButton size={42} />
           </div>
         </div>
+
+        {state.dataMode === 'demo' && (
+          <span className="sample-pill">
+            <Icon name="flag" size={12} /> Sample data
+          </span>
+        )}
 
         <DateRail
           selected={date}
@@ -91,33 +107,32 @@ export function Today() {
         />
       </header>
 
-      {/* ───────────────────────────────────────── how am I doing, in one look */}
+      {/* ──────────────────────────── the rings, and the score inside them */}
       <section className="stack stack-3" aria-labelledby="score-h">
         <h2 className="sr-only" id="score-h">
           Health score for {isToday ? 'today' : prettyDateLong(date)}
         </h2>
 
-        <div className="card score">
-          <Rings progress={progress} size={188} weight={17}>
+        <div className="score-card">
+          <Rings progress={progress} size={232}>
             <span className="score__num num">{Math.round(progress.overall * 100)}</span>
             <span className="score__cap">Health<br />Score</span>
           </Rings>
 
-          <div className="stack stack-2 score__say">
-            <p className="row t-title2" style={{ gap: 'var(--s-2)' }}>
-              <Icon name="sprout" size={22} style={{ color: 'var(--brand)', flex: 'none' }} />
+          <div className="score__say">
+            <p className="score__state">
+              <Icon name="sprout" size={21} style={{ color: 'var(--brand)', flex: 'none' }} />
               {status.headline}
             </p>
-            <p className="t-callout dim">{status.body}</p>
+            <p className="score__body">{status.body}</p>
           </div>
         </div>
 
         {/* The AI's read of the day, tappable through to the whole thing. */}
         {insights.problem?.kind === 'setup' ? (
-          <SetupNotice
-            title="Jumbo’s AI is not connected"
-            message={insights.problem.message}
-            missing={insights.problem.missing}
+          <UnavailableNotice
+            title="Jumbo’s read of today isn’t available"
+            message="Your own numbers below are unaffected."
             compact
           />
         ) : insights.loading && !top ? (
@@ -133,7 +148,9 @@ export function Today() {
             className="insight-card insight-card--tap"
             onClick={() => { haptic('selection'); navigate('future') }}
           >
-            <Icon name="sparkles" size={18} style={{ color: 'var(--brand)', flex: 'none' }} />
+            <span className="insight-card__spark">
+              <Icon name="sparkles" size={17} />
+            </span>
             <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
               <span className="t-callout">{top.changed}</span>
               <Confidence value={top.confidence} compact />
@@ -143,39 +160,39 @@ export function Today() {
         ) : null}
       </section>
 
-      {/* ──────────────────────────────────────────── the four that matter */}
-      <section className="section">
+      {/* ───────────────────────────────────────── the four that matter */}
+      <section>
         <h2 className="sr-only">Key metrics</h2>
         <ul className="metric-grid stagger">
           {metrics.map((m) => (
-            <li key={m.key}>
+            <li key={m.key} style={{ display: 'flex' }}>
               <button
-                className="metric metric--tap"
+                className="metric"
                 onClick={() => { haptic('selection'); setDetail(m) }}
                 aria-label={`${m.label}: ${m.value} ${m.unit}. Open details.`}
               >
-              <Icon name={m.icon} size={22} style={{ color: m.colour }} />
-              <span className="t-caption dim">{m.label}</span>
-              <span className="metric__value num">{m.value}</span>
-              <span className="t-caption dim2">{m.unit}</span>
-              {m.note ? (
-                <span className={`metric__delta${m.note === 'On target' ? ' is-up' : ''}`}>
-                  {m.note === 'On target' && <Icon name="check" size={12} strokeWidth={2.4} />}
-                  {m.note}
-                </span>
-              ) : m.deltaPct === null ? (
-                <span className="metric__delta">No basis yet</span>
-              ) : (
-                <span className={`metric__delta${m.deltaPct > 0 ? ' is-up' : m.deltaPct < 0 ? ' is-down' : ''}`}>
-                  {m.deltaPct !== 0 && (
-                    <Icon
-                      name="arrow-up" size={12} strokeWidth={2.4}
-                      style={{ transform: m.deltaPct < 0 ? 'rotate(180deg)' : undefined }}
-                    />
-                  )}
-                  {m.deltaPct > 0 ? '+' : ''}{m.deltaPct}% vs week
-                </span>
-              )}
+                <Icon name={m.icon} size={22} className="metric__icon" style={{ color: m.colour }} />
+                <span className="metric__label">{m.label}</span>
+                <span className="metric__value num">{m.value}</span>
+                <span className="metric__unit">{m.unit}</span>
+                {m.note ? (
+                  <span className={`metric__delta${m.note === 'On target' ? ' is-up' : ''}`}>
+                    {m.note === 'On target' && <Icon name="check" size={12} strokeWidth={2.4} />}
+                    {m.note}
+                  </span>
+                ) : m.deltaPct === null ? (
+                  <span className="metric__delta">No basis yet</span>
+                ) : (
+                  <span className={`metric__delta${m.deltaPct > 0 ? ' is-up' : m.deltaPct < 0 ? ' is-down' : ''}`}>
+                    {m.deltaPct !== 0 && (
+                      <Icon
+                        name="arrow-up" size={12} strokeWidth={2.4}
+                        style={{ transform: m.deltaPct < 0 ? 'rotate(180deg)' : undefined }}
+                      />
+                    )}
+                    {m.deltaPct > 0 ? '+' : ''}{m.deltaPct}% vs week
+                  </span>
+                )}
               </button>
             </li>
           ))}
@@ -240,37 +257,42 @@ export function Today() {
         )}
       </Sheet>
 
-      {/* ──────────────────────────────────────────────── the way into the AI */}
+      {/* ──────────────────────────────────────────── the way into the AI */}
       <button
         className="ask-card"
         onClick={() => { haptic('selection'); navigate('chat') }}
       >
-        <Mascot size={54} />
+        <Mascot size={52} />
         <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
-          <span className="t-title3">Ask Jumbo anything</span>
-          <span className="t-caption dim">
+          <span className="ask-card__title">Ask Jumbo anything</span>
+          <span className="ask-card__sub">
             Personalised answers from your own data, or plan your next step.
           </span>
         </span>
         <Icon name="chevron" size={18} style={{ flex: 'none', color: 'var(--ink-3)' }} />
       </button>
 
-      {/* ───────────────────────────────────────────────────── today's focus */}
-      <section className="section">
-        <SectionHead
-          title={isToday ? 'Today’s focus' : 'That day’s focus'}
-          action={
-            <button className="btn btn--ghost btn--sm" onClick={() => navigate('capture')}>
-              Add something
-            </button>
-          }
-        />
+      {/* ───────────────────────────────────────────────── today's focus */}
+      <section className="stack stack-3">
+        <div className="sec-head">
+          <h2 className="sec-head__title">{isToday ? 'Today’s focus' : 'That day’s focus'}</h2>
+          <button className="sec-head__link" onClick={() => navigate('capture')}>
+            Add <Icon name="plus" size={14} />
+          </button>
+        </div>
         <ul className="focus-row">
           {focus.map((f) => (
             <li key={f.id} className={`focus${f.done ? ' is-done' : ''}`}>
-              <Icon name={f.icon} size={20} style={{ color: f.colour }} />
-              <span className="t-callout strong">{f.title}</span>
-              <span className="t-caption dim2 grow">{f.sub}</span>
+              <span
+                className="focus__icon"
+                style={{ background: f.done ? 'var(--brand-dim)' : 'var(--surface-2)' }}
+              >
+                <Icon name={f.icon} size={18} style={{ color: f.done ? 'var(--brand)' : f.colour }} />
+              </span>
+              <span className="stack stack-1 grow" style={{ minWidth: 0 }}>
+                <span className="focus__title">{f.title}</span>
+                <span className="focus__sub">{f.sub}</span>
+              </span>
               <MiniRing
                 value={f.progress}
                 colour={f.done ? 'var(--brand)' : f.colour}

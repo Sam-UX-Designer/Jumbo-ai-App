@@ -4,6 +4,7 @@ import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AssetImage, AvatarButton } from '../components/Asset'
 import { DateRail } from '../components/DateRail'
 import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
+import { useNavigate } from '../components/Nav'
 import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
 import { useStore } from '../state/store'
@@ -37,6 +38,7 @@ export function Capture() {
   const [modal, setModal] = useState<Modal>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
+  const navigate = useNavigate()
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
 
@@ -86,20 +88,31 @@ export function Capture() {
   ]
 
   return (
-    <div className="stack stack-10">
+    <div className="stack stack-6">
       <header className="stack stack-5">
-        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-          <div className="stack stack-1" style={{ minWidth: 0 }}>
-            <p className="eyebrow">Capture</p>
-            <h1 className="t-title1">
-              {isToday ? 'Add today’s data' : `Add to ${prettyDate(date)}`}
-            </h1>
+        <div className="scr-head">
+          <div style={{ minWidth: 0 }}>
+            <h1 className="scr-head__title">Capture</h1>
+            <p className="scr-head__sub">
+              {isToday
+                ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
+                : `Adding to ${prettyDate(date)}.`}
+            </p>
           </div>
-          <AvatarButton />
+          <div className="scr-head__actions">
+            <button
+              className="round-btn"
+              aria-label="Ask Jumbo"
+              onClick={() => { haptic('selection'); navigate('chat') }}
+            >
+              <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
+            </button>
+            <AvatarButton size={42} />
+          </div>
         </div>
-        <p className="t-callout dim" style={{ maxWidth: '44ch' }}>
-          Sleep, steps and heart data arrive on their own. This is only for the gaps.
-        </p>
+        {state.dataMode === 'demo' && (
+          <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>
+        )}
         <DateRail selected={date} onSelect={(d) => dispatch({ type: 'selectDate', date: d })} />
       </header>
 
@@ -243,12 +256,15 @@ function CaptureTile({
 }: { icon: IconName; colour: string; title: string; sub: string; onClick: () => void; primary?: boolean }) {
   return (
     <button className={`cap-tile${primary ? ' cap-tile--primary' : ''}`} onClick={onClick}>
-      <span className="cap-tile__icon" style={{ background: 'var(--surface-2)', color: colour }}>
+      <span
+        className="cap-tile__icon"
+        style={{ background: `color-mix(in srgb, ${colour} 16%, transparent)`, color: colour }}
+      >
         <Icon name={icon} size={21} />
       </span>
       <span className="stack" style={{ gap: 2 }}>
-        <span className="t-callout strong">{title}</span>
-        <span className="t-caption dim2">{sub}</span>
+        <span className="cap-tile__title">{title}</span>
+        <span className="cap-tile__sub">{sub}</span>
       </span>
     </button>
   )

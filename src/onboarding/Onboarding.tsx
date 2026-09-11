@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/onboarding.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AssetImage, BrandMark, BrandWordmark, Mascot, SourceLogo } from '../components/Asset'
-import { Confidence, ErrorNotice, ProvenanceTag, SetupNotice, Switch } from '../components/UI'
+import { Confidence, ErrorNotice, ProvenanceTag, Switch, UnavailableNotice } from '../components/UI'
 import { Sparkline } from '../components/Charts'
 import { useStore } from '../state/store'
 import { api, type ProviderInfo } from '../lib/api'
@@ -43,13 +43,16 @@ const GOALS: Array<{ key: GoalKey; label: string; detail: string; icon: IconName
 ]
 
 export function Onboarding() {
-  const { dispatch, sync } = useStore()
+  const { state, dispatch, sync } = useStore()
   const [step, setStep] = useState<Step>('welcome')
   const idx = STEPS.indexOf(step)
   const go = (s: Step) => { haptic('selection'); setStep(s) }
 
   const exploreWithSamples = () => {
     dispatch({ type: 'setDataMode', mode: 'demo' })
+    // A sample tour needs a name to greet. It is sample data, labelled as
+    // such everywhere it appears, and the person can change it in You.
+    if (!state.profile.name.trim()) dispatch({ type: 'setProfile', profile: { name: 'Alex' } })
     dispatch({ type: 'finishOnboarding' })
   }
 
@@ -416,9 +419,9 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         </div>
 
         {state.serverReachable === false && (
-          <SetupNotice
-            title="Jumbo’s API is not running"
-            message="Real connections go through Jumbo’s server. Start it with npm run dev:api, or carry on with sample data and connect later."
+          <UnavailableNotice
+            title="Sources can’t be reached right now"
+            message="You can carry on with sample data and connect a source later from your profile."
           />
         )}
 
@@ -449,11 +452,11 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
                   <p className="t-caption dim2">
                     {p.transport === 'native'
                       ? `${p.reason} You can connect it from the Jumbo app.`
-                      : `Needs ${p.missing.join(', ')} on the server.`}
+                      : 'Not available to connect in Jumbo yet.'}
                   </p>
                 )}
                 {failure?.id === p.id && failure.kind === 'setup' && (
-                  <SetupNotice title="Not configured yet" message={failure.message} missing={failure.missing} docs={failure.docs} compact />
+                  <UnavailableNotice title="Not available yet" message="This source can’t be connected right now. You can carry on and add it later." compact />
                 )}
                 {failure?.id === p.id && failure.kind === 'error' && (
                   <ErrorNotice title="That did not work" message={failure.message} />

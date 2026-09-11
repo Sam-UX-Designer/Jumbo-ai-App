@@ -3,8 +3,9 @@ import '../styles/explore.css'
 import { AiOrb, Icon } from '../components/Icon'
 import { AssetImage, AvatarButton } from '../components/Asset'
 import {
-  Empty, ErrorNotice, SectionHead, Segmented, SetupNotice, Sheet, useToast,
+  Empty, ErrorNotice, SectionHead, Segmented, Sheet, UnavailableNotice, useToast,
 } from '../components/UI'
+import { useNavigate } from '../components/Nav'
 import { useStore } from '../state/store'
 import { api, compactCount, isoDurationMinutes, type YoutubeVideo } from '../lib/api'
 import type { GoalKey } from '../data/types'
@@ -41,6 +42,7 @@ const SORTS: Array<{ value: Sort; label: string }> = [
 
 export function Explore() {
   const { state, dispatch } = useStore()
+  const navigate = useNavigate()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('for-you')
   const [query, setQuery] = useState('')
@@ -116,19 +118,24 @@ export function Explore() {
   }
 
   return (
-    <div className="stack stack-10">
-      <header className="stack stack-2">
-        <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-          <div className="stack stack-1" style={{ minWidth: 0 }}>
-            <p className="eyebrow">Explore</p>
-            <h1 className="t-title1">Learn from real people</h1>
-          </div>
-          <AvatarButton />
+    <div className="stack stack-5">
+      <header className="scr-head">
+        <div style={{ minWidth: 0 }}>
+          <h1 className="scr-head__title">Explore</h1>
+          <p className="scr-head__sub">
+            Real videos from YouTube, chosen against your goals. Their views are their own.
+          </p>
         </div>
-        <p className="t-callout dim" style={{ maxWidth: '46ch' }}>
-          Real videos from YouTube, chosen against your goals. Their views are their own. Jumbo
-          does not endorse them and does not treat them as evidence.
-        </p>
+        <div className="scr-head__actions">
+          <button
+            className="round-btn"
+            aria-label="Ask Jumbo"
+            onClick={() => { haptic('selection'); navigate('chat') }}
+          >
+            <Icon name="sparkles" size={19} style={{ color: 'var(--brand)' }} />
+          </button>
+          <AvatarButton size={42} />
+        </div>
       </header>
 
       <form
@@ -207,11 +214,10 @@ export function Explore() {
       </div>
 
       {problem?.kind === 'setup' && (
-        <SetupNotice
-          title="Explore is not connected to YouTube"
-          message={problem.message}
-          missing={problem.missing}
-          docs={problem.docs}
+        <UnavailableNotice
+          title="Explore isn’t available right now"
+          message="Videos can’t be loaded at the moment. Anything you have saved is still here, and the rest of Jumbo is unaffected."
+          onRetry={() => void load(query.trim())}
         />
       )}
       {problem?.kind === 'error' && (
