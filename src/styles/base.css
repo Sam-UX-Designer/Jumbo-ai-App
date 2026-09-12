@@ -121,40 +121,39 @@ a { color: var(--accent-text); }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
   display: flex; align-items: center; justify-content: space-around;
   padding-bottom: var(--safe-b);
-  /* Same reasoning as the dock: the material is drawn by a masked layer that
-     reaches above the bar, so screens without a dock get the same soft
-     transition rather than a rule across the page. */
+  /* The bar's material is drawn by the layer below so it can reach a few
+     pixels past its own top edge. The bar itself stays a plain box. */
   background: none;
 }
 
+/*
+ * The bar's edge.
+ *
+ * A bar is the edge of the window, so its material is the background with
+ * the scene moving faintly behind it. It reaches var(--nav-edge) above the
+ * bar and no further: enough that content dissolves into the bar instead of
+ * being sliced by a rule, short enough that it is an edge rather than a
+ * region. Nothing in the content area is veiled by it, and the composer
+ * floating above the bar covers most of it anyway.
+ */
 .tabbar::before {
   content: '';
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--feather) * -1);
+  top: calc(var(--nav-edge) * -1);
   bottom: 0;
   z-index: -1;
   pointer-events: none;
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  backdrop-filter: saturate(180%) blur(22px);
-  /* Every stop is an absolute length measured from the top of the feather,
-     not a percentage. The pseudo-element is the feather plus the whole bar,
-     so a percentage puts the ramp below the bar's own top edge and nothing
-     actually softens in the zone this exists for. */
-  background: linear-gradient(
-    to bottom,
-    transparent 0,
-    color-mix(in srgb, var(--glass) 55%, transparent) calc(var(--feather) * 0.62),
-    var(--glass) var(--feather)
-  );
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.5), #000 var(--feather));
-  mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.5), #000 var(--feather));
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  background: linear-gradient(to bottom, transparent 0, var(--glass) var(--nav-edge));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--nav-edge));
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--nav-edge));
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tabbar::before {
-    background: linear-gradient(to bottom, transparent 0, var(--bg) var(--feather));
-    -webkit-mask-image: none; mask-image: none;
+    background: linear-gradient(to bottom, transparent 0, var(--bg) var(--nav-edge));
   }
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -531,96 +530,31 @@ a { color: var(--accent-text); }
 /* ============================================================
    Ask Jumbo dock
 
-   The entry into the conversation, on every screen. It sits directly
-   above the tab bar and is shaped like the composer it opens, so the
-   gesture is already familiar: tap the field, start typing.
+   The entry into the conversation, on every screen.
+
+   It is not a panel. There is no sheet, no container and no blurred
+   region: the chip row and the composer are two floating controls that
+   happen to be stacked, each carrying its own material, its own edge and
+   its own radius. Content scrolls behind them and stays sharp right up
+   to the moment it passes underneath, which is what the platform does
+   with a floating control and what a bottom sheet of glass never does.
+
+   The dock's own box draws nothing at all. It exists to place the two
+   controls above the tab bar and to publish how much room they need.
    ============================================================ */
 .askdock {
   position: fixed;
   left: 0; right: 0;
-  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  bottom: var(--nav-h, calc(var(--tab-h) + env(safe-area-inset-bottom)));
   z-index: 45;
-  display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
-  padding: var(--s-3) var(--s-5) var(--s-3);
-  /* The dock itself carries no background, no blur and no border. All three
-     produced the same artefact: a crisp rectangle where the material began.
-     The glass is drawn by the two masked layers below, which reach above the
-     dock and feather in, so content dissolves into it rather than stopping
-     at a line. The dock's own children stay perfectly sharp. */
+  display: flex; flex-direction: column; align-items: center;
+  /* chips to composer */
+  gap: var(--s-2);
+  /* composer to tab bar */
+  padding: 0 var(--s-5) 10px;
+  background: none;
+  border: 0;
   pointer-events: none;
-}
-
-/*
- * The feather.
- *
- * Two layers, because one cannot ramp. A backdrop-filter has a single blur
- * radius and a hard edge of its own; masking one layer fades how much of it
- * you see, but the blur is the same strength all the way up. Stacking a light
- * layer that starts high against a strong layer that starts low gives a real
- * gradient of blur, which is what the platform does at the top of a scroll
- * view — and the second layer samples the first, so the strength compounds
- * towards the dock rather than stepping.
- *
- * Both are positioned rather than left in flow: the dock is a flex column,
- * and a pseudo-element in a flex container is a flex item.
- */
-.askdock::before,
-.askdock::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  top: calc(var(--feather) * -1);
-  bottom: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Light, and first to arrive. */
-.askdock::before {
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather));
-  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather));
-}
-
-/* Strong, and carrying the tint. Solid by the time it reaches the dock's own
-   top edge, so the field and the chips sit on a surface rather than on the
-   content behind them. */
-.askdock::after {
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  backdrop-filter: saturate(180%) blur(22px);
-  /* Absolute lengths, for the same reason as the tab bar: this box is the
-     feather plus the dock, so a percentage lands well below the dock's own
-     top edge and the tint never reaches the zone it is meant to soften. At
-     var(--feather) the surface is whole, which is exactly where the dock's
-     own children begin. */
-  background: linear-gradient(
-    to bottom,
-    transparent 0,
-    color-mix(in srgb, var(--glass) 55%, transparent) calc(var(--feather) * 0.66),
-    var(--glass) var(--feather)
-  );
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.55), #000 var(--feather));
-  mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.55), #000 var(--feather));
-}
-
-/* No blur available: the fade is still a fade, just without the softening. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .askdock::before { display: none; }
-  .askdock::after {
-    background: linear-gradient(to bottom, transparent 0, var(--bg) var(--feather));
-    -webkit-mask-image: none; mask-image: none;
-  }
-}
-
-/* Asked for less transparency: an opaque bar with a defined edge is the
-   platform's own answer here, and it is what this setting is for. */
-@media (prefers-reduced-transparency: reduce) {
-  .askdock {
-    background: var(--bg);
-    border-top: 1px solid var(--hairline);
-  }
-  .askdock::before, .askdock::after { display: none; }
 }
 .askdock > * { pointer-events: auto; width: 100%; max-width: 600px; }
 /* The chip row is the one child allowed to run past that width. */
@@ -658,19 +592,51 @@ a { color: var(--accent-text); }
   .askdock__chips { margin-inline: calc(var(--s-8) * -1); padding-inline: var(--s-8); }
 }
 
+/* Each chip is its own piece of material. The row has no panel behind it,
+   so what separates a chip from the content is the chip's own edge. */
+.askdock .qchip {
+  background: var(--material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  border-color: var(--material-line);
+  box-shadow: var(--material-lift);
+}
+
+/* ── The composer ─────────────────────────────────────────────────────
+   A control, not a card: one pill the height of its own send button plus
+   its padding, with the mark on the left and the action on the right. It
+   is a button rather than an input, because tapping it opens the real
+   conversation with its composer already focused, which is one keyboard
+   rather than two. */
 .askdock__field {
   display: flex; align-items: center; gap: var(--s-3);
-  padding: 7px 7px 7px var(--s-4);
+  height: 54px;
+  padding: 0 6px 0 var(--s-4);
   border-radius: var(--r-pill);
-  border: 1px solid var(--hairline-firm);
-  background: var(--surface);
-  box-shadow: var(--shadow-2);
+  border: 1px solid var(--material-line);
+  background: var(--material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--material-lift);
   cursor: pointer; text-align: left;
   transition: border-color var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
 }
 .askdock__field:hover  { border-color: var(--brand-line); }
 .askdock__field:active { transform: scale(0.99); }
 .askdock__field:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* No blur available, or asked for less of it: the material becomes the
+   surface itself. The control keeps its shape; only the scene behind it
+   stops showing through. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .askdock__field, .askdock .qchip { background: var(--surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .askdock__field, .askdock .qchip {
+    background: var(--surface);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
 
 .askdock__placeholder {
   flex: 1; min-width: 0;
@@ -680,7 +646,7 @@ a { color: var(--accent-text); }
 }
 
 .askdock__go {
-  flex: none; width: 38px; height: 38px;
+  flex: none; width: 42px; height: 42px;
   display: grid; place-items: center;
   border-radius: 50%;
   background: var(--brand); color: var(--brand-ink);
@@ -690,7 +656,7 @@ a { color: var(--accent-text); }
    below it, so the last card clears the chips rather than sliding under
    them. --dock-h is published by AskDock; the fallback covers first paint. */
 .main--dock {
-  padding-bottom: calc(var(--tab-h) + var(--dock-h, 150px) + var(--s-5) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--nav-h, calc(var(--tab-h) + env(safe-area-inset-bottom))) + var(--dock-h, 112px) + var(--s-5));
 }
 
 /* Once the sidebar takes over there is no tab bar to sit above, and the
@@ -705,5 +671,5 @@ a { color: var(--accent-text); }
     padding: var(--s-6) var(--s-8) var(--s-5) calc(248px + var(--s-8) * 2);
   }
   .askdock > * { max-width: 100%; }
-  .main--dock { padding-bottom: calc(var(--dock-h, 150px) + var(--s-6)); }
+  .main--dock { padding-bottom: calc(var(--dock-h, 112px) + var(--s-6)); }
 }

@@ -54,7 +54,7 @@ export const ASSETS = {
 
   /* ── AI mascot ─────────────────────────────────────────────────── */
   mascot: {
-    file: 'mascot/jumbo-mascot.svg',
+    file: 'mascot/jumbo-mascot.png',
     alt: 'Jumbo, your health companion',
     ratio: 1,
   },

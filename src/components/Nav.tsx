@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
 import { BrandMark } from './Asset'
 import { haptic } from '../lib/feedback'
@@ -85,6 +85,28 @@ export function TabBar({
   onNavigate: (r: Route) => void
 }) {
   const go = (r: Route) => { haptic('selection'); onNavigate(r) }
+  const bar = useRef<HTMLElement>(null)
+
+  /**
+   * Publish the bar's real height. The centre action is taller than a tab
+   * and the safe area varies by device, so `--tab-h` is the tab's height,
+   * not the bar's. Everything that sits directly above the bar reads this
+   * instead of adding the two up and being a few pixels out.
+   */
+  useEffect(() => {
+    const el = bar.current
+    if (!el) return
+    const publish = () => {
+      document.documentElement.style.setProperty('--nav-h', `${Math.ceil(el.offsetHeight)}px`)
+    }
+    publish()
+    const ro = new ResizeObserver(publish)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.removeProperty('--nav-h')
+    }
+  }, [])
 
   const tab = (item: NavItem) => {
     // Measurements, settings and the conversation are reached from inside a
@@ -107,7 +129,7 @@ export function TabBar({
   }
 
   return (
-    <nav className="tabbar" aria-label="Primary">
+    <nav className="tabbar" aria-label="Primary" ref={bar}>
       {LEFT.map(tab)}
 
       <button

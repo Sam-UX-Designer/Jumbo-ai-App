@@ -187,4 +187,11 @@
   margin-inline: calc(var(--s-5) * -1);
   padding-inline: var(--s-5);
 }
-.mealask .askdock__field { box-shadow: none; }
+/* Inside a sheet the composer is not floating over anything, so it drops
+   the material and sits on the sheet's own surface. */
+.mealask .askdock__field,
+.mealask .qchip {
+  background: var(--surface-2);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: none;
+}
