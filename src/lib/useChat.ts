@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react'
+import type { ChatFocus } from '../components/Nav'
 import type { IconName } from '../components/Icon'
 import { useStore } from '../state/store'
 import { api } from './api'
@@ -14,7 +15,7 @@ import { haptic } from './feedback'
  * the send is refused with the reason rather than answered by a script, and
  * the failed turn stays on screen with a retry.
  */
-export function useChat() {
+export function useChat(focus?: ChatFocus | null) {
   const { state, dispatch } = useStore()
   const inFlight = useRef(new Set<string>())
 
@@ -44,6 +45,10 @@ export function useChat() {
       summary,
       goals: state.goals,
       history,
+      // What the question is about, when it was asked from somewhere
+      // specific. The broader summary still travels, so a question that
+      // needs the wider picture can still reach it.
+      focus: focus ? { kind: focus.kind, subject: focus.summary } : undefined,
     })
     inFlight.current.delete(id)
 
@@ -59,7 +64,7 @@ export function useChat() {
     } else {
       dispatch({ type: 'chatFail', id, message: result.message })
     }
-  }, [dispatch, summary, state.goals])
+  }, [dispatch, summary, state.goals, focus])
 
   const send = useCallback((text: string) => {
     const question = text.trim()

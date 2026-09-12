@@ -489,10 +489,12 @@ a { color: var(--accent-text); }
   bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
   z-index: 45;
   display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
-  padding: var(--s-10) var(--s-5) var(--s-3);
-  /* Solid behind the controls, fading out above them, so content scrolling
-     under the dock is never half-legible behind a chip. */
-  background: linear-gradient(to top, var(--bg) 0, var(--bg) 76%, transparent 100%);
+  padding: var(--s-4) var(--s-5) var(--s-3);
+  /* Opaque, with a hairline above it. The screen reserves the dock's exact
+     height below its content, so nothing ever scrolls underneath a chip —
+     a meal card is never half-hidden behind one. */
+  background: var(--bg);
+  border-top: 1px solid var(--hairline);
   pointer-events: none;
 }
 .askdock > * { pointer-events: auto; width: 100%; max-width: 600px; }
@@ -552,8 +554,12 @@ a { color: var(--accent-text); }
   background: var(--brand); color: var(--brand-ink);
 }
 
-/* Screens carrying the dock need room for it under their last element. */
-.main--dock { padding-bottom: calc(var(--tab-h) + var(--s-24) + env(safe-area-inset-bottom)); }
+/* Screens carrying the dock reserve its measured height, plus the tab bar
+   below it, so the last card clears the chips rather than sliding under
+   them. --dock-h is published by AskDock; the fallback covers first paint. */
+.main--dock {
+  padding-bottom: calc(var(--tab-h) + var(--dock-h, 150px) + var(--s-5) + env(safe-area-inset-bottom));
+}
 
 /* Once the sidebar takes over there is no tab bar to sit above, and the
    field belongs over the content column rather than the whole window. */
@@ -567,5 +573,5 @@ a { color: var(--accent-text); }
     padding: var(--s-6) var(--s-8) var(--s-5) calc(248px + var(--s-8) * 2);
   }
   .askdock > * { max-width: 100%; }
-  .main--dock { padding-bottom: var(--s-24); }
+  .main--dock { padding-bottom: calc(var(--dock-h, 150px) + var(--s-6)); }
 }

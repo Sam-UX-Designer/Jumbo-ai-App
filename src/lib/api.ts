@@ -216,6 +216,8 @@ export const api = {
     summary: unknown
     goals: string[]
     history: Array<{ role: 'you' | 'jumbo'; text: string }>
+    /** The specific thing the question is about, when there is one. */
+    focus?: { kind: string; subject: unknown }
   }) => call<ChatAnswer>('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
 
   youtube: (params: { q?: string; topic?: string; goals?: string[]; limit?: number }) => {

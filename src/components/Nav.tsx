@@ -11,7 +11,21 @@ export type Route =
  * right of every top-level screen and has to reach the profile from there;
  * threading a callback through five screens to do it would be worse.
  */
-type Navigate = (route: Route, question?: string) => void
+/**
+ * What a conversation is about, when it was opened from something specific.
+ * Ask Jumbo is one implementation; this is how a screen tells it which meal
+ * the question concerns without a second chat.
+ */
+export interface ChatFocus {
+  kind: 'meal'
+  /** The day the meal belongs to, so going back can reopen it. */
+  date: string
+  mealId: string
+  /** A compact description of the meal, sent to the AI as the subject. */
+  summary: unknown
+}
+
+type Navigate = (route: Route, question?: string, focus?: ChatFocus) => void
 
 const NavCtx = createContext<Navigate>(() => {})
 

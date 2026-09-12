@@ -430,7 +430,7 @@ Hard limits:
 ai.post('/chat', async (req, res) => {
   if (!aiConfigured()) return aiUnavailable(res, 'Ask Jumbo')
 
-  const { question, summary, history, goals } = req.body ?? {}
+  const { question, summary, history, goals, focus } = req.body ?? {}
   if (typeof question !== 'string' || !question.trim()) {
     return res.status(400).json({ error: 'no_question', message: 'There was no question to answer.' })
   }
@@ -449,9 +449,17 @@ ai.post('/chat', async (req, res) => {
       role: 'user',
       parts: [text([
         goals?.length ? `Their stated goals: ${goals.join(', ')}.` : 'They have not set any goals yet.',
-        `A statistical summary of their data:\n${JSON.stringify(summary ?? {}, null, 2)}`,
+        // When the question was asked from a specific thing — a meal they
+        // tapped — say so first, so "is this balanced" is about that meal
+        // and not the week.
+        focus?.subject
+          ? `They are asking about this specific ${focus.kind ?? 'item'}, which they opened before asking. `
+            + `Unless they clearly ask about something else, your answer is about this:\n`
+            + `${JSON.stringify(focus.subject, null, 2)}`
+          : null,
+        `A statistical summary of their wider data, for context:\n${JSON.stringify(summary ?? {}, null, 2)}`,
         `Their question: ${question.slice(0, 2000)}`,
-      ].join('\n\n'))],
+      ].filter(Boolean).join('\n\n'))],
     },
   ]
 

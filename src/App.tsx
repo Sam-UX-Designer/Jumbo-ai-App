@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
-import { NavProvider, Sidebar, TabBar, type Route } from './components/Nav'
+import { NavProvider, Sidebar, TabBar, type ChatFocus, type Route } from './components/Nav'
 import { AskDock } from './components/AskDock'
 import { ToastProvider, useToast } from './components/UI'
 import { Onboarding } from './onboarding/Onboarding'
@@ -30,11 +30,21 @@ function Shell() {
   // Where Ask Jumbo was opened from, so closing it returns you there rather
   // than dropping you on Today.
   const [origin, setOrigin] = useState<Route>('today')
+  // What the conversation is about, when it was opened from a specific
+  // thing — a meal, so far. Kept across the trip so going back reopens it.
+  const [focus, setFocus] = useState<ChatFocus | null>(null)
   const toast = useToast()
 
-  const navigate = (next: Route, question?: string) => {
+  const navigate = (next: Route, question?: string, nextFocus?: ChatFocus) => {
     setHandover(next === 'chat' ? question : undefined)
-    if (next === 'chat' && route !== 'chat') setOrigin(route)
+    if (next === 'chat') {
+      if (route !== 'chat') setOrigin(route)
+      setFocus(nextFocus ?? null)
+    } else {
+      // Leaving the conversation for anywhere but the screen it came from
+      // drops the subject; returning to that screen keeps it.
+      if (next !== origin) setFocus(null)
+    }
     setRoute(next)
   }
 
@@ -70,10 +80,14 @@ function Shell() {
           >
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
-            {route === 'capture' && <Capture />}
+            {route === 'capture' && (
+              <Capture reopenMeal={focus?.kind === 'meal' ? focus : null} />
+            )}
             {route === 'explore' && <Explore />}
             {route === 'measurements' && <Measurements />}
-            {route === 'chat' && <Chat initialQuestion={handover} onClose={() => navigate(origin)} />}
+            {route === 'chat' && (
+              <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
+            )}
             {route === 'you' && <You onNavigate={setRoute} />}
           </main>
         </div>

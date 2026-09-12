@@ -7,7 +7,7 @@ import { Markdown } from '../components/Markdown'
 import { ErrorNotice, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useChat, QUICK_PROMPTS } from '../lib/useChat'
-import { useNavigate } from '../components/Nav'
+import { useNavigate, type ChatFocus } from '../components/Nav'
 import { haptic } from '../lib/feedback'
 
 /**
@@ -18,11 +18,11 @@ import { haptic } from '../lib/feedback'
  * configured the screen says so instead of answering.
  */
 export function Chat({
-  initialQuestion, onClose,
-}: { initialQuestion?: string; onClose?: () => void }) {
+  initialQuestion, onClose, focus,
+}: { initialQuestion?: string; onClose?: () => void; focus?: ChatFocus | null }) {
   const { state } = useStore()
   const navigate = useNavigate()
-  const chat = useChat()
+  const chat = useChat(focus)
   const [draft, setDraft] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)

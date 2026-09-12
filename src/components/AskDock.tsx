@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Icon } from './Icon'
 import { useNavigate, type Route } from './Nav'
 import { QUICK_ACTIONS } from '../lib/useChat'
@@ -19,11 +20,33 @@ import { haptic } from '../lib/feedback'
  */
 export function AskDock({ screen }: { screen: Route }) {
   const navigate = useNavigate()
+  const ref = useRef<HTMLDivElement>(null)
   const chips = QUICK_ACTIONS[screen] ?? QUICK_ACTIONS.today
   const open = (question?: string) => { haptic('selection'); navigate('chat', question) }
 
+  /**
+   * Publish the dock's real height so the screen above can reserve exactly
+   * that much room. Guessing it left the last of the content sitting under
+   * the chips, and the height moves with the chip row, the font size and the
+   * safe area.
+   */
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const publish = () => {
+      document.documentElement.style.setProperty('--dock-h', `${Math.ceil(el.offsetHeight)}px`)
+    }
+    publish()
+    const ro = new ResizeObserver(publish)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.removeProperty('--dock-h')
+    }
+  }, [screen])
+
   return (
-    <div className="askdock">
+    <div className="askdock" ref={ref}>
       <ul className="askdock__chips" aria-label="Ask Jumbo about this screen">
         {chips.map((q) => (
           <li key={q.text}>

@@ -6,8 +6,9 @@ import { DateRail } from '../components/DateRail'
 import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
 import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
+import { MealDetail } from './MealDetail'
 import { useStore } from '../state/store'
-import type { Measurement, MeasurementKind, WorkoutEntry, WorkoutType } from '../data/types'
+import type { MealEntry, Measurement, MeasurementKind, WorkoutEntry, WorkoutType } from '../data/types'
 import { mealTotals } from '../data/foods'
 import { dailyProgress } from '../lib/analytics'
 import { celebrate, haptic } from '../lib/feedback'
@@ -32,9 +33,11 @@ const MEASURE_KINDS: Array<{ kind: MeasurementKind; label: string; unit: string;
   { kind: 'vitaminD', label: 'Vitamin D', unit: 'ng/mL', step: 1, dp: 0, start: 38 },
 ]
 
-export function Capture() {
+export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: string } | null }) {
   const { state, dispatch } = useStore()
   const [modal, setModal] = useState<Modal>(null)
+  // The meal whose detail is open, by id. Null when the list is showing.
+  const [openMealId, setOpenMealId] = useState<string | null>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
   const { confirm, node: confirmNode } = useConfirm()
@@ -50,6 +53,12 @@ export function Capture() {
   // Only offered where the browser genuinely supports it.
   const dictation = useDictation(() => {})
 
+  // Returning from a conversation that was about a meal puts that meal back
+  // on screen, so back lands where it left rather than on the list.
+  useEffect(() => {
+    if (reopenMeal?.mealId) setOpenMealId(reopenMeal.mealId)
+  }, [reopenMeal?.mealId])
+
   const openMeal = (mode: MealMode) => {
     haptic('selection')
     setMealMode(mode)
@@ -59,6 +68,8 @@ export function Capture() {
   const logged = [
     ...today.meals.map((m) => ({
       id: m.id, icon: 'plate' as IconName, colour: 'var(--nutrition)',
+      /** Opens this meal's detail. Only meals have one. */
+      open: () => { haptic('selection'); setOpenMealId(m.id) },
       /**
        * The photograph this meal was read from, when there is one. Meals
        * added by hand, and those saved before photographs were kept, fall
@@ -72,6 +83,7 @@ export function Capture() {
     })),
     ...(today.workout ? [{
       id: today.workout.id, icon: 'training' as IconName, colour: 'var(--training)', photo: undefined,
+      open: undefined as (() => void) | undefined,
       time: '',
       title: `${today.workout.type} · ${today.workout.minutes} min`,
       sub: `${['easy', 'moderate', 'hard'][today.workout.intensity - 1]}${today.workout.perceivedEffort ? ` · felt ${today.workout.perceivedEffort}/10` : ''}`,
@@ -79,6 +91,7 @@ export function Capture() {
     }] : []),
     ...(today.notes ? [{
       id: 'note', icon: 'note' as IconName, colour: 'var(--sleep)', photo: undefined,
+      open: undefined as (() => void) | undefined,
       time: '',
       title: 'Note', sub: today.notes,
       remove: () => dispatch({ type: 'setNote', date: today.date, note: '' }),
@@ -189,7 +202,17 @@ export function Capture() {
         ) : (
           <ul className="stack stack-3">
             {logged.map((row) => (
-              <li className="card row" key={row.id} style={{ gap: 'var(--s-3)' }}>
+              <li
+                className={`card row${row.open ? ' logrow--tap' : ''}`}
+                key={row.id}
+                style={{ gap: 'var(--s-3)' }}
+                {...(row.open ? {
+                  role: 'button', tabIndex: 0, onClick: row.open,
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.open!() }
+                  },
+                } : {})}
+              >
                 {row.photo !== undefined ? (
                   <AssetImage
                     asset="mealPhoto" src={row.photo} alt="" width={40} height={40}
@@ -208,15 +231,16 @@ export function Capture() {
                   <span className="t-caption dim2" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</span>
                 </div>
                 {row.time && <span className="t-caption dim2 num none">{row.time}</span>}
+                {row.open && <Icon name="chevron" size={16} style={{ color: 'var(--ink-3)', flex: 'none' }} />}
                 {row.remove && (
                   <button
                     className="icon-btn" aria-label={`Remove ${row.title}`}
-                    onClick={() => confirm({
+                    onClick={(e) => confirm((e.stopPropagation(), {
                       title: 'Remove this entry?',
                       body: 'It comes out of today and out of your long-term pattern. This cannot be undone.',
                       confirmLabel: 'Remove',
                       onConfirm: () => { row.remove!(); haptic('impactHeavy'); toast({ text: 'Entry removed', icon: 'trash' }) },
-                    })}
+                    }))}
                   >
                     <Icon name="trash" size={17} />
                   </button>
@@ -226,6 +250,13 @@ export function Capture() {
           </ul>
         )}
       </section>
+
+      <MealDetail
+        open={openMealId !== null}
+        onClose={() => setOpenMealId(null)}
+        date={today.date}
+        meal={(today.meals.find((m) => m.id === openMealId) ?? null) as MealEntry | null}
+      />
 
       <MealCapture
         open={modal === 'meal'} onClose={() => setModal(null)}
