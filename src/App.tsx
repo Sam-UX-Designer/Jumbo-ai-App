@@ -97,7 +97,7 @@ function Shell() {
               <Capture reopenMeal={focus?.kind === 'meal' ? focus : null} />
             )}
             {route === 'explore' && <Explore />}
-            {route === 'measurements' && <Measurements />}
+            {route === 'measurements' && <Measurements onBack={() => setRoute('today')} />}
             {route === 'chat' && (
               <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
             )}

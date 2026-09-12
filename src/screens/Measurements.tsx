@@ -35,7 +35,7 @@ const META: Record<MeasurementKind, KindMeta> = {
 
 type Group = 'fitness' | 'body' | 'blood'
 
-export function Measurements() {
+export function Measurements({ onBack }: { onBack?: () => void }) {
   const { state } = useStore()
   const [group, setGroup] = useState<Group>('fitness')
 
@@ -57,7 +57,7 @@ export function Measurements() {
   if (!state.measurements.length) {
     return (
       <div className="stack stack-8">
-        <ScreenHead title="Measurements" />
+        <ScreenHead title="Measurements" onBack={onBack} />
         <Empty
           icon="measure" title="No measurements yet"
           body="Connect a lab or DEXA source, or add a result by hand from Capture. Jumbo keeps the source with every number."
@@ -69,6 +69,7 @@ export function Measurements() {
   return (
     <div className="stack stack-10">
       <ScreenHead
+        onBack={onBack}
         title="Measurements"
         sub="Lab panels, scans and tests, kept next to the daily data so you can see them move together."
       />

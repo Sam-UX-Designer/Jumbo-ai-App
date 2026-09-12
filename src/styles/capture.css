@@ -52,13 +52,13 @@
    else on the row carries colour, so which one is picked is not a
    judgement call. */
 .cap-tile.is-on {
-  color: var(--tint);
+  color: var(--tint-ink);
   border-color: color-mix(in srgb, var(--tint) 58%, transparent);
   background: color-mix(in srgb, var(--tint) 13%, var(--surface));
 }
 .cap-tile.is-on .cap-tile__icon {
   background: color-mix(in srgb, var(--tint) 22%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
 }
 
 /* ── The action for whatever is picked ────────────────────────────────
@@ -94,7 +94,7 @@
   border-radius: var(--r-tile);
   background: color-mix(in srgb, var(--tint) 14%, var(--surface-2));
   border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
 }
 @media (max-width: 379px) {
   .capact { gap: var(--s-3); padding: var(--s-3); }
@@ -236,7 +236,7 @@
   transition: background 180ms var(--ease), border-color 180ms var(--ease),
               color 180ms var(--ease), transform var(--d-fast) var(--ease);
 }
-.recfilter svg { color: var(--tint); flex: none; }
+.recfilter svg { color: var(--tint-ink); flex: none; }
 .recfilter:hover  { border-color: var(--ink-4); }
 .recfilter:active { transform: scale(0.97); }
 .recfilter:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
@@ -244,7 +244,7 @@
 /* Selected: the category's own colour, at the weight of a state rather
    than of an advertisement. */
 .recfilter.is-on {
-  color: var(--tint);
+  color: var(--tint-ink);
   border-color: color-mix(in srgb, var(--tint) 62%, transparent);
   background: color-mix(in srgb, var(--tint) 12%, var(--surface));
 }
@@ -296,7 +296,7 @@
   border-radius: var(--r-pill);
   border: 1px solid color-mix(in srgb, var(--tint) 35%, transparent);
   background: color-mix(in srgb, var(--tint) 9%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
   font-size: var(--t-callout); font-weight: 600; letter-spacing: -0.005em;
   white-space: nowrap;
 }

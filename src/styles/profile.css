@@ -81,7 +81,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--tint) 15%, transparent);
   border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
 }
 .streak__body {
   display: flex; flex-direction: column; gap: 1px; min-width: 0;
@@ -113,7 +113,9 @@
    to it. It is quiet, because it is the lesser of the two things you can
    do here and it must not read as a step in the page's hierarchy. */
 .you-head .btn--ghost {
-  min-height: 26px;
+  /* Quiet, but not below the platform's 28pt floor for a control. */
+  min-height: 30px;
+  padding-inline: var(--s-3);
   font-size: var(--t-caption); font-weight: 520;
   color: var(--ink-3);
 }

@@ -261,11 +261,16 @@ export function ProfilePhotoPicker({
           <Icon name="camera" size={13} strokeWidth={2} />
         </span>
       </button>
+      {/* Plumbing, not a control: the button above is what people reach.
+          Left in the tab order it was an unnamed stop that announced
+          nothing and did nothing visible. */}
       <input
         ref={input}
         type="file"
         accept="image/*"
         className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
         onChange={(e) => { void choose(e.target.files?.[0]); e.target.value = '' }}
       />
       {photo && (

@@ -74,12 +74,12 @@
   transition: background 180ms var(--ease), border-color 180ms var(--ease),
               color 180ms var(--ease), transform var(--d-fast) var(--ease);
 }
-.notifilter svg { color: var(--tint); flex: none; }
+.notifilter svg { color: var(--tint-ink); flex: none; }
 .notifilter:hover  { border-color: var(--ink-4); }
 .notifilter:active { transform: scale(0.97); }
 .notifilter:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .notifilter.is-on {
-  color: var(--tint);
+  color: var(--tint-ink);
   border-color: color-mix(in srgb, var(--tint) 62%, transparent);
   background: color-mix(in srgb, var(--tint) 12%, var(--surface));
 }
@@ -93,7 +93,7 @@
   display: grid; place-items: center;
   border-radius: var(--r-pill);
   border: 2px solid var(--bg);
-  background: var(--critical); color: #fff;
+  background: var(--unread); color: #fff;
   font-size: 11px; font-weight: 700; line-height: 1;
   font-variant-numeric: tabular-nums;
   animation: noti-badge var(--d-base) var(--ease-spring) both;
@@ -142,7 +142,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--tint) 15%, transparent);
   border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
 }
 
 .noti__body {
@@ -181,7 +181,7 @@
 @keyframes noti-fill { from { transform: scaleX(0) !important; } }
 .noti__pct {
   flex: none;
-  font-size: var(--t-caption); font-weight: 620; color: var(--tint);
+  font-size: var(--t-caption); font-weight: 620; color: var(--tint-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -198,7 +198,7 @@
 .noti__dot {
   width: 7px; height: 7px; flex: none;
   border-radius: 50%;
-  background: var(--critical);
+  background: var(--unread);
 }
 .noti__chev { color: var(--ink-4); flex: none; }
 

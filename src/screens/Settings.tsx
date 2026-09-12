@@ -3,8 +3,8 @@ import '../styles/profile.css'
 import { Icon, type IconName } from '../components/Icon'
 import { ProfilePhotoPicker, SourceLogo } from '../components/Asset'
 import {
-  DemoBadge, Empty, ErrorNotice, SectionHead, Segmented, Sheet, UnavailableNotice,
-  Switch, useConfirm, useToast,
+  DemoBadge, Empty, ErrorNotice, ScreenHead, SectionHead, Segmented, Sheet,
+  UnavailableNotice, Switch, useConfirm, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
@@ -80,11 +80,14 @@ export function Settings({
     <div className="stack stack-5">
       {/* The photograph lives on Profile and in the profile tab. Settings is
           reached from Profile, so a third copy of it here was a control
-          repeating what the screen you just left already said. */}
-      <header className="scr-head">
-        <h1 className="scr-head__title">Settings</h1>
-        <p className="scr-head__sub">Make JUMBO work for you.</p>
-      </header>
+          repeating what the screen you just left already said. The way back
+          is not: the tab bar returns you to a section, not to the screen you
+          were on. */}
+      <ScreenHead
+        title="Settings"
+        sub="Make JUMBO work for you."
+        onBack={() => onNavigate('you')}
+      />
 
       {state.dataMode === 'demo' && <DemoBadge />}
 

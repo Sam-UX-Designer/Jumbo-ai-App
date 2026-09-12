@@ -278,7 +278,7 @@ export function SectionHead({
  * part of the header, not something each screen remembers to add.
  */
 export function ScreenHead({
-  title, sub, actions, sample = false,
+  title, sub, actions, sample = false, onBack,
 }: {
   title: string
   sub?: string
@@ -286,12 +286,27 @@ export function ScreenHead({
   actions?: ReactNode
   /** Shown when the screen is displaying sample rather than recorded data. */
   sample?: boolean
+  /**
+   * Where this screen goes back to. A screen pushed on top of another needs
+   * one: the tab bar can only return you to a section, not to the thing you
+   * were looking at when you left it.
+   */
+  onBack?: () => void
 }) {
   return (
     <header className="stack stack-4" style={{ marginBottom: 'var(--s-6)' }}>
       {/* The subtitle is a direct child so it can take the full width under
           the title rather than sharing a column with the controls. */}
-      <div className="scr-head">
+      <div className={`scr-head${onBack ? ' scr-head--back' : ''}`}>
+        {onBack && (
+          <button
+            className="icon-btn icon-btn--edge scr-head__back"
+            aria-label="Back"
+            onClick={() => { haptic('selection'); onBack() }}
+          >
+            <Icon name="back" size={19} />
+          </button>
+        )}
         <h1 className="scr-head__title">{title}</h1>
         {actions && <div className="scr-head__actions">{actions}</div>}
         {sub && <p className="scr-head__sub">{sub}</p>}

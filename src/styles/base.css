@@ -114,6 +114,13 @@ a { color: var(--accent-text); }
 @media (min-width: 640px) { .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 639px) { .grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* Every surface that carries a category colour derives its readable
+   version here, on the element where --tint is in scope. */
+.chip--tinted, .recfilter, .notifilter, .cap-tile, .capact,
+.reccard, .streak, .plan, .noti {
+  --tint-ink: color-mix(in srgb, var(--tint) var(--tint-mix), var(--tint-deep));
+}
+
 /* ============================================================
    Navigation
    ============================================================ */
@@ -166,7 +173,9 @@ a { color: var(--accent-text); }
   background: none; border: 0; cursor: pointer; color: var(--ink-3);
   padding: var(--s-2) 2px; transition: color var(--d-fast) var(--ease);
 }
-.tabbar__item[aria-current="page"] { color: var(--brand); }
+/* --accent-text, not --brand: the vivid green measures 1.43:1 as a word on
+   the light theme, which is a colour you can see and a label you cannot. */
+.tabbar__item[aria-current="page"] { color: var(--accent-text); }
 .tabbar__item span { font-size: var(--t-micro); font-weight: 620; letter-spacing: 0.01em; text-transform: none; }
 
 /* The profile tab carries the photograph. The other four say "current"
@@ -316,11 +325,11 @@ a { color: var(--accent-text); }
    Same rule as the capture kinds and the notification filters, so the three
    chip rows in the app read as one control rather than three. A solid brand
    fill here also swallowed the mark, which was the colour's whole job. */
-.chip--tinted svg { color: var(--tint); flex: none; }
+.chip--tinted svg { color: var(--tint-ink); flex: none; }
 .chip--tinted[aria-pressed="true"] {
   background: color-mix(in srgb, var(--tint) 13%, var(--surface));
   border-color: color-mix(in srgb, var(--tint) 58%, transparent);
-  color: var(--tint);
+  color: var(--tint-ink);
   font-weight: 640;
 }
 

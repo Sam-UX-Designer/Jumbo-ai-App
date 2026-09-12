@@ -20,6 +20,23 @@
   --brand-glow:   rgba(146, 232, 42, 0.30);
   --accent-text:  var(--brand);
 
+  /**
+   * How a category colour is darkened when it has to carry text or a small
+   * glyph rather than fill a shape.
+   *
+   * `--tint` is the vivid colour: it fills, it strokes an arc, it tints a
+   * surface. Against a dark surface it can also be read, so here it is used
+   * whole. On the light theme it cannot: the brand green on white measures
+   * 1.52:1, which is a colour you can see and a word you cannot.
+   *
+   * These are the two halves of the mix rather than the mixed colour,
+   * because a custom property that refers to --tint has to be declared
+   * where --tint exists. On :root it would resolve against nothing and
+   * inherit as invalid, which is how it first went wrong.
+   */
+  --tint-mix:  100%;
+  --tint-deep: transparent;
+
   /* ── Surfaces ────────────────────────────────────────────────
      The reference sits on near-black with cards only just above it. */
   --bg:         #08090B;
@@ -38,7 +55,7 @@
   /* ── Ink ─────────────────────────────────────────────────────── */
   --ink:    #FFFFFF;
   --ink-2:  #9A9CA3;
-  --ink-3:  #6E7079;
+  --ink-3:  #8A8D96;
   --ink-4:  #46484F;
 
   --hairline:      rgba(255, 255, 255, 0.075);
@@ -63,6 +80,8 @@
   --positive: #2EE07A;
   --caution:  #FF8A16;
   --critical: #FF4D6A;
+  /* White on this, at badge size: 4.9:1. The signal red carries 3.2:1. */
+  --unread:   #D32F48;
 
   /* ── Elevation ───────────────────────────────────────────────── */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .5);
@@ -160,7 +179,11 @@
   --brand-dim:    rgba(146, 232, 42, 0.20);
   --brand-line:   rgba(88, 150, 10, 0.38);
   --brand-glow:   rgba(146, 232, 42, 0.34);
-  --accent-text:  #4A8500;   /* text-safe green on white */
+  --accent-text:  #3F7100;   /* 5.5:1 on the page, 5.2:1 on a tinted day */
+  /* 52% of the colour over near-black. The worst case, the brand green,
+     lands at 4.77:1 on white; every other category is above 7:1. */
+  --tint-mix:  52%;
+  --tint-deep: #0B0D0A;
 
   --bg:        #F7F8F5;
   --bg-deep:   #EFF1EC;
@@ -174,7 +197,7 @@
 
   --ink:   #111311;
   --ink-2: #5E635D;
-  --ink-3: #83887F;
+  --ink-3: #686D65;
   --ink-4: #AFB4AB;
 
   --hairline:      rgba(17, 19, 17, 0.09);
@@ -191,9 +214,10 @@
   --note:      #D98200;  --note-dim:      rgba(217, 130, 0, 0.16);
   --ai:        #7B2BEE;  --ai-dim:        rgba(123, 43, 238, 0.16);
 
-  --positive: #00A862;
-  --caution:  #F06A00;
+  --positive: #006B3F;
+  --caution:  #A85000;
   --critical: #E4194B;
+  --unread:   #C8283F;
 
   --shadow-1: 0 1px 2px rgba(17, 19, 17, .06);
   --shadow-2: 0 10px 28px rgba(17, 19, 17, .09);

@@ -19,6 +19,17 @@
   align-items: center;
   column-gap: var(--s-3);
 }
+/* With a back control the head gains a lane for it, and the title and
+   subtitle both shift out of the way rather than wrapping around it. */
+.scr-head--back {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "back title actions"
+    "back sub   sub";
+  column-gap: var(--s-3);
+}
+.scr-head__back { grid-area: back; align-self: start; flex: none; }
+
 .scr-head__title   { grid-area: title; min-width: 0; }
 .scr-head__actions { grid-area: actions; }
 .scr-head__sub     { grid-area: sub; }
@@ -65,7 +76,7 @@
   width: 8px; height: 8px; border-radius: 50%;
   /* The same red as the unread badges on the notifications screen: one
      colour for one meaning, rather than two reds for the same thing. */
-  background: var(--critical);
+  background: var(--unread);
   border: 2px solid var(--surface);
 }
 
