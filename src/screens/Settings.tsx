@@ -3,13 +3,14 @@ import '../styles/profile.css'
 import { Icon, type IconName } from '../components/Icon'
 import { ProfilePhotoPicker, SourceLogo } from '../components/Asset'
 import {
-  DemoBadge, Empty, ErrorNotice, SectionHead, Segmented, UnavailableNotice,
+  DemoBadge, Empty, ErrorNotice, SectionHead, Segmented, Sheet, UnavailableNotice,
   Switch, useConfirm, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
 import type { GoalKey } from '../data/types'
 import { api, type ProviderInfo } from '../lib/api'
+import { planById } from '../data/plans'
 import { guessPlatform, nativeBridge } from '../lib/native'
 import { celebrate, haptic, hapticsSupported, playSound } from '../lib/feedback'
 import {
@@ -32,53 +33,153 @@ const SOURCE_ICON: Record<string, IconName> = {
   whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
 }
 
+/** The app's own version, for About. */
+const VERSION = '2.0.0'
+
+/** Which group of controls is open. Null is the index. */
+type Panel =
+  | null | 'profile' | 'goals' | 'appearance' | 'feel'
+  | 'reminders' | 'push' | 'integrations' | 'privacy' | 'about'
+
 /**
- * App settings.
+ * Settings.
  *
- * Everything that changes how Jumbo behaves, grouped the way the platform
- * groups settings: account, then what it may read, then what it does with
- * it, then how it looks, then the data itself. You is the summary; this is
- * where the switches live.
- *
- * Nothing here is a placeholder. A setting appears only when it changes
- * something the app actually does.
+ * An index of groups, each opening onto its own controls. Every row here
+ * changes something Jumbo actually does; the two the reference shows that
+ * Jumbo cannot do yet, units and language, are marked and do not open, which
+ * is the honest version of drawing them.
  */
 export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
   const { state, dispatch, sync, refreshProviders } = useStore()
   const toast = useToast()
   const { confirm, node: confirmNode } = useConfirm()
+  const [panel, setPanel] = useState<Panel>(null)
   const [permission, setPermission] = useState(notificationPermission())
 
   const set = (key: keyof typeof state.settings, value: boolean) =>
     dispatch({ type: 'setSetting', key, value })
 
+  const open = (p: Panel) => { haptic('selection'); setPanel(p) }
+  const close = () => setPanel(null)
+
+  const plan = planById(state.plan)
+  const connected = state.providers.filter((p) => p.connection).length
+  const isFree = state.plan === 'free'
+
   return (
-    <div className="stack stack-6">
-      <div className="sub-head">
-        <button className="icon-btn" aria-label="Back to your profile" onClick={() => onNavigate('you')}>
-          <Icon name="back" size={20} />
-        </button>
-        <h1 className="sub-head__title">Settings</h1>
-      </div>
+    <div className="stack stack-5">
+      <header className="scr-head">
+        <h1 className="scr-head__title">Settings</h1>
+        <div className="scr-head__actions">
+          <ProfilePhotoPicker
+            size={44}
+            onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
+          />
+        </div>
+        <p className="scr-head__sub">Make JUMBO work for you.</p>
+      </header>
 
       {state.dataMode === 'demo' && <DemoBadge />}
 
-      {/* ------------------------------------------------------- account */}
-      <section className="section" id="account">
-        <SectionHead title="Account" />
-        <div className="card stack stack-5">
-        <div className="row" style={{ gap: 'var(--s-4)' }}>
-          <ProfilePhotoPicker
-            size={56}
-            onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
-          />
-          <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
-            <span className="t-title3">{state.profile.name || 'Add your name'}</span>
-            <span className="t-caption dim">Tap the photo to change it.</span>
-          </div>
-        </div>
+      {/* ───────────────────────────────────────────────────────── account */}
+      <Group label="Account">
+        {/* The plan carries the product's own colour rather than a gold
+            sticker: this is a tier of Jumbo, not a badge from elsewhere. */}
+        <button className="row-item row-item--plan" onClick={() => onNavigate('subscribe')}>
+          <span className="row-item__icon" style={{ background: 'var(--brand-dim)', color: 'var(--accent-text)' }}>
+            <Icon name="sparkles" size={16} />
+          </span>
+          <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
+            <span className="row-item__title">{isFree ? 'JUMBO Pro' : plan.name}</span>
+            <span className="row-item__sub">
+              {isFree ? 'Unlock advanced insights and features' : plan.pitch}
+            </span>
+          </span>
+          <span className="row-item__pill">{isFree ? 'Explore plans' : 'Manage'}</span>
+          <Icon name="chevron" size={16} style={{ flex: 'none', color: 'var(--ink-3)' }} />
+        </button>
 
-        <div className="grid grid--2">
+        <Row icon="profile" colour="var(--ink-2)" title="Profile" sub="Name, phone, photo" onClick={() => open('profile')} />
+      </Group>
+
+      {/* ───────────────────────────────────────────────────── preferences */}
+      <Group label="Preferences">
+        <Row icon="target" colour="var(--brand)" title="Goals and targets" sub={`${state.goals.length} chosen`} onClick={() => open('goals')} />
+        <Row icon="sun" colour="var(--meal)" title="Appearance" sub="Light, dark or system" onClick={() => open('appearance')} />
+        <Row icon="sound" colour="var(--recovery)" title="Sound and haptics" sub="How a completed capture feels" onClick={() => open('feel')} />
+        <Row icon="measure" colour="var(--ink-3)" title="Units" sub="Metric only for now" soon />
+        <Row icon="explore" colour="var(--ink-3)" title="Language" sub="English only for now" soon />
+      </Group>
+
+      {/* ─────────────────────────────────────────────────── notifications */}
+      <Group label="Notifications">
+        <Row
+          icon="bell" colour="var(--nutrition)" title="Reminders"
+          sub={state.reminders.enabled ? (nextReminderLabel(state.reminders) ?? 'On') : 'Off'}
+          onClick={() => open('reminders')}
+        />
+        <Row
+          icon="phone" colour="var(--sleep)" title="Push notifications"
+          sub={permission === 'granted' ? 'Allowed' : permission === 'denied' ? 'Blocked in this browser' : 'Not yet allowed'}
+          onClick={() => open('push')}
+        />
+      </Group>
+
+      {/* ─────────────────────────────────────────────────── integrations */}
+      <Group label="Integrations">
+        <Row
+          icon="heart" colour="var(--training)" title="Health and fitness apps"
+          sub={connected > 0 ? `${connected} connected` : 'Apple Health, Oura, Garmin and more'}
+          onClick={() => open('integrations')}
+        />
+      </Group>
+
+      {/* ──────────────────────────────────────────────────── privacy */}
+      <Group label="Privacy and data">
+        <Row
+          icon="shield" colour="var(--movement)" title="Data and privacy"
+          sub="What Jumbo may read, export or delete"
+          onClick={() => open('privacy')}
+        />
+      </Group>
+
+      {/* ───────────────────────────────────────────────────────── support */}
+      <Group label="About">
+        <Row
+          icon="info" colour="var(--recovery)" title="About JUMBO"
+          sub={`Version ${VERSION}`}
+          onClick={() => open('about')}
+        />
+      </Group>
+
+      <nav className="group" aria-label="Session">
+        <button
+          className="row-item row-item--danger"
+          onClick={() => confirm({
+            title: 'Sign out of Jumbo?',
+            body: 'Your records stay on this device. You will start again from the welcome screen.',
+            confirmLabel: 'Sign out',
+            onConfirm: () => { dispatch({ type: 'signOut' }); haptic('impactLight') },
+          })}
+        >
+          <span className="row-item__icon row-item__icon--plain" style={{ color: 'var(--critical)' }}>
+            <Icon name="signout" size={17} />
+          </span>
+          <span className="grow row-item__title">Sign out</span>
+        </button>
+      </nav>
+
+      {/* ═══════════════════════════════════════════════════════ the panels */}
+
+      <Sheet open={panel === 'profile'} onClose={close} title="Profile" subtitle="How Jumbo addresses you, and the number your account is keyed to.">
+        <div className="stack stack-5">
+          <div className="row" style={{ gap: 'var(--s-4)' }}>
+            <ProfilePhotoPicker
+              size={56}
+              onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
+            />
+            <span className="t-caption dim grow">Tap the photo to change it. It stays on this device.</span>
+          </div>
           <div className="field">
             <label className="field__label" htmlFor="p-name">Name</label>
             <input
@@ -91,41 +192,65 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
             <label className="field__label" htmlFor="p-phone">Phone</label>
             <input
               id="p-phone" className="input" type="tel" inputMode="tel" value={state.profile.phone}
-              placeholder="+44 7700 900123"
+              placeholder="+91 98765 43210"
               onChange={(e) => dispatch({ type: 'setProfile', profile: { phone: e.target.value } })}
             />
             <span className="field__hint">Your account is keyed to this number.</span>
           </div>
         </div>
+      </Sheet>
+
+      <Sheet open={panel === 'goals'} onClose={close} title="Goals and targets" subtitle="Pick as many as fit. They shape what Jumbo shows first, and nothing is hidden because of them.">
+        <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
+          {GOALS.map((g) => (
+            <button
+              key={g.key} className="chip" aria-pressed={state.goals.includes(g.key)}
+              onClick={() => { haptic('selection'); dispatch({ type: 'toggleGoal', goal: g.key }) }}
+            >
+              {g.label}
+            </button>
+          ))}
         </div>
-      </section>
+      </Sheet>
 
-      {/* --------------------------------------------------------- goals */}
-      <section className="section" id="goals">
-        <SectionHead title="Your goals" sub="Pick as many as fit. They shape what Jumbo shows first, and nothing is hidden because of them." />
-        <div className="card">
-          <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
-            {GOALS.map((g) => (
-              <button
-                key={g.key} className="chip" aria-pressed={state.goals.includes(g.key)}
-                onClick={() => { haptic('selection'); dispatch({ type: 'toggleGoal', goal: g.key }) }}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
+      <Sheet open={panel === 'appearance'} onClose={close} title="Appearance">
+        <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
+          <span className="t-callout">Theme</span>
+          <Segmented
+            ariaLabel="Theme" value={state.theme}
+            onChange={(v) => dispatch({ type: 'setTheme', theme: v as typeof state.theme })}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'System' },
+            ]}
+          />
         </div>
-      </section>
+      </Sheet>
 
-      {/* ------------------------------------------------------- sources */}
-      <div id="sources">
-        <Sources onNavigate={onNavigate} onSync={sync} onRefresh={refreshProviders} />
-      </div>
+      <Sheet open={panel === 'feel'} onClose={close} title="Sound and haptics" subtitle="Reserved for real moments: a capture, a completion, a milestone.">
+        <div className="stack stack-5">
+          {hapticsSupported() ? (
+            <SettingRow
+              label="Haptics"
+              hint="Short, patterned vibrations on capture, confirmation and milestones. Never on ordinary taps."
+              checked={state.settings.haptics}
+              onChange={(v) => { set('haptics', v); if (v) haptic('success') }}
+            />
+          ) : (
+            <p className="t-caption dim2">This device does not expose haptics to the browser.</p>
+          )}
+          <SettingRow
+            label="Sound"
+            hint="A short tone on a completed meal, workout or milestone. Browsers cannot read your phone’s silent switch, so this is the switch."
+            checked={state.settings.sound}
+            onChange={(v) => { set('sound', v); if (v) playSound('confirm') }}
+          />
+        </div>
+      </Sheet>
 
-      {/* ----------------------------------------------------- reminders */}
-      <section className="section" id="reminders">
-        <SectionHead title="Reminders" sub="Jumbo nudges at the times you actually eat and train." />
-        <div className="card stack stack-5">
+      <Sheet open={panel === 'reminders'} onClose={close} title="Reminders" subtitle="Jumbo nudges at the times you actually eat and train.">
+        <div className="stack stack-5">
           <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
             <div className="stack stack-1" style={{ minWidth: 0 }}>
               <span className="t-callout strong">Meal and workout reminders</span>
@@ -178,34 +303,45 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
             />
           )}
         </div>
-      </section>
+      </Sheet>
 
-      {/* ------------------------------------------------ feel & privacy */}
-      <section className="section">
-        <SectionHead title="Feel" sub="Reserved for real moments: a capture, a completion, a milestone." />
-        <div className="card stack stack-5">
-          {hapticsSupported() ? (
-            <SettingRow
-              label="Haptics"
-              hint="Short, patterned vibrations on capture, confirmation and milestones. Never on ordinary taps."
-              checked={state.settings.haptics}
-              onChange={(v) => { set('haptics', v); if (v) haptic('success') }}
-            />
-          ) : (
-            <p className="t-caption dim2">This device does not expose haptics to the browser.</p>
+      <Sheet open={panel === 'push'} onClose={close} title="Push notifications" subtitle="What Jumbo is allowed to raise, and when.">
+        <div className="stack stack-4">
+          <div className="card card--quiet stack stack-2">
+            <span className="t-caption dim">This browser</span>
+            <span className="t-title3">
+              {permission === 'granted' ? 'Notifications allowed'
+                : permission === 'denied' ? 'Notifications blocked'
+                : 'Not asked yet'}
+            </span>
+            <span className="t-caption dim2">
+              {permission === 'denied'
+                ? 'Allow notifications for this site in your browser settings, then come back.'
+                : 'Jumbo only sends the reminders you set. There is no marketing, and nothing is sent about your data.'}
+            </span>
+          </div>
+          {permission !== 'granted' && notificationsSupported() && (
+            <button
+              className="btn btn--secondary"
+              style={{ alignSelf: 'flex-start' }}
+              onClick={async () => { setPermission(await requestNotificationPermission()) }}
+            >
+              Ask for permission
+            </button>
           )}
-          <SettingRow
-            label="Sound"
-            hint="A short tone on a completed meal, workout or milestone. Browsers cannot read your phone’s silent switch, so this is the switch."
-            checked={state.settings.sound}
-            onChange={(v) => { set('sound', v); if (v) playSound('confirm') }}
-          />
+          <p className="t-caption dim2">
+            Tips and product updates are not sent yet. When they are, they will be their own switch
+            rather than folded into reminders.
+          </p>
         </div>
-      </section>
+      </Sheet>
 
-      <section className="section" id="privacy">
-        <SectionHead title="Privacy and control" sub="Each switch changes what the app actually does." />
-        <div className="card stack stack-5">
+      <Sheet open={panel === 'integrations'} onClose={close} title="Health and fitness apps" subtitle="Where Jumbo reads sleep, steps and heart data from.">
+        <Sources onNavigate={onNavigate} onSync={sync} onRefresh={refreshProviders} />
+      </Sheet>
+
+      <Sheet open={panel === 'privacy'} onClose={close} title="Data and privacy" subtitle="Each switch changes what the app actually does.">
+        <div className="stack stack-5">
           <SettingRow
             label="Pattern analysis"
             hint="Lets Jumbo look for relationships across your data and write insights. Off leaves the data visible and uninterpreted."
@@ -218,40 +354,19 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
             checked={state.settings.creatorPersonalisation}
             onChange={(v) => set('creatorPersonalisation', v)}
           />
+
           <hr className="hairline" />
           <div className="stack stack-2">
             <span className="t-callout strong">Where your data goes</span>
             <p className="t-caption dim">
               Records, meals and notes are stored on this device. When Jumbo’s AI is turned on, a
               statistical summary of your data, never your name, phone number, notes or photos,
-              is sent to Jumbo’s AI provider to write insights. Meal photos are sent for analysis at the
-              moment you take them and are not stored afterwards.
+              is sent to Jumbo’s AI provider to write insights. Meal photos are sent for analysis at
+              the moment you take them and are not stored afterwards.
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* ---------------------------------------------------- appearance */}
-      <section className="section" id="appearance">
-        <SectionHead title="Appearance" />
-        <div className="card row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
-          <span className="t-callout">Theme</span>
-          <Segmented
-            ariaLabel="Theme" value={state.theme}
-            onChange={(v) => dispatch({ type: 'setTheme', theme: v as typeof state.theme })}
-            options={[
-              { value: 'dark', label: 'Dark' },
-              { value: 'light', label: 'Light' },
-              { value: 'system', label: 'System' },
-            ]}
-          />
-        </div>
-      </section>
-
-      {/* ----------------------------------------------------- your data */}
-      <section className="section" id="data">
-        <SectionHead title="Your data" />
-        <div className="card stack stack-4">
+          <hr className="hairline" />
           <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
             <div className="stack stack-1" style={{ minWidth: 0 }}>
               <span className="t-callout strong">Export everything</span>
@@ -275,8 +390,6 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
             </button>
           </div>
 
-          <hr className="hairline" />
-
           <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
             <div className="stack stack-1" style={{ minWidth: 0 }}>
               <span className="t-callout strong">Clear everything</span>
@@ -288,49 +401,92 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
                 title: 'Clear all Jumbo data?',
                 body: 'Your profile, goals, meals, workouts, measurements and notes are deleted from this device. Connected sources stay connected to your Jumbo account until you disconnect them. This cannot be undone.',
                 confirmLabel: 'Delete everything',
-                onConfirm: () => { dispatch({ type: 'resetAll' }); haptic('impactHeavy') },
+                onConfirm: () => { dispatch({ type: 'resetAll' }); haptic('impactHeavy'); close() },
               })}
             >
               Clear
             </button>
           </div>
-
-          <hr className="hairline" />
-
-          <div className="row row--between row--wrap" style={{ gap: 'var(--s-3)' }}>
-            <div className="stack stack-1" style={{ minWidth: 0 }}>
-              <span className="t-callout strong">Sign out</span>
-              <span className="t-caption dim2">
-                Ends this session. Nothing on this device is deleted, and signing back in brings it
-                all back.
-              </span>
-            </div>
-            <button
-              className="btn btn--secondary btn--sm"
-              onClick={() => confirm({
-                title: 'Sign out of Jumbo?',
-                body: 'Your records stay on this device. You will start again from the welcome screen.',
-                confirmLabel: 'Sign out',
-                onConfirm: () => { dispatch({ type: 'signOut' }); haptic('impactLight') },
-              })}
-            >
-              Sign out
-            </button>
-          </div>
         </div>
+      </Sheet>
 
-        <p className="t-caption dim2">
-          Jumbo is a wellness and longevity companion. It does not diagnose, treat or monitor medical
-          conditions, and its projections are not clinical predictions. If something in your data
-          worries you, speak to a clinician.
-        </p>
-      </section>
+      <Sheet open={panel === 'about'} onClose={close} title="About JUMBO">
+        <div className="stack stack-4">
+          <div className="card card--quiet row row--between">
+            <span className="t-callout">Version</span>
+            <span className="t-callout num dim">{VERSION}</span>
+          </div>
+          <p className="t-callout dim">
+            Jumbo is a wellness and longevity companion. It does not diagnose, treat or monitor
+            medical conditions, and its projections are not clinical predictions. If something in
+            your data worries you, speak to a clinician.
+          </p>
+          <p className="t-caption dim2">
+            Terms of service and a privacy policy are not published yet. Until they are, what Jumbo
+            does with your data is described in full under Data and privacy.
+          </p>
+        </div>
+      </Sheet>
 
       {confirmNode}
     </div>
   )
 }
 
+/* ------------------------------------------------------------ the index */
+
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="stack" style={{ gap: 0 }}>
+      <h2 className="group__label">{label}</h2>
+      <div className="group">{children}</div>
+    </section>
+  )
+}
+
+function Row({
+  icon, colour, title, sub, onClick, soon,
+}: {
+  icon: IconName
+  colour: string
+  title: string
+  sub: string
+  onClick?: () => void
+  /** Drawn, but not yet something Jumbo can do. */
+  soon?: boolean
+}) {
+  const body = (
+    <>
+      <span className="row-item__icon row-item__icon--plain" style={{ color: colour }}>
+        <Icon name={icon} size={19} />
+      </span>
+      <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
+        <span className="row-item__title">{title}</span>
+        <span className="row-item__sub">{sub}</span>
+      </span>
+      {soon
+        ? <span className="plan__soon">Soon</span>
+        : <Icon name="chevron" size={16} style={{ flex: 'none', color: 'var(--ink-3)' }} />}
+    </>
+  )
+  if (soon) return <div className="row-item row-item--soon">{body}</div>
+  return <button className="row-item" onClick={onClick}>{body}</button>
+}
+
+function SettingRow({
+  label, hint, checked, onChange,
+}: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
+  const id = `set-${label.replace(/\s+/g, '-').toLowerCase()}`
+  return (
+    <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
+      <div className="stack stack-1" style={{ minWidth: 0 }}>
+        <span className="t-callout strong">{label}</span>
+        <span className="t-caption dim" id={id}>{hint}</span>
+      </div>
+      <Switch checked={checked} label={label} describedBy={id} onChange={onChange} />
+    </div>
+  )
+}
 /* ---------------------------------------------------------------- sources */
 /**
  * What the person is told when a connection did not complete.
@@ -589,19 +745,4 @@ const METRIC_COPY: Record<string, string> = {
   heart: 'Heart and fitness: resting heart rate, HRV, VO₂ max',
   body: 'Body composition: weight, body fat, lean mass',
   nutrition: 'Nutrition: meals, energy and protein',
-}
-
-function SettingRow({
-  label, hint, checked, onChange,
-}: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
-  const id = `set-${label.replace(/\s+/g, '-').toLowerCase()}`
-  return (
-    <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-      <div className="stack stack-1" style={{ minWidth: 0 }}>
-        <span className="t-callout strong">{label}</span>
-        <span className="t-caption dim" id={id}>{hint}</span>
-      </div>
-      <Switch checked={checked} onChange={onChange} label={label} describedBy={id} />
-    </div>
-  )
 }

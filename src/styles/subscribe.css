@@ -1,0 +1,208 @@
+/* ============================================================
+   Plans
+
+   A pricing screen inside a health app, which means it has to do two
+   things at once: be legible enough that the ladder is obvious in a
+   glance, and honest enough that nothing on it is a promise the app
+   cannot keep. The second is why "Coming soon" is a first-class state
+   here rather than an asterisk.
+   ============================================================ */
+
+.sub {
+  display: flex; flex-direction: column; gap: var(--s-5);
+}
+
+/* ── Head ─────────────────────────────────────────────────────────────
+   The mark sits beside the promise rather than above it, so the first
+   screenful is the sentence and the price, not a hero. */
+.sub__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--s-3);
+}
+.sub__title {
+  grid-column: 1;
+  font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+.sub__blurb {
+  grid-column: 1 / -1;
+  margin-top: var(--s-2);
+  font-size: var(--t-callout); color: var(--ink-2); line-height: 1.45;
+  max-width: 44ch;
+}
+.sub__mark { grid-column: 2; grid-row: 1 / span 1; }
+
+/* ── The billing period, and what choosing yearly actually saves ────── */
+.sub__period {
+  display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+}
+.sub__save {
+  font-size: var(--t-caption); font-weight: 620;
+  color: var(--accent-text);
+}
+
+/* ── Plan cards ───────────────────────────────────────────────────────
+   A rail: four plans do not fit across a phone, and stacking them makes
+   the ladder a scroll instead of a comparison. */
+/* All four cards run to the height of the tallest, and each one's credit
+   line is pinned to its foot, so the four allowances sit on one line
+   across the rail instead of wherever each benefit list happens to end. */
+.sub__rail { align-items: stretch; }
+.sub__rail > li { display: flex; }
+
+.plan {
+  position: relative;
+  display: flex; flex-direction: column;
+  width: 262px;
+  flex: 1;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background:
+    linear-gradient(168deg, color-mix(in srgb, var(--tint) 12%, transparent), transparent 62%),
+    var(--surface);
+  box-shadow: var(--card-lip);
+}
+
+/* The recommended plan is marked by weight, not by shouting: a firmer
+   border in its own colour and a label that names why. */
+.plan--pick {
+  border-color: color-mix(in srgb, var(--tint) 55%, transparent);
+  box-shadow: var(--card-lip), 0 10px 34px -14px color-mix(in srgb, var(--tint) 55%, transparent);
+}
+.plan__pick {
+  position: absolute; top: -9px; left: var(--s-4);
+  padding: 3px var(--s-2); border-radius: var(--r-pill);
+  background: var(--tint); color: var(--brand-ink);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.01em;
+}
+
+.plan__icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--tint) 18%, transparent);
+  color: var(--tint);
+  margin-bottom: var(--s-3);
+}
+.plan__name {
+  font-size: var(--t-title3); font-weight: 700; letter-spacing: -0.02em;
+}
+.plan__pitch {
+  font-size: var(--t-caption); color: var(--ink-2); margin-top: 2px;
+}
+
+.plan__price {
+  display: flex; align-items: baseline; gap: 5px;
+  margin-top: var(--s-4);
+}
+.plan__amount {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.04em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.plan__per { font-size: var(--t-caption); color: var(--ink-3); }
+.plan__equiv {
+  font-size: var(--t-caption); color: var(--ink-3); margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__cta { margin: var(--s-4) 0; width: 100%; }
+/* The current plan is a statement, not an offer. */
+.plan__cta[disabled] { opacity: 1; background: var(--surface-2); color: var(--ink-2); border-color: var(--card-line); }
+
+.plan__list { display: flex; flex-direction: column; gap: var(--s-2); }
+.plan__item {
+  display: flex; align-items: flex-start; gap: var(--s-2);
+  font-size: var(--t-caption); line-height: 1.35;
+}
+.plan__item svg { flex: none; margin-top: 1px; }
+/* Not built yet: said plainly, in the row, rather than behind a footnote. */
+.plan__item--soon { color: var(--ink-3); }
+.plan__soon {
+  flex: none;
+  padding: 1px 6px; border-radius: 6px;
+  background: var(--surface-2); color: var(--ink-3);
+  font-size: 9.5px; font-weight: 640; letter-spacing: 0.01em;
+  align-self: center;
+}
+
+.plan__credits {
+  margin-top: auto;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--tint) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
+  color: var(--ink);
+  font-size: var(--t-caption); font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── What a credit is ─────────────────────────────────────────────── */
+.credits__uses {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.credits__use {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  text-align: center;
+  font-size: 10px; color: var(--ink-3); line-height: 1.2;
+}
+
+/* ── The comparison ───────────────────────────────────────────────── */
+.compare { width: 100%; border-collapse: collapse; font-size: var(--t-caption); }
+.compare th, .compare td {
+  padding: var(--s-2) 6px;
+  text-align: center;
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+.compare th:first-child, .compare td:first-child {
+  text-align: left; white-space: normal; min-width: 108px;
+  color: var(--ink-2); font-weight: 500;
+}
+.compare thead th {
+  font-size: var(--t-micro); font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-3);
+  border-bottom-color: var(--hairline-firm);
+}
+.compare thead th[data-pick='true'] { color: var(--accent-text); }
+.compare td { color: var(--ink); font-weight: 560; }
+.compare tr:last-child td { border-bottom: 0; }
+.compare__soon { color: var(--ink-3); font-weight: 500; }
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.sub__foot {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-2) var(--s-4);
+  font-size: var(--t-caption);
+}
+.sub__link {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 32px; padding: 4px 2px;
+  background: none; border: 0; cursor: pointer;
+  color: var(--ink-2); font-size: var(--t-caption); font-weight: 560;
+}
+.sub__link:hover { color: var(--ink); }
+.sub__link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+/* The comparison is wider than a phone and scrolls inside its own card.
+   The card clips, the table scrolls, and neither widens the page. */
+.compare__wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.compare__wrap::-webkit-scrollbar { display: none; }
+
+/* The last column fades rather than being sliced by the card's edge, the
+   same cue the chip rows use. */
+@supports (mask-image: linear-gradient(#000, #000)) {
+  .compare__wrap {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+  }
+}

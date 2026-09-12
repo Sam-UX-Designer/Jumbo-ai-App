@@ -150,7 +150,7 @@ export function Future() {
     <div className="stack stack-6">
       <header className="stack stack-4">
         <div className="scr-head">
-          <h1 className="scr-head__title">Future AI</h1>
+          <h1 className="scr-head__title">AI Future</h1>
           <div className="scr-head__actions">
             {/* The plan is the scenario further down this screen — the one
                 place the habits are actually set — so this goes there
@@ -168,7 +168,9 @@ export function Future() {
             </button>
             <AvatarButton size={42} />
           </div>
-          <p className="scr-head__sub">Ask. Learn. Improve. Live longer.</p>
+          {/* The feature keeps its name; the line under it says what the
+              feature is for. */}
+          <p className="scr-head__sub">Your lifestyle, understood.</p>
         </div>
         {state.dataMode === 'demo' && (
           <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>

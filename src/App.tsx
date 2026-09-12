@@ -11,6 +11,7 @@ import { Explore } from './screens/Explore'
 import { Measurements } from './screens/Measurements'
 import { You } from './screens/You'
 import { Settings } from './screens/Settings'
+import { Subscribe } from './screens/Subscribe'
 import { Chat } from './screens/Chat'
 import { StoreProvider, useStore } from './state/store'
 import { consistencyStreak } from './lib/analytics'
@@ -20,7 +21,7 @@ import { haptic } from './lib/feedback'
 const TITLES: Record<Route, string> = {
   today: 'Today', future: 'AI Future', capture: 'Capture',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
-  chat: 'Ask Jumbo', settings: 'Settings',
+  chat: 'Ask Jumbo', settings: 'Settings', subscribe: 'Plans',
 }
 
 function Shell() {
@@ -92,7 +93,7 @@ function Shell() {
         <div className="shell">
           <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
           <main
-            className={`main${route === 'chat' || route === 'settings' ? '' : ' main--dock'}`}
+            className={`main${route === 'chat' || route === 'settings' || route === 'subscribe' ? '' : ' main--dock'}`}
             id="main" key={route} tabIndex={-1}
           >
             {route === 'today' && <Today />}
@@ -109,9 +110,10 @@ function Shell() {
               <You onNavigate={(r, to) => { anchor.current = to ?? null; setRoute(r) }} />
             )}
             {route === 'settings' && <Settings onNavigate={setRoute} />}
+            {route === 'subscribe' && <Subscribe onNavigate={setRoute} />}
           </main>
         </div>
-        {route !== 'chat' && route !== 'settings' && <AskDock screen={route} />}
+        {route !== 'chat' && route !== 'settings' && route !== 'subscribe' && <AskDock screen={route} />}
         <TabBar route={route} origin={origin} onNavigate={setRoute} />
       </div>
     </NavProvider>

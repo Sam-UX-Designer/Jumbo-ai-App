@@ -128,3 +128,78 @@ button.row-item:focus-visible { outline: 2px solid var(--brand); outline-offset:
   font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.03em;
   line-height: 1.1;
 }
+
+/* ── Plain icon slot ──────────────────────────────────────────────────
+   The settings index draws its icons as coloured glyphs rather than in
+   tinted squares, as the reference does: eleven tinted squares down one
+   screen reads as eleven buttons rather than one list. */
+.row-item__icon--plain {
+  background: none;
+  width: 26px; height: 26px;
+}
+
+/* A row that is drawn but cannot be opened yet. It is not a control, so
+   it does not take a control's affordances. */
+.row-item--soon { cursor: default; }
+.row-item--soon .row-item__title,
+.row-item--soon .row-item__sub { color: var(--ink-3); }
+
+/* The plan row carries an action of its own on the right. */
+.row-item__pill {
+  flex: none;
+  padding: 5px var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--brand); color: var(--brand-ink);
+  font-size: var(--t-caption); font-weight: 640;
+  white-space: nowrap;
+}
+.row-item--plan .row-item__sub { max-width: 24ch; }
+/* The action needs its width before the copy takes what is left. */
+.row-item--plan { gap: var(--s-2); }
+
+/* ── The subscription card on You ─────────────────────────────────────
+   The product's own green, not a gold sticker: this is a tier of Jumbo,
+   and the brand already has a colour that means "more". */
+/* Two rows at phone width: the copy is a full sentence and squeezing a
+   pill in beside it left three ragged lines. The action gets its own line
+   and the whole card stays one tap target. */
+.plancard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s-2) var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--brand-line);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--brand) 16%, transparent), transparent 64%),
+    var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+}
+.plancard:hover  { border-color: var(--brand); }
+.plancard:active { transform: scale(0.99); }
+.plancard:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.plancard__icon {
+  width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center;
+  border-radius: var(--r-chip);
+  background: var(--brand-dim); color: var(--accent-text);
+}
+.plancard__title { font-size: var(--t-title3); font-weight: 700; letter-spacing: -0.018em; }
+.plancard__sub   { font-size: var(--t-caption); color: var(--ink-2); line-height: 1.35; }
+.plancard__cta {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  text-align: center;
+  margin-top: 2px;
+  padding: 9px var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--brand); color: var(--brand-ink);
+  font-size: var(--t-caption); font-weight: 660;
+  white-space: nowrap;
+}

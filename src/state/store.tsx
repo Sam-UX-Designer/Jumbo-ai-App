@@ -11,6 +11,7 @@ import { computeBaseline } from '../lib/analytics'
 import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
 import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type YoutubeVideo } from '../lib/api'
+import type { PlanId } from '../data/plans'
 import { uid } from '../lib/util'
 
 const STORAGE_KEY = 'jumbo.state.v2'
@@ -71,6 +72,15 @@ export interface Persisted {
    * the search that found it has been replaced.
    */
   savedVideoData: Record<string, SavedVideo>
+  /**
+   * The plan this person is actually on.
+   *
+   * There is no billing yet, so nothing in the app sets this to anything but
+   * 'free'. It exists so the subscription card and Settings read the real
+   * plan rather than a hard-coded one, and so the day checkout lands there is
+   * one place to write to.
+   */
+  plan: PlanId
   theme: 'system' | 'light' | 'dark'
   settings: Settings
   reminders: Reminders
@@ -138,6 +148,7 @@ const defaultPersisted: Persisted = {
   followedChannels: [],
   savedVideos: [],
   savedVideoData: {},
+  plan: 'free',
   theme: 'dark',
   settings: defaultSettings,
   reminders: defaultReminders,
@@ -292,6 +303,7 @@ function reducer(state: State, action: Action): State {
         permissions: { ...DEFAULT_PERMISSIONS, ...(action.payload.permissions ?? {}) },
         // Absent in state stored before saved videos kept their own copy.
         savedVideoData: action.payload.savedVideoData ?? {},
+        plan: action.payload.plan ?? 'free',
       }, { ...rt, bootstrapped: true })
 
     case 'setProfile': return next({ profile: { ...p.profile, ...action.profile } })

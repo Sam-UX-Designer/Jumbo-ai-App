@@ -5,7 +5,7 @@ import { haptic } from '../lib/feedback'
 
 export type Route =
   | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
-  | 'settings'
+  | 'settings' | 'subscribe'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -91,7 +91,7 @@ export function TabBar({
     // section, so the tab they belong to stays lit rather than nothing being
     // current.
     const current = route === item.route
-      || (item.route === 'you' && (route === 'measurements' || route === 'settings'))
+      || (item.route === 'you' && (route === 'measurements' || route === 'settings' || route === 'subscribe'))
       || (route === 'chat' && item.route === origin)
     return (
       <button

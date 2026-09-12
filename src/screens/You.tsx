@@ -5,6 +5,7 @@ import { DemoBadge, useConfirm, useToast } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
 import { consistencyStreak, dailyProgress } from '../lib/analytics'
+import { planById } from '../data/plans'
 import { haptic } from '../lib/feedback'
 
 /** One row of the grouped menu: where it goes, and what it is about. */
@@ -46,6 +47,9 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
   // being looked at, rather than a second score computed a second way.
   const day = state.days[state.days.length - 1]
   const score = day ? Math.round(dailyProgress(day, state.baseline).overall * 100) : 0
+
+  const plan = planById(state.plan)
+  const isFree = state.plan === 'free'
 
   const open = (anchor: string) => { haptic('selection'); onNavigate('settings', anchor) }
 
@@ -95,6 +99,25 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
           <Stat icon="heart" colour="var(--recovery)" value={score} label="Health score" />
         </div>
       </section>
+
+      {/* ───────────────────────────────────────────────────── the plan ─────
+          What plan this person is actually on. There is no billing yet, so
+          for now this always reads Free and the card offers the plans rather
+          than claiming a subscription nobody bought. */}
+      <button className="plancard" onClick={() => { haptic('selection'); onNavigate('subscribe') }}>
+        <span className="plancard__icon">
+          <Icon name={isFree ? 'sparkles' : (plan.icon as IconName)} size={19} />
+        </span>
+        <span className="grow stack" style={{ gap: 3, minWidth: 0, textAlign: 'left' }}>
+          <span className="plancard__title">{isFree ? 'JUMBO Pro' : plan.name}</span>
+          <span className="plancard__sub">
+            {isFree
+              ? 'Unlock deeper insights, advanced analysis and personalised plans.'
+              : `${plan.pitch} ${plan.credits.toLocaleString('en-IN')} AI credits a month.`}
+          </span>
+        </span>
+        <span className="plancard__cta">{isFree ? 'Explore plans' : 'Manage plan'}</span>
+      </button>
 
       {/* ─────────────────────────────────────────────────────────── the menu */}
       <nav className="group" aria-label="Settings">
