@@ -264,7 +264,10 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
       />
       <WorkoutSheet open={modal === 'workout'} onClose={() => setModal(null)} date={today.date} />
       <MeasurementSheet open={modal === 'measurement'} onClose={() => setModal(null)} />
+      {/* Keyed by day: the note belongs to a date, so moving along the rail
+          must not carry the previous day's words across. */}
       <NoteSheet
+        key={today.date}
         open={modal === 'note'} onClose={() => setModal(null)}
         date={today.date} initial={today.notes ?? ''} autoDictate={dictate}
       />
@@ -449,6 +452,15 @@ function NoteSheet({
   const { dispatch } = useStore()
   const toast = useToast()
   const [text, setText] = useState(initial)
+
+  // Opening shows what is actually saved for this day. Without this an
+  // abandoned draft would still be sitting in the field the next time.
+  useEffect(() => {
+    if (open) setText(initial)
+    // `initial` deliberately not a dependency: it must not overwrite what is
+    // being typed while the sheet is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Dictated words are appended, so speaking twice adds to the note rather
   // than replacing it.

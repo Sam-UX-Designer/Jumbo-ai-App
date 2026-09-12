@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AiOrb, Icon } from '../components/Icon'
-import { AssetImage, Mascot } from '../components/Asset'
+import { AssetImage } from '../components/Asset'
 import { Camera, type Capture } from '../components/Camera'
+import { Thinking } from '../components/Thinking'
 import { Confidence, ErrorNotice, Sheet, Stepper, UnavailableNotice, useToast } from '../components/UI'
 import { useStore } from '../state/store'
 import { api, type FoodAnalysis } from '../lib/api'
@@ -35,6 +36,16 @@ export function MealCapture({
   const [failure, setFailure] = useState<Failure | null>(null)
   const [adding, setAdding] = useState(false)
   const [query, setQuery] = useState('')
+  /**
+   * Which visit to the sheet an analysis belongs to.
+   *
+   * Closing the sheet mid-analysis does not cancel the request, and a reply
+   * landing afterwards would put the sheet back into review — so the next
+   * time it opened it would show the last photograph's meal instead of the
+   * camera. Bumping this on close makes that reply arrive for a visit that is
+   * over, and it is dropped.
+   */
+  const visit = useRef(0)
 
   useEffect(() => {
     if (open) {
@@ -43,16 +54,20 @@ export function MealCapture({
       if (startIn === 'manual') { setPhase('review'); setAdding(true) }
       return
     }
+    visit.current += 1
     setPhase('camera'); setShot(null); setResult(null); setItems([])
     setFailure(null); setAdding(false); setQuery('')
   }, [open, startIn])
 
   const analyse = async (capture: Capture) => {
+    const mine = visit.current
     setShot(capture)
     setPhase('analysing')
     setFailure(null)
 
     const r = await api.analyseFood(capture.base64, capture.mediaType)
+    // The sheet was closed while this was in the air. Nothing to show.
+    if (mine !== visit.current) return
 
     if (r.ok) {
       setResult(r.data)
@@ -155,13 +170,11 @@ export function MealCapture({
               <img src={shot.dataUrl} alt="The meal you just photographed" />
             </div>
           )}
-          {/* The mascot's own working state carries this. Nothing narrates
-              what Jumbo is supposedly doing. */}
-          <div className="working" role="status" aria-label="Working">
-            <Mascot size={64} thinking />
-          </div>
-          <div className="stack stack-2">
-            {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 52 }} />)}
+          {/* The photograph is already on screen, so the wait needs nothing
+              standing in for the answer: the mark and one word, the same as
+              Ask Jumbo. No skeleton rows pretending to be the food. */}
+          <div className="working">
+            <Thinking size={40} />
           </div>
         </div>
       )}

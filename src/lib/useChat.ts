@@ -35,9 +35,12 @@ export function useChat(focus?: ChatFocus | null) {
     if (inFlight.current.has(id)) return
     inFlight.current.add(id)
 
-    // Everything already answered, so Jumbo keeps the thread of the conversation.
+    // Everything already answered, so Jumbo keeps the thread of the
+    // conversation. Both halves of the turn being answered are left out: the
+    // reply has nothing in it yet, and its question is already travelling as
+    // the question — sending it again would ask the same thing twice.
     const history = historyRef.current
-      .filter((m) => !m.pending && !m.error && m.text && m.id !== id)
+      .filter((m) => !m.pending && !m.error && m.text && m.id !== id && m.id !== `${id}-you`)
       .map((m) => ({ role: m.role, text: m.text }))
 
     const result = await api.chat({
@@ -75,12 +78,20 @@ export function useChat(focus?: ChatFocus | null) {
     void run(id, question)
   }, [dispatch, run])
 
+  /**
+   * Ask the same question again, in place.
+   *
+   * The turn that failed goes back to waiting and is answered where it
+   * already is, so the thread does not collect a stranded error above a
+   * second copy of the question.
+   */
   const retry = useCallback((id: string) => {
-    const asked = state.chat.find((m) => m.id === `${id}-you`)
+    const asked = historyRef.current.find((m) => m.id === `${id}-you`)
     if (!asked) return
-    dispatch({ type: 'chatSend', id: `${id}-retry`, text: asked.text })
-    void run(`${id}-retry`, asked.text)
-  }, [dispatch, run, state.chat])
+    haptic('selection')
+    dispatch({ type: 'chatRetry', id })
+    void run(id, asked.text)
+  }, [dispatch, run])
 
   const clear = useCallback(() => dispatch({ type: 'chatClear' }), [dispatch])
 

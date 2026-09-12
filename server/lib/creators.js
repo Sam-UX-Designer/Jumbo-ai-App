@@ -175,6 +175,55 @@ export async function curatedVideos({ topic = null, query = '', limit = 14, time
   return out
 }
 
+/**
+ * The latest videos from specific channels, by channel id.
+ *
+ * Explore's "Following" tab is a list of channel ids the person collected
+ * from videos they saw. Those ids address YouTube's own public feed directly,
+ * so the tab shows what those channels have actually published rather than
+ * whichever of their videos happen to be in the current search — and it needs
+ * no API key, like the curated feeds above.
+ */
+export async function channelVideos({ channelIds: ids = [], limit = 14, timeoutMs = 6000 } = {}) {
+  const wanted = ids.filter((id) => /^UC[A-Za-z0-9_-]{22}$/.test(id)).slice(0, 12)
+  // Nothing to ask for is not a failure to reach anything.
+  if (!wanted.length) return { videos: [], unreachable: false }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+  let read
+  try {
+    read = await Promise.all(wanted.map(async (id) => {
+      // Prefixed so a channel id can never collide with a creator handle.
+      const key = `ch:${id}`
+      const cached = feedCache.get(key)
+      if (cached && Date.now() - cached.at < FEED_TTL_MS) return { ok: true, videos: cached.videos }
+      try {
+        // The feed names the channel, so nothing has to be supplied for it.
+        const videos = parseEntries(await get(`${FEED}${id}`, controller.signal), { name: '' })
+        feedCache.set(key, { at: Date.now(), videos })
+        return { ok: true, videos }
+      } catch {
+        // A stale copy is still real; only a channel with nothing cached is
+        // genuinely unread.
+        return cached ? { ok: true, videos: cached.videos } : { ok: false, videos: [] }
+      }
+    }))
+  } finally {
+    clearTimeout(timer)
+  }
+
+  // Newest first across all of them, which is what a subscription feed is.
+  const videos = read.flatMap((r) => r.videos)
+    .sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')))
+    .slice(0, limit)
+
+  // Not one feed could be read. That is a failure to report, not a person
+  // whose creators have published nothing.
+  return { videos, unreachable: read.every((r) => !r.ok) }
+}
+
 /** The topic a goal maps to, for the "For you" search. */
 export const GOAL_TOPIC = {
   energy: 'mental', fitness: 'fitness', sleep: 'sleep',

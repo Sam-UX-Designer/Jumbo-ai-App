@@ -317,6 +317,31 @@ export function You({ onNavigate }: { onNavigate: (r: Route) => void }) {
 }
 
 /* ---------------------------------------------------------------- sources */
+/**
+ * What the person is told when a connection did not complete.
+ *
+ * The provider redirects back with a short code — `bad_state`, `no_session`,
+ * `token_exchange_400` and so on. Those name the mechanism, not the problem,
+ * and they are the kind of thing that must never reach the product. Each maps
+ * to a sentence saying what actually happened and what to do next; anything
+ * unrecognised falls back to the plain "try again", never to the raw code.
+ */
+function connectFailure(name: string, reason: string): string {
+  if (reason === 'access_denied' || reason === 'user_denied') {
+    return `${name} wasn’t connected — permission was declined.`
+  }
+  if (/^token_exchange/.test(reason) || reason === 'no_access_token') {
+    return `${name} didn’t finish connecting. Try again in a moment.`
+  }
+  if (reason === 'network_error') {
+    return `Jumbo couldn’t reach ${name}. Check your connection and try again.`
+  }
+  if (reason === 'bad_state' || reason === 'state_mismatch' || reason === 'no_session') {
+    return `That ${name} sign-in expired before it finished. Start it again.`
+  }
+  return `${name} couldn’t be connected. Try again.`
+}
+
 function Sources({
   onNavigate, onSync, onRefresh,
 }: { onNavigate: (r: Route) => void; onSync: () => Promise<void>; onRefresh: () => Promise<void> }) {
@@ -336,14 +361,22 @@ function Sources({
     const id = params.get('connect')
     if (!id) return
     const status = params.get('status')
+    const name = state.providers.find((p) => p.id === id)?.name ?? id
     if (status === 'connected') {
       celebrate('confirm', false)
-      toast({ text: `${id} connected`, icon: 'link' })
+      toast({ text: `${name} connected`, icon: 'link' })
       void onSync()
     } else {
-      toast({ text: `Could not connect ${id}: ${params.get('reason') ?? 'unknown error'}`, icon: 'info', tone: 'warning' })
+      const reason = params.get('reason') ?? ''
+      // The code stays in the console, where it is useful. What reaches the
+      // person is what they can do about it.
+      console.warn(`[connect:${id}] failed`, reason)
+      toast({ text: connectFailure(name, reason), icon: 'info', tone: 'warning' })
     }
     window.history.replaceState({}, '', window.location.pathname)
+    // Runs once, on the redirect back. `state.providers` is only read for a
+    // display name and must not re-fire this when the list refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onSync, toast])
 
   const connect = async (p: ProviderInfo) => {

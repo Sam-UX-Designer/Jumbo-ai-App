@@ -10,10 +10,13 @@ import { generateHistory, generateMeasurements, TODAY } from '../data/generate'
 import { computeBaseline } from '../lib/analytics'
 import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
-import { api, type ProviderInfo, type ServerConfig, type SyncedDay } from '../lib/api'
+import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type YoutubeVideo } from '../lib/api'
 import { uid } from '../lib/util'
 
 const STORAGE_KEY = 'jumbo.state.v2'
+
+/** A video kept in the person's own library, stored whole so it can be drawn. */
+export type SavedVideo = YoutubeVideo
 
 export interface Settings {
   haptics: boolean
@@ -60,6 +63,14 @@ export interface Persisted {
   dismissed: string[]
   followedChannels: string[]
   savedVideos: string[]
+  /**
+   * The saved videos themselves, by id.
+   *
+   * `savedVideos` alone is only a list of ids, and an id cannot be drawn.
+   * Keeping the video beside it is what lets Saved show what was saved after
+   * the search that found it has been replaced.
+   */
+  savedVideoData: Record<string, SavedVideo>
   theme: 'system' | 'light' | 'dark'
   settings: Settings
   reminders: Reminders
@@ -126,6 +137,7 @@ const defaultPersisted: Persisted = {
   dismissed: [],
   followedChannels: [],
   savedVideos: [],
+  savedVideoData: {},
   theme: 'dark',
   settings: defaultSettings,
   reminders: defaultReminders,
@@ -149,6 +161,7 @@ export type Action =
   | { type: 'chatSend'; id: string; text: string }
   | { type: 'chatReply'; id: string; text: string; followUps: string[]; visualization?: Viz | null }
   | { type: 'chatFail'; id: string; message: string }
+  | { type: 'chatRetry'; id: string }
   | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
   | { type: 'signOut' }
@@ -160,7 +173,7 @@ export type Action =
   | { type: 'setNote'; date: string; note: string }
   | { type: 'addMeasurement'; measurement: Measurement }
   | { type: 'toggleChannel'; channelId: string }
-  | { type: 'toggleSavedVideo'; videoId: string }
+  | { type: 'toggleSavedVideo'; video: SavedVideo }
   | { type: 'decide'; insightId: string; decision: InsightDecision }
   | { type: 'dismissInsight'; insightId: string }
   | { type: 'setTheme'; theme: Persisted['theme'] }
@@ -277,6 +290,8 @@ function reducer(state: State, action: Action): State {
         reminders: { ...defaultReminders, ...(action.payload.reminders ?? {}) },
         profile: { ...defaultPersisted.profile, ...(action.payload.profile ?? {}) },
         permissions: { ...DEFAULT_PERMISSIONS, ...(action.payload.permissions ?? {}) },
+        // Absent in state stored before saved videos kept their own copy.
+        savedVideoData: action.payload.savedVideoData ?? {},
       }, { ...rt, bootstrapped: true })
 
     case 'setProfile': return next({ profile: { ...p.profile, ...action.profile } })
@@ -333,6 +348,20 @@ function reducer(state: State, action: Action): State {
           ? { ...m, pending: false, error: action.message }
           : m)),
       }
+    /**
+     * Asking the same question again after a failure.
+     *
+     * The failed turn is put back into its waiting state in place, so the
+     * thread stays one question and one answer. Appending a fresh pair would
+     * leave the error on screen and the question written out twice.
+     */
+    case 'chatRetry':
+      return {
+        ...state,
+        chat: state.chat.map((m) => (m.id === action.id
+          ? { ...m, text: '', followUps: undefined, visualization: undefined, error: undefined, pending: true }
+          : m)),
+      }
     case 'chatClear': return { ...state, chat: [] }
     case 'resetAll':
       return derive({ ...defaultPersisted, theme: p.theme }, {
@@ -359,12 +388,20 @@ function reducer(state: State, action: Action): State {
           ? p.followedChannels.filter((c) => c !== action.channelId)
           : [...p.followedChannels, action.channelId],
       })
-    case 'toggleSavedVideo':
+    case 'toggleSavedVideo': {
+      const { id } = action.video
+      if (p.savedVideos.includes(id)) {
+        const data = { ...p.savedVideoData }
+        delete data[id]
+        return next({ savedVideos: p.savedVideos.filter((v) => v !== id), savedVideoData: data })
+      }
+      // The video travels with the id, so Saved still has something to draw
+      // once the search that turned it up is gone.
       return next({
-        savedVideos: p.savedVideos.includes(action.videoId)
-          ? p.savedVideos.filter((v) => v !== action.videoId)
-          : [...p.savedVideos, action.videoId],
+        savedVideos: [...p.savedVideos, id],
+        savedVideoData: { ...p.savedVideoData, [id]: action.video },
       })
+    }
 
     case 'decide': return next({ decisions: { ...p.decisions, [action.insightId]: action.decision } })
     case 'dismissInsight': return next({ dismissed: [...p.dismissed, action.insightId] })

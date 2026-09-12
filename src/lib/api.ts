@@ -231,6 +231,12 @@ export const api = {
     )
   },
 
+  /** The latest from channels the person follows, read from their own feeds. */
+  channels: (ids: string[], limit = 20) =>
+    call<{ source: 'youtube' | 'curated'; query: string; videos: YoutubeVideo[] }>(
+      `/youtube/channels?ids=${encodeURIComponent(ids.join(','))}&limit=${limit}`,
+    ),
+
   channel: (id: string) =>
     call<{ id: string; title: string; description: string; thumbnail: string | null; subscriberCount: string | null; url: string }>(
       `/youtube/channel/${id}`,

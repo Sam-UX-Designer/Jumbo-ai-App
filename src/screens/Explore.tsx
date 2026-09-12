@@ -91,10 +91,51 @@ export function Explore() {
   useEffect(() => { void load() }, [load])
 
   const followed = state.followedChannels
-  const followedVideos = useMemo(() => videos.filter((v) => followed.includes(v.channelId)), [videos, followed])
-  const savedVideos = useMemo(() => videos.filter((v) => state.savedVideos.includes(v.id)), [videos, state.savedVideos])
+
+  /**
+   * What was saved, drawn from the person's own library rather than from
+   * whatever the last search returned. An id saved before the video itself
+   * was kept still resolves if that video happens to be on screen.
+   */
+  const savedVideos = useMemo(
+    () => state.savedVideos
+      .map((id) => state.savedVideoData[id] ?? videos.find((v) => v.id === id))
+      .filter((v): v is YoutubeVideo => Boolean(v))
+      .reverse(),
+    [state.savedVideos, state.savedVideoData, videos],
+  )
+
+  /**
+   * The followed channels' own feeds, fetched for the tab. Filtering the
+   * current results would only ever show the followed creators who happen to
+   * be in this search, which is not what following means.
+   */
+  const [followedVideos, setFollowedVideos] = useState<YoutubeVideo[]>([])
+  const [followingLoading, setFollowingLoading] = useState(false)
+  /** True when the feeds could not be read — distinct from nothing published. */
+  const [followingFailed, setFollowingFailed] = useState(false)
+  const [followingNonce, setFollowingNonce] = useState(0)
+
+  useEffect(() => {
+    if (tab !== 'following' || !followed.length) {
+      setFollowedVideos([]); setFollowingFailed(false); return
+    }
+    let cancelled = false
+    setFollowingLoading(true)
+    setFollowingFailed(false)
+    void (async () => {
+      const r = await api.channels(followed)
+      if (cancelled) return
+      setFollowingLoading(false)
+      setFollowedVideos(r.ok ? (r.data.videos ?? []) : [])
+      setFollowingFailed(!r.ok)
+    })()
+    return () => { cancelled = true }
+  }, [tab, followed, followingNonce])
 
   const pool = tab === 'for-you' ? videos : tab === 'saved' ? savedVideos : followedVideos
+  // Saved reads from storage, so only the two fetched tabs can be waiting.
+  const busy = tab === 'following' ? followingLoading : tab === 'saved' ? false : loading
 
   // Sorting is done here, on results YouTube actually returned. Nothing is
   // reordered into existence.
@@ -213,7 +254,14 @@ export function Explore() {
         <UnavailableNotice
           title="Explore isn’t available right now"
           message="Videos can’t be loaded at the moment. Anything you have saved is still here, and the rest of Jumbo is unaffected."
-          onRetry={() => void load(query.trim())}
+          onRetry={() => void load(query.trim(), topic)}
+        />
+      )}
+      {tab === 'following' && followingFailed && (
+        <UnavailableNotice
+          title="Your creators’ videos couldn’t load"
+          message="Jumbo couldn’t reach them just now. Anything you have saved is still here."
+          onRetry={() => setFollowingNonce((n) => n + 1)}
         />
       )}
       {problem?.kind === 'error' && (
@@ -303,23 +351,29 @@ export function Explore() {
           }
         />
 
-        {loading ? (
+        {busy ? (
           <ul className="stack stack-3">
             {[0, 1, 2, 3].map((i) => <li key={i} className="skeleton" style={{ height: 92 }} />)}
           </ul>
+        ) : tab === 'following' && followingFailed ? (
+          // The notice above already says what happened. Claiming they follow
+          // no one on top of it would be wrong as well as unhelpful.
+          null
         ) : shown.length === 0 ? (
           <Empty
             icon="explore"
             title={
               problem ? 'Nothing to show yet'
                 : tab === 'saved' ? 'Nothing saved yet'
-                : tab === 'following' ? 'Not following anyone yet'
+                : tab === 'following' && !followed.length ? 'Not following anyone yet'
+                : tab === 'following' ? 'Nothing new from them yet'
                 : 'No results'
             }
             body={
               problem ? 'Once YouTube is connected, real videos appear here. Jumbo will not invent them.'
-                : tab === 'saved' ? 'Save a video and it collects here.'
-                : tab === 'following' ? 'Follow a channel and its videos appear here.'
+                : tab === 'saved' ? 'Save a video and it stays here, whatever you search for next.'
+                : tab === 'following' && !followed.length ? 'Follow a channel and its latest videos appear here.'
+                : tab === 'following' ? 'The creators you follow have not posted recently.'
                 : 'Try a different search.'
             }
           />
@@ -334,7 +388,7 @@ export function Explore() {
                 onOpen={() => setOpen(v)}
                 onSave={() => {
                   haptic('impactLight')
-                  dispatch({ type: 'toggleSavedVideo', videoId: v.id })
+                  dispatch({ type: 'toggleSavedVideo', video: v })
                   toast({
                     text: state.savedVideos.includes(v.id) ? 'Removed from saved' : 'Saved',
                     icon: 'check',

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { env, has } from '../lib/env.js'
-import { GOAL_TOPIC, curatedVideos } from '../lib/creators.js'
+import { GOAL_TOPIC, channelVideos, curatedVideos } from '../lib/creators.js'
 
 export const youtube = Router()
 
@@ -26,6 +26,39 @@ const GOAL_QUERIES = {
   aging: ['vo2 max healthspan', 'longevity exercise evidence'],
   consistency: ['building exercise habits science', 'training consistency deload'],
 }
+
+/**
+ * The latest from specific channels — Explore's "Following" tab.
+ *
+ * Read straight from each channel's own public feed, so following a creator
+ * shows what they have actually published rather than whichever of their
+ * videos happened to be in the last search. No API key involved.
+ */
+youtube.get('/channels', async (req, res) => {
+  const ids = String(req.query.ids ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const limit = Math.min(Number(req.query.limit ?? 20) || 20, 40)
+  if (!ids.length) return res.json({ source: 'curated', query: 'Following', videos: [] })
+
+  try {
+    const { videos, unreachable } = await channelVideos({ channelIds: ids, limit })
+    if (unreachable) {
+      // Say so, rather than let "we could not ask" read as "they published
+      // nothing" — the tab would quietly claim the creators had gone quiet.
+      return res.status(502).json({
+        error: 'youtube_unreachable',
+        message: 'Videos could not be loaded just now.',
+      })
+    }
+    // An empty list is now a real answer: these channels published nothing.
+    return res.json({ source: 'curated', query: 'Following', videos })
+  } catch (err) {
+    console.warn('[youtube] channel feeds failed:', err.message)
+    return res.status(502).json({
+      error: 'youtube_unreachable',
+      message: 'Videos could not be loaded just now.',
+    })
+  }
+})
 
 youtube.get('/search', async (req, res) => {
   const q = String(req.query.q ?? '').trim()

@@ -25,7 +25,6 @@ export function Chat({
   const navigate = useNavigate()
   const chat = useChat(focus)
   const [draft, setDraft] = useState('')
-  const endRef = useRef<HTMLDivElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const sentInitial = useRef(false)
@@ -125,8 +124,8 @@ export function Chat({
 
                 <div className="stack stack-3" style={{ minWidth: 0, maxWidth: '100%' }}>
                   {m.pending ? (
-                    // Fills the space the answer will occupy, so a long wait
-                    // is never a blank rectangle with a mark beside it.
+                    // The mark and one word, in the place the answer will
+                    // take. Nothing stands in for the answer itself.
                     <Thinking size={34} />
                   ) : m.error ? (
                     <ErrorNotice
@@ -159,8 +158,6 @@ export function Chat({
             ))}
           </ul>
         )}
-
-        <div ref={endRef} />
       </div>
 
       <p className="chat__foot t-caption dim2">
