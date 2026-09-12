@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import '../styles/explore.css'
-import { AiOrb, Icon } from '../components/Icon'
+import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AssetImage } from '../components/Asset'
 import {
   Empty, SectionHead, Segmented, Sheet, UnavailableNotice, useToast,
@@ -22,21 +22,26 @@ const GOAL_LABEL: Record<GoalKey, string> = {
  * queries sent to YouTube, so a chip always produces genuine results or a
  * genuine error.
  */
-const TOPICS: Array<{ id: string; label: string; query: string | null }> = [
-  { id: 'for-you',   label: 'For you',   query: null },
-  { id: 'sleep',     label: 'Sleep',     query: 'sleep quality and HRV science' },
-  { id: 'fitness',   label: 'Fitness',   query: 'strength training and zone 2 for health' },
-  { id: 'nutrition', label: 'Nutrition', query: 'protein and nutrition for lean mass' },
-  { id: 'longevity', label: 'Longevity', query: 'longevity and healthspan research' },
-  { id: 'mental',    label: 'Mental',    query: 'stress, recovery and mental health habits' },
+/**
+ * The topics, each with the mark and the colour its subject already has
+ * everywhere else in Jumbo. Sleep is the same purple here as it is on
+ * Today; nutrition the same orange as a Breakfast pill.
+ */
+const TOPICS: Array<{ id: string; label: string; query: string | null; icon: IconName; tint: string }> = [
+  { id: 'for-you',   label: 'For you',   query: null, icon: 'sparkles', tint: 'var(--brand)' },
+  { id: 'sleep',     label: 'Sleep',     query: 'sleep quality and HRV science', icon: 'sleep', tint: 'var(--sleep)' },
+  { id: 'fitness',   label: 'Fitness',   query: 'strength training and zone 2 for health', icon: 'training', tint: 'var(--movement)' },
+  { id: 'nutrition', label: 'Nutrition', query: 'protein and nutrition for lean mass', icon: 'plate', tint: 'var(--nutrition)' },
+  { id: 'longevity', label: 'Longevity', query: 'longevity and healthspan research', icon: 'sprout', tint: 'var(--brand)' },
+  { id: 'mental',    label: 'Mental',    query: 'stress, recovery and mental health habits', icon: 'heart', tint: 'var(--recovery)' },
 ]
 
 type Sort = 'relevant' | 'recent' | 'longest'
 
-const SORTS: Array<{ value: Sort; label: string }> = [
-  { value: 'relevant', label: 'Most relevant' },
-  { value: 'recent',   label: 'Most recent' },
-  { value: 'longest',  label: 'Longest first' },
+const SORTS: Array<{ value: Sort; label: string; icon: IconName }> = [
+  { value: 'relevant', label: 'Most relevant', icon: 'target' },
+  { value: 'recent',   label: 'Most recent', icon: 'clock' },
+  { value: 'longest',  label: 'Longest first', icon: 'play' },
 ]
 
 export function Explore() {
@@ -203,9 +208,11 @@ export function Explore() {
       <div className="rail" role="group" aria-label="Topics">
         {TOPICS.map((t) => (
           <button
-            key={t.id} className="chip" aria-pressed={topic === t.id}
+            key={t.id} className="chip chip--tinted" aria-pressed={topic === t.id}
+            style={{ ['--tint' as string]: t.tint }}
             onClick={() => pickTopic(t)}
           >
+            <Icon name={t.icon} size={17} strokeWidth={2} />
             {t.label}
           </button>
         ))}
@@ -231,9 +238,9 @@ export function Explore() {
         value={tab}
         onChange={(v) => setTab(v as Tab)}
         options={[
-          { value: 'for-you', label: 'Discover' },
-          { value: 'saved', label: `Saved ${state.savedVideos.length}` },
-          { value: 'following', label: `Following ${followed.length}` },
+          { value: 'for-you', label: 'Discover', icon: 'explore', tint: 'var(--brand)' },
+          { value: 'saved', label: `Saved ${state.savedVideos.length}`, icon: 'bookmark', tint: 'var(--nutrition)' },
+          { value: 'following', label: `Following ${followed.length}`, icon: 'heart', tint: 'var(--training)' },
         ]}
       />
 
@@ -279,7 +286,7 @@ export function Explore() {
       {/* ────────────────────────────── the one to watch first */}
       {!loading && featured && (
         <section className="section">
-          <SectionHead title="Featured" />
+          <SectionHead title="Featured" icon="bookmark" tint="var(--nutrition)" />
           <button className="feature" onClick={() => setOpen(featured)}>
             <span className="feature__art">
               <AssetImage
@@ -308,7 +315,7 @@ export function Explore() {
       {/* ────────────────────────────── the next few, at a glance */}
       {!loading && trending.length > 0 && (
         <section className="section">
-          <SectionHead title="Trending for you" />
+          <SectionHead title="Trending for you" icon="bolt" tint="var(--movement)" />
           <ul className="trend-rail">
             {trending.map((v) => (
               <li key={v.id}>
@@ -329,6 +336,8 @@ export function Explore() {
       <section className="section">
         <SectionHead
           title={tab === 'for-you' ? 'Recommended videos' : tab === 'saved' ? 'Saved' : 'From people you follow'}
+          icon={tab === 'for-you' ? 'play' : tab === 'saved' ? 'bookmark' : 'heart'}
+          tint={tab === 'for-you' ? 'var(--brand)' : tab === 'saved' ? 'var(--nutrition)' : 'var(--training)'}
           sub={tab === 'for-you' && shown.length ? `${shown.length} results` : undefined}
           action={
             shown.length > 1 ? (

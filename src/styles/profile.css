@@ -23,9 +23,88 @@
   line-height: 1.06;
   margin: 0;
 }
-.you-head__say {
-  font-size: var(--t-callout); color: var(--ink-2); line-height: 1.4;
+/* The name is the largest thing on the screen after the title, because a
+   profile page is a name with a face on it. */
+.you-head__name {
+  font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 2px 0 0;
+}
+.you-head__phone {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-callout); color: var(--ink-3); line-height: 1.35;
   margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.you-head__phone svg { color: var(--ink-4); flex: none; }
+
+/* Editing is one control under the identity it edits, at the size of a
+   control rather than of a claim. */
+.you-head__edit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 0 var(--s-4);
+  margin-top: 2px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--card-line);
+  background: var(--surface); color: var(--ink-2);
+  font-size: var(--t-caption); font-weight: 600;
+  cursor: pointer;
+  transition: background var(--d-fast) var(--ease), color var(--d-fast) var(--ease),
+              transform var(--d-fast) var(--ease);
+}
+.you-head__edit:hover  { background: var(--surface-2); color: var(--ink); }
+.you-head__edit:active { transform: scale(0.97); }
+.you-head__edit:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ── Streaks ──────────────────────────────────────────────────────────
+   Two halves of one card, divided once. This is the whole gamification:
+   a number the record earned and a line that reads it. No badges, no
+   levels, no confetti. */
+.streaks {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  overflow: hidden;
+}
+.streak {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  min-width: 0;
+}
+.streak + .streak { border-left: 1px solid var(--hairline); }
+
+.streak__mark {
+  width: 42px; height: 42px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
+  color: var(--tint);
+}
+.streak__body {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.streak__label {
+  font-size: var(--t-caption); color: var(--ink-3); line-height: 1.2;
+}
+.streak__value {
+  font-size: var(--t-title2); font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.streak__unit { font-size: var(--t-callout); font-weight: 600; color: var(--ink-2); }
+.streak__say {
+  font-size: var(--t-caption); color: var(--ink-3); line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Narrow phones: the mark goes, the numbers stay. */
+@media (max-width: 379px) {
+  .streak { gap: var(--s-2); padding: var(--s-3) var(--s-2); }
+  .streak__mark { display: none; }
 }
 /* At this size the badge sits on the rim rather than outside it. */
 .you-head .photo-edit__badge { width: 30px; height: 30px; right: 2px; bottom: 2px; }

@@ -145,7 +145,9 @@ export function Segmented<T extends string | number>({
   value, options, onChange, ariaLabel,
 }: {
   value: T
-  options: Array<{ value: T; label: string }>
+  /** `icon` is optional. Where a segment names a kind of thing rather than
+      an ordering, the mark is what the eye finds first. */
+  options: Array<{ value: T; label: string; icon?: IconName; tint?: string }>
   onChange: (v: T) => void
   ariaLabel: string
 }) {
@@ -154,9 +156,11 @@ export function Segmented<T extends string | number>({
       {options.map((o) => (
         <button
           key={String(o.value)} type="button" className="segmented__btn"
+          style={o.tint ? ({ ['--tint' as string]: o.tint }) : undefined}
           aria-pressed={o.value === value}
           onClick={() => { haptic('selection'); onChange(o.value) }}
         >
+          {o.icon && <Icon name={o.icon} size={16} strokeWidth={2} />}
           {o.label}
         </button>
       ))}
@@ -245,12 +249,20 @@ export function Stat({
    Section header
    ============================================================ */
 export function SectionHead({
-  title, sub, action,
-}: { title: string; sub?: string; action?: ReactNode }) {
+  title, sub, action, icon, tint,
+}: { title: string; sub?: string; action?: ReactNode; icon?: IconName; tint?: string }) {
   return (
     <div className="sec-head" style={{ alignItems: 'flex-start' }}>
       <div className="stack stack-1" style={{ minWidth: 0 }}>
-        <h2 className="sec-head__title">{title}</h2>
+        <h2 className="sec-head__title">
+          {icon && (
+            <Icon
+              name={icon} size={18} strokeWidth={2}
+              className="sec-head__icon" style={tint ? { color: tint } : undefined}
+            />
+          )}
+          {title}
+        </h2>
         {sub && <p className="t-caption dim">{sub}</p>}
       </div>
       {action}

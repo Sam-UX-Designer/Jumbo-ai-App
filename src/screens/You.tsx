@@ -4,7 +4,7 @@ import { AvatarButton, ProfilePhotoPicker } from '../components/Asset'
 import { DemoBadge, useConfirm, useToast } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
-import { consistencyStreak, dailyProgress } from '../lib/analytics'
+import { bestStreak, consistencyStreak, dailyProgress } from '../lib/analytics'
 import { planById } from '../data/plans'
 import { haptic } from '../lib/feedback'
 
@@ -15,16 +15,17 @@ interface MenuRow {
   colour: string
   title: string
   sub: string
-  /** The group inside Settings this row lands on. */
+  /** The panel inside Settings this row opens. */
   anchor: string
 }
 
 const MENU: MenuRow[] = [
+  { id: 'account', icon: 'profile', colour: 'var(--sleep)', title: 'Account details', sub: 'Name, phone and photo', anchor: 'profile' },
   { id: 'goals', icon: 'target', colour: 'var(--brand)', title: 'Your goals', sub: 'What Jumbo shows you first', anchor: 'goals' },
-  { id: 'sources', icon: 'phone', colour: 'var(--recovery)', title: 'Connected sources', sub: 'Apple Health, Oura, Garmin and more', anchor: 'sources' },
-  { id: 'data', icon: 'measure', colour: 'var(--sleep)', title: 'Your data', sub: 'Export, or clear it from this device', anchor: 'data' },
+  { id: 'sources', icon: 'phone', colour: 'var(--recovery)', title: 'Connected sources', sub: 'Apple Health, Oura, Garmin and more', anchor: 'integrations' },
+  { id: 'data', icon: 'measure', colour: 'var(--sleep)', title: 'Your data', sub: 'Export, or clear it from this device', anchor: 'privacy' },
   { id: 'reminders', icon: 'bell', colour: 'var(--nutrition)', title: 'Reminders', sub: 'Meal, workout and check-in nudges', anchor: 'reminders' },
-  { id: 'settings', icon: 'settings', colour: 'var(--ink-2)', title: 'App settings', sub: 'Appearance, feel and privacy', anchor: 'account' },
+  { id: 'settings', icon: 'settings', colour: 'var(--ink-2)', title: 'App settings', sub: 'Appearance, feel and privacy', anchor: '' },
 ]
 
 /**
@@ -41,8 +42,7 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
   const { confirm, node: confirmNode } = useConfirm()
 
   const streak = consistencyStreak(state.days, state.baseline)
-  const connected = state.providers.filter((p) => p.connection).length
-  const firstName = state.profile.name.trim().split(' ')[0]
+  const best = bestStreak(state.days, state.baseline)
   // The same figure Today shows in the middle of its rings, for the day
   // being looked at, rather than a second score computed a second way.
   const day = state.days[state.days.length - 1]
@@ -62,38 +62,42 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
         you are already here.
       */}
       <header className="you-head">
-        <h1 className="you-head__title">You</h1>
+        <h1 className="you-head__title">Profile</h1>
         <ProfilePhotoPicker
           size={104}
           onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
         />
-        <p className="you-head__say">
-          {firstName ? `${firstName}, keep going` : 'Your profile and your progress'}
-          {' '}<span aria-hidden="true">🌱</span>
+        <p className="you-head__name">{state.profile.name || 'Add your name'}</p>
+        <p className="you-head__phone">
+          <Icon name="call" size={15} />
+          {state.profile.phone || 'No phone number yet'}
         </p>
+        <button className="you-head__edit" onClick={() => open('profile')}>
+          <Icon name="edit" size={14} /> Edit
+        </button>
       </header>
 
       {state.dataMode === 'demo' && <DemoBadge />}
 
-      {/* ────────────────────────────────────────── who, and how it is going */}
-      <section className="card prof">
-        <button className="prof__top" onClick={() => open('account')}>
-          <span className="grow stack" style={{ gap: 3, minWidth: 0 }}>
-            <span className="prof__name">
-              {state.profile.name || 'Add your name'}
-            </span>
-            <span className="prof__meta">
-              {state.baseline.daysOfHistory} days
-              {connected > 0 ? ` · ${connected} connected` : ''}
-              {streak > 0 ? ` · ${streak}-day streak` : ''}
-            </span>
-            <span className="prof__say">Small steps. A healthier, brighter you.</span>
-          </span>
-          <Icon name="chevron" size={17} style={{ flex: 'none', color: 'var(--ink-3)' }} />
-        </button>
+      {/* ─────────────────────────────────────────────── how it is going ────
+          Two figures from the same record and the same rule: the run you
+          are on, and the longest run in it. Neither is invented, and
+          neither is congratulated for a number it has not reached. */}
+      <section className="streaks">
+        <Streak
+          icon="bolt" tint="var(--nutrition)" label="Current streak" days={streak}
+          say={streak === 0 ? 'Start one today' : streak >= best && best > 0 ? 'Your best run yet' : 'Keep it going'}
+        />
+        <Streak
+          icon="trophy" tint="var(--brand)" label="Best streak" days={best}
+          say={best === 0 ? 'Nothing recorded yet' : `Across ${state.baseline.daysOfHistory} days`}
+        />
+      </section>
 
-        {/* Four figures Jumbo actually holds. Nothing here is invented: an
-            empty streak shows as zero rather than as encouragement. */}
+      {/* ────────────────────────────────── four figures Jumbo actually holds.
+          Nothing here is invented: an empty streak shows as zero rather
+          than as encouragement. */}
+      <section className="card prof">
         <div className="prof__stats">
           <Stat icon="target" colour="var(--brand)" value={state.goals.length} label="Goals" />
           <Stat icon="today" colour="var(--sleep)" value={state.baseline.daysOfHistory} label="Days active" />
@@ -168,6 +172,26 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
       </p>
 
       {confirmNode}
+    </div>
+  )
+}
+
+/** One streak: what it is, how long, and a line that reads the number. */
+function Streak({
+  icon, tint, label, days, say,
+}: { icon: IconName; tint: string; label: string; days: number; say: string }) {
+  return (
+    <div className="streak" style={{ ['--tint' as string]: tint }}>
+      <span className="streak__mark" aria-hidden="true">
+        <Icon name={icon} size={20} strokeWidth={1.9} />
+      </span>
+      <span className="streak__body">
+        <span className="streak__label">{label}</span>
+        <span className="streak__value">
+          {days}<span className="streak__unit">{days === 1 ? ' day' : ' days'}</span>
+        </span>
+        <span className="streak__say">{say}</span>
+      </span>
     </div>
   )
 }

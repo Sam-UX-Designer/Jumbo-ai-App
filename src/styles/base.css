@@ -311,6 +311,19 @@ a { color: var(--accent-text); }
   background: var(--brand); border-color: var(--brand); color: var(--brand-ink); font-weight: 640;
 }
 
+/* A chip that names a subject rather than an action carries the subject's
+   own colour in its mark, and takes that colour when it is the one chosen.
+   Same rule as the capture kinds and the notification filters, so the three
+   chip rows in the app read as one control rather than three. A solid brand
+   fill here also swallowed the mark, which was the colour's whole job. */
+.chip--tinted svg { color: var(--tint); flex: none; }
+.chip--tinted[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--tint) 13%, var(--surface));
+  border-color: color-mix(in srgb, var(--tint) 58%, transparent);
+  color: var(--tint);
+  font-weight: 640;
+}
+
 .tag {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px var(--s-2); border-radius: 8px;
@@ -334,12 +347,18 @@ a { color: var(--accent-text); }
   border: 1px solid var(--hairline);
 }
 .segmented__btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 38px; padding: 0 var(--s-4); border: 0; background: transparent;
   border-radius: var(--r-pill); cursor: pointer; color: var(--ink-2);
   font-size: var(--t-caption); font-weight: 620; white-space: nowrap;
   transition: background var(--d-base) var(--ease), color var(--d-fast);
 }
+/* Resting, the mark carries its subject's colour. Chosen, the whole
+   segment is the brand fill and the mark goes with the label, because two
+   colours inside one filled pill is one too many. */
+.segmented__btn svg { color: var(--tint, currentColor); flex: none; }
 .segmented__btn[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.segmented__btn[aria-pressed="true"] svg { color: currentColor; }
 
 /* ============================================================
    Fields

@@ -13,7 +13,7 @@ export type IconName =
   | 'bell' | 'sound' | 'external' | 'flag'
   | 'search' | 'filter' | 'bookmark' | 'more' | 'mic' | 'arrow-up' | 'chevron-down'
   | 'target' | 'sprout' | 'shield' | 'sparkles' | 'settings' | 'signout'
-  | 'list' | 'cutlery' | 'bowl' | 'cloche' | 'apple' | 'trophy'
+  | 'list' | 'cutlery' | 'bowl' | 'cloche' | 'apple' | 'trophy' | 'edit' | 'call'
 
 type Motion = 'none' | 'idle' | 'active' | 'celebrate'
 
@@ -81,6 +81,10 @@ const PATHS: Record<IconName, string> = {
   cutlery: 'M7.4 3.4v7.2M10.2 3.4v7.2M8.8 10.6V20.6M15.4 20.6v-6.4h-1.6V8.2c0-2.6 1.4-4.8 3.4-4.8v17.2',
   bowl: 'M3.8 11.6h16.4a8.2 8.2 0 0 1-8.2 8.2 8.2 8.2 0 0 1-8.2-8.2ZM12 8.8c0-2.8 2-4.6 4.8-4.6 0 2.8-2 4.6-4.8 4.6Z',
   cloche: 'M3.4 18.4h17.2M4.8 15.6a7.2 7.2 0 0 1 14.4 0ZM12 8.4V5.6M10.6 5.6h2.8',
+  /* A pencil for editing, and a handset for a number. `phone` already
+     means a device in this set, so the number gets its own mark. */
+  edit: 'M15.4 4.6a2.26 2.26 0 0 1 3.2 3.2L8.4 18l-4.2 1.2L5.4 15l10-10.4ZM13.8 6.2l3.2 3.2',
+  call: 'M20.6 16.9v2.4a1.6 1.6 0 0 1-1.74 1.6 15.8 15.8 0 0 1-6.9-2.45 15.6 15.6 0 0 1-4.8-4.8A15.8 15.8 0 0 1 4.7 6.72 1.6 1.6 0 0 1 6.3 4.98h2.4a1.6 1.6 0 0 1 1.6 1.38c.1.77.29 1.52.55 2.24a1.6 1.6 0 0 1-.36 1.69l-1.02 1.02a12.8 12.8 0 0 0 4.8 4.8l1.02-1.02a1.6 1.6 0 0 1 1.69-.36c.72.26 1.47.45 2.24.55a1.6 1.6 0 0 1 1.38 1.62Z',
   trophy: 'M7.6 4.4h8.8v5a4.4 4.4 0 0 1-8.8 0v-5ZM7.6 6.2H5a2.2 2.2 0 0 0 2.6 2.2M16.4 6.2H19a2.2 2.2 0 0 1-2.6 2.2M12 13.8v3.4M8.8 20.2h6.4l-.7-3H9.5l-.7 3Z',
   apple: 'M12 8.2c-1-1.1-2.4-1.7-3.8-1.7-2.6 0-4.6 2.3-4.6 5.6 0 4.2 3 8.4 5.4 8.4 1.1 0 1.9-.6 3-.6s1.9.6 3 .6c2.4 0 5.4-4.2 5.4-8.4 0-3.3-2-5.6-4.6-5.6-1.4 0-2.8.6-3.8 1.7ZM12 8.2V5.4M12 5.4c0-1.3 1.1-2.4 2.4-2.4',
 }

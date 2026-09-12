@@ -390,9 +390,14 @@
   gap: var(--s-4);
 }
 .sec-head__title {
+  display: flex; align-items: center; gap: 7px;
   font-size: var(--t-title3); font-weight: 660;
   letter-spacing: -0.015em; color: var(--ink); margin: 0;
 }
+/* A section's mark sits with its heading, in the colour of what the
+   section is about. It is a signpost, never a decoration, so a section
+   that needs no signpost passes no icon. */
+.sec-head__icon { flex: none; }
 .sec-head__link {
   font-size: var(--t-callout); font-weight: 560;
   color: var(--ink-2); background: none; border: 0; cursor: pointer;

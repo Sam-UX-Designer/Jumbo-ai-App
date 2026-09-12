@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
 import { NavProvider, Sidebar, TabBar, type ChatFocus, type Route } from './components/Nav'
 import { AskDock } from './components/AskDock'
@@ -37,16 +37,14 @@ function Shell() {
   // What the conversation is about, when it was opened from a specific
   // thing — a meal, so far. Kept across the trip so going back reopens it.
   const [focus, setFocus] = useState<ChatFocus | null>(null)
-  /**
-   * The group inside Settings a menu row asked for. Settings is one scroll
-   * rather than seven pushed screens, so arriving lands on the right group
-   * instead of always at the top.
+/**
+   * The panel inside Settings a row on Profile asked for, so "Reminders"
+   * opens reminders rather than the index.
    *
-   * A ref, not state: clearing it after the scroll would re-run the effect
-   * below, which would then take its scroll-to-top branch and undo the very
-   * scroll it had just performed.
+   * State rather than a ref, because Settings reads it on the render that
+   * mounts it. It is cleared when the route leaves Settings.
    */
-  const anchor = useRef<string | null>(null)
+  const [panel, setPanel] = useState<string | null>(null)
   const toast = useToast()
 
   const navigate = (next: Route, question?: string, nextFocus?: ChatFocus) => {
@@ -64,13 +62,8 @@ function Shell() {
 
   useEffect(() => {
     document.title = `${TITLES[route]} · Jumbo`
-    const to = anchor.current
-    anchor.current = null
-    // The group is in the DOM by now: effects run after the commit that
-    // rendered the new route.
-    const el = to ? document.getElementById(to) : null
-    if (el) el.scrollIntoView({ block: 'start', behavior: 'auto' })
-    else window.scrollTo({ top: 0, behavior: 'auto' })
+    window.scrollTo({ top: 0, behavior: 'auto' })
+    if (route !== 'settings') setPanel(null)
   }, [route])
 
   // Reminders fire while Jumbo is open; Profile says so plainly. Acting on
@@ -109,9 +102,11 @@ function Shell() {
               <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
             )}
             {route === 'you' && (
-              <You onNavigate={(r, to) => { anchor.current = to ?? null; setRoute(r) }} />
+              <You onNavigate={(r, to) => { setPanel(to || null); setRoute(r) }} />
             )}
-            {route === 'settings' && <Settings onNavigate={setRoute} />}
+            {route === 'settings' && (
+              <Settings onNavigate={setRoute} arriveOn={(panel as never) ?? undefined} />
+            )}
             {route === 'subscribe' && <Subscribe onNavigate={setRoute} />}
             {route === 'notifications' && <Notifications onNavigate={setRoute} />}
           </main>

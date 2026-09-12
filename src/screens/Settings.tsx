@@ -49,11 +49,21 @@ type Panel =
  * Jumbo cannot do yet, units and language, are marked and do not open, which
  * is the honest version of drawing them.
  */
-export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
+export function Settings({
+  onNavigate, arriveOn,
+}: {
+  onNavigate: (r: Route) => void
+  /**
+   * The panel to arrive on. A row on Profile that says "Reminders" opens
+   * reminders; it used to scroll toward a group id that was never rendered,
+   * which meant every row landed at the top of the index instead.
+   */
+  arriveOn?: Panel
+}) {
   const { state, dispatch, sync, refreshProviders } = useStore()
   const toast = useToast()
   const { confirm, node: confirmNode } = useConfirm()
-  const [panel, setPanel] = useState<Panel>(null)
+  const [panel, setPanel] = useState<Panel>(arriveOn ?? null)
   const [permission, setPermission] = useState(notificationPermission())
 
   const set = (key: keyof typeof state.settings, value: boolean) =>
@@ -68,14 +78,11 @@ export function Settings({ onNavigate }: { onNavigate: (r: Route) => void }) {
 
   return (
     <div className="stack stack-5">
+      {/* The photograph lives on Profile and in the profile tab. Settings is
+          reached from Profile, so a third copy of it here was a control
+          repeating what the screen you just left already said. */}
       <header className="scr-head">
         <h1 className="scr-head__title">Settings</h1>
-        <div className="scr-head__actions">
-          <ProfilePhotoPicker
-            size={44}
-            onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
-          />
-        </div>
         <p className="scr-head__sub">Make JUMBO work for you.</p>
       </header>
 

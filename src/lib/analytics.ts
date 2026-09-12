@@ -75,20 +75,42 @@ export function dailyProgress(day: DayRecord, base: Baseline): DailyProgress {
  * A consistency streak: days where the person did the sustainable thing.
  * A genuine rest day counts. A day of extreme training does not count double.
  */
+/** What counts as a day you showed up. One rule, used by both streaks. */
+function kept(d: DayRecord, base: Baseline): boolean {
+  const p = dailyProgress(d, base)
+  const restedWell = d.sleepHours >= base.sleepHours - 0.9
+  const movedEnough = d.restDay ? true : d.steps >= Math.max(6000, base.steps * 0.72)
+  return restedWell && movedEnough && p.overall > 0.45
+}
+
 export function consistencyStreak(days: DayRecord[], base: Baseline): number {
   let streak = 0
   let grace = 1 // one off day does not undo a month of showing up
   for (let i = days.length - 1; i >= 0; i--) {
     const d = days[i]
     if (i === days.length - 1 && new Date().getHours() < 20) continue // today is unfinished
-    const p = dailyProgress(d, base)
-    const restedWell = d.sleepHours >= base.sleepHours - 0.9
-    const movedEnough = d.restDay ? true : d.steps >= Math.max(6000, base.steps * 0.72)
-    if (restedWell && movedEnough && p.overall > 0.45) streak++
+    if (kept(d, base)) streak++
     else if (grace > 0) grace--
     else break
   }
   return streak
+}
+
+/**
+ * The longest run in the record, by the same rule and with the same one
+ * day of grace. Derived from the history that is already there, so it is
+ * as real as the current streak and never larger than it should be.
+ */
+export function bestStreak(days: DayRecord[], base: Baseline): number {
+  let best = 0
+  let run = 0
+  let grace = 1
+  for (const d of days) {
+    if (kept(d, base)) { run++; best = Math.max(best, run) }
+    else if (grace > 0) { grace-- }
+    else { run = 0; grace = 1 }
+  }
+  return Math.max(best, consistencyStreak(days, base))
 }
 
 export function weeklySeries(days: DayRecord[], pick: (d: DayRecord) => number, weeks = 12) {
