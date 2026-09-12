@@ -168,13 +168,135 @@
 }
 
 /* A logged entry that opens its own detail. */
-.logrow--tap {
-  cursor: pointer;
-  transition: background var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
+/* ============================================================
+   Recently added
+
+   One list of everything that went into a day, in the order it went in.
+   The cards are the surfaces: there is no panel around the section, so
+   the list reads as a stack of records rather than a table inside a box.
+   ============================================================ */
+
+/* The filters. One row that scrolls; a wrapped filter row turns a glance
+   into a search. `.rail` already owns the scrolling and the edge fade. */
+.rec__filters { padding-block: 2px; }
+
+.recfilter {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 44px; padding: 0 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--t-callout); font-weight: 560; letter-spacing: -0.01em;
+  white-space: nowrap; cursor: pointer;
+  transition: background 180ms var(--ease), border-color 180ms var(--ease),
+              color 180ms var(--ease), transform var(--d-fast) var(--ease);
 }
-.logrow--tap:hover  { background: var(--surface-2); }
-.logrow--tap:active { transform: scale(0.99); }
-.logrow--tap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.recfilter svg { color: var(--tint); flex: none; }
+.recfilter:hover  { border-color: var(--ink-4); }
+.recfilter:active { transform: scale(0.97); }
+.recfilter:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Selected: the category's own colour, at the weight of a state rather
+   than of an advertisement. */
+.recfilter.is-on {
+  color: var(--tint);
+  border-color: color-mix(in srgb, var(--tint) 62%, transparent);
+  background: color-mix(in srgb, var(--tint) 12%, var(--surface));
+}
+
+.rec__none { padding: var(--s-5) var(--s-1); }
+
+/* ── A record ─────────────────────────────────────────────────────────
+   Photograph, then what it was, then when. The time sits at the end
+   because it orders the list; it is not what you read first. */
+.reccard {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  text-align: left;
+}
+.reccard--tap { cursor: pointer; transition: background var(--d-fast) var(--ease), transform 120ms var(--ease); }
+.reccard--tap:hover  { background: var(--surface-2); }
+.reccard--tap:active { transform: scale(0.98); }
+.reccard--tap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* The photograph. A square with the app's tile radius, never a circle:
+   a circle crops the middle out of a plate. */
+.reccard__shot {
+  width: 72px; height: 72px; flex: none;
+  border-radius: var(--r-tile);
+  object-fit: cover;
+}
+/* A record with no photograph slot at all shows its category's mark. */
+.reccard__shot--icon {
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--tint, var(--ink-4)) 13%, var(--surface-2));
+  color: var(--tint, var(--ink-2));
+}
+
+.reccard__body {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  flex: 1; min-width: 0;
+}
+
+/* The category, said once, in its own colour. */
+.reccard__pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px 5px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--tint) 35%, transparent);
+  background: color-mix(in srgb, var(--tint) 9%, transparent);
+  color: var(--tint);
+  font-size: var(--t-callout); font-weight: 600; letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.reccard__pill--plain {
+  --tint: var(--ink-3);
+  color: var(--ink-2);
+}
+
+/* The one number the row is about, at the platform's title size. */
+.reccard__value {
+  font-size: var(--t-title2); font-weight: 660; letter-spacing: -0.028em;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* What it was, and when. Dimmer than the value rather than smaller than it
+   by much: the hierarchy is carried by colour and weight.
+   The reference sets these a step larger. At 402px that step costs half the
+   meal name to an ellipsis, and the same reference shows the whole name, so
+   the size that keeps the words wins over the size that was drawn wide. */
+.reccard__sub {
+  font-size: var(--t-callout); font-weight: 400; color: var(--ink-3); line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* The time reads against the value, so it needs air between them: at 22px
+   four pixels is a collision, not a gap. */
+.reccard__end {
+  display: flex; align-items: center; gap: 4px;
+  flex: none; margin-left: var(--s-2);
+}
+.reccard__time {
+  font-size: var(--t-callout); font-weight: 400; color: var(--ink-3);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.reccard__chev { color: var(--ink-4); flex: none; }
+
+/* Narrow phones: the photograph and the time both stay, and the text
+   truncates, because losing either loses the record's identity. */
+@media (max-width: 379px) {
+  .reccard { gap: var(--s-2); padding: var(--s-2); }
+  .reccard__end { gap: 0; }
+}
 
 /* Ask Jumbo inside the meal sheet. Same chips, same field, same rule: one
    row that scrolls sideways, sitting directly above the input. */

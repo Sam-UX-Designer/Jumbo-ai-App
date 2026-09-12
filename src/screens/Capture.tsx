@@ -12,9 +12,54 @@ import type { MealEntry, Measurement, MeasurementKind, WorkoutEntry, WorkoutType
 import { mealTotals } from '../data/foods'
 import { dailyProgress } from '../lib/analytics'
 import { celebrate, haptic } from '../lib/feedback'
-import { prettyDate, uid } from '../lib/util'
+import { clockTime, nowClock, prettyDate, uid } from '../lib/util'
 
 type Modal = null | 'meal' | 'workout' | 'measurement' | 'note'
+
+/**
+ * The categories a record can carry. They are labels and filters. They are
+ * never the sort: see `byNewest`.
+ *
+ * Each takes the Jumbo colour the rest of the app already uses for that kind
+ * of thing, so a green Lunch pill here is the same green as movement
+ * everywhere else rather than a sixth palette invented for one list.
+ */
+type Category = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Exercise'
+
+const CATEGORIES: Array<{ id: Category; icon: IconName; tint: string }> = [
+  { id: 'Breakfast', icon: 'cutlery',  tint: 'var(--nutrition)' },
+  { id: 'Lunch',     icon: 'bowl',     tint: 'var(--movement)' },
+  { id: 'Dinner',    icon: 'cloche',   tint: 'var(--sleep)' },
+  { id: 'Snack',     icon: 'apple',    tint: 'var(--training)' },
+  { id: 'Exercise',  icon: 'training', tint: 'var(--recovery)' },
+]
+
+interface LoggedRecord {
+  id: string
+  /** Null only for the day's note, which belongs to no slot. */
+  category: Category | null
+  /** The record's own stored clock, "18:26". Null when it has none. */
+  time: string | null
+  /** A saved photograph, null for the reserved placeholder, undefined for a
+      record that has no photograph slot at all. */
+  photo?: string | null
+  value: string
+  sub: string
+  open?: () => void
+  remove?: () => void
+}
+
+/**
+ * Newest first, on the stored value rather than on anything displayed.
+ * "HH:MM" is zero-padded and 24-hour, so comparing the strings compares the
+ * clock. A record with no clock sorts after every record that has one.
+ */
+const byNewest = (a: LoggedRecord, b: LoggedRecord) => {
+  if (a.time && b.time) return b.time.localeCompare(a.time)
+  if (a.time) return -1
+  if (b.time) return 1
+  return 0
+}
 
 /** Where a capture starts from, so the sheet can open in the right mode. */
 type MealMode = 'camera' | 'manual'
@@ -40,6 +85,7 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
   const [openMealId, setOpenMealId] = useState<string | null>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
+  const [filter, setFilter] = useState<Category | 'all'>('all')
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
 
@@ -65,38 +111,63 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
     setModal('meal')
   }
 
-  const logged = [
+  /**
+   * Everything added to this day, as one list.
+   *
+   * The ordering value is the record's own stored clock: MealEntry.time, and
+   * WorkoutEntry.time for a session that was saved rather than synced. It is
+   * the only thing that decides the order. The category is a label and a
+   * filter; it never moves a row. A record with no clock of its own — a
+   * workout that arrived from a wearable as a daily total, and the day's
+   * note — cannot claim a position among the rest, so it sits after them
+   * rather than being given an invented time.
+   */
+  const records: LoggedRecord[] = [
     ...today.meals.map((m) => ({
-      id: m.id, icon: 'plate' as IconName, colour: 'var(--nutrition)',
-      /** Opens this meal's detail. Only meals have one. */
-      open: () => { haptic('selection'); setOpenMealId(m.id) },
+      id: m.id,
+      category: m.slot as Category,
+      time: m.time,
       /**
        * The photograph this meal was read from, when there is one. Meals
        * added by hand, and those saved before photographs were kept, fall
        * back to the reserved placeholder — see src/lib/assets.ts.
        */
       photo: (m.photo ?? null) as string | null,
-      title: `${m.slot} · ${mealTotals(m.items).kcal} kcal`,
-      time: m.time,
+      value: `${mealTotals(m.items).kcal} kcal`,
       sub: m.items.slice(0, 3).map((i) => i.name).join(', ') || `${m.items.length} items`,
-      remove: m.method !== 'imported' ? () => dispatch({ type: 'removeMeal', date: today.date, mealId: m.id }) : undefined,
+      open: () => { haptic('selection'); setOpenMealId(m.id) },
+      remove: m.method !== 'imported'
+        ? () => dispatch({ type: 'removeMeal', date: today.date, mealId: m.id })
+        : undefined,
     })),
     ...(today.workout ? [{
-      id: today.workout.id, icon: 'training' as IconName, colour: 'var(--training)', photo: undefined,
-      open: undefined as (() => void) | undefined,
-      time: '',
-      title: `${today.workout.type} · ${today.workout.minutes} min`,
-      sub: `${['easy', 'moderate', 'hard'][today.workout.intensity - 1]}${today.workout.perceivedEffort ? ` · felt ${today.workout.perceivedEffort}/10` : ''}`,
-      remove: today.workout.source === 'manual' ? () => dispatch({ type: 'removeWorkout', date: today.date }) : undefined,
+      id: today.workout.id,
+      category: 'Exercise' as Category,
+      time: today.workout.time ?? null,
+      photo: undefined,
+      value: `${today.workout.type} · ${today.workout.minutes} min`,
+      sub: `${['Easy', 'Moderate', 'Hard'][today.workout.intensity - 1]}${today.workout.perceivedEffort ? ` · felt ${today.workout.perceivedEffort}/10` : ''}`,
+      open: undefined,
+      remove: today.workout.source === 'manual'
+        ? () => dispatch({ type: 'removeWorkout', date: today.date })
+        : undefined,
     }] : []),
     ...(today.notes ? [{
-      id: 'note', icon: 'note' as IconName, colour: 'var(--sleep)', photo: undefined,
-      open: undefined as (() => void) | undefined,
-      time: '',
-      title: 'Note', sub: today.notes,
+      id: 'note',
+      category: null,
+      time: null,
+      photo: undefined,
+      value: 'Note',
+      sub: today.notes,
+      open: undefined,
       remove: () => dispatch({ type: 'setNote', date: today.date, note: '' }),
     }] : []),
   ]
+
+  // Filter first, then order. Never the other way round, and never by name.
+  const shown = records
+    .filter((r) => filter === 'all' || r.category === filter)
+    .sort(byNewest)
 
   return (
     <div className="stack stack-6">
@@ -152,7 +223,34 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
           title="Recently added"
           sub={isToday ? prettyDate(today.date) : `On ${prettyDate(today.date)}`}
         />
-        {logged.length === 0 ? (
+
+        {records.length > 0 && (
+          <div className="rec__filters rail" role="group" aria-label="Filter by category">
+            <button
+              className={`recfilter${filter === 'all' ? ' is-on' : ''}`}
+              style={{ '--tint': 'var(--brand)' } as React.CSSProperties}
+              aria-pressed={filter === 'all'}
+              onClick={() => { haptic('selection'); setFilter('all') }}
+            >
+              <Icon name="list" size={18} strokeWidth={2} />
+              All
+            </button>
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                className={`recfilter${filter === c.id ? ' is-on' : ''}`}
+                style={{ '--tint': c.tint } as React.CSSProperties}
+                aria-pressed={filter === c.id}
+                onClick={() => { haptic('selection'); setFilter(c.id) }}
+              >
+                <Icon name={c.icon} size={18} strokeWidth={2} />
+                {c.id}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {records.length === 0 ? (
           <Empty
             icon="plate"
             title="Nothing added yet"
@@ -161,54 +259,71 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
               <Icon name="camera" size={16} /> Photograph a meal
             </button>}
           />
+        ) : shown.length === 0 ? (
+          <p className="t-callout dim2 rec__none">Nothing in {filter} on this day.</p>
         ) : (
           <ul className="stack stack-3">
-            {logged.map((row) => (
-              <li
-                className={`card row${row.open ? ' logrow--tap' : ''}`}
-                key={row.id}
-                style={{ gap: 'var(--s-3)' }}
-                {...(row.open ? {
-                  role: 'button', tabIndex: 0, onClick: row.open,
-                  onKeyDown: (e: React.KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.open!() }
-                  },
-                } : {})}
-              >
-                {row.photo !== undefined ? (
-                  <AssetImage
-                    asset="mealPhoto" src={row.photo} alt="" width={40} height={40}
-                    rounded="tile" style={{ width: 40, height: 40 }}
-                  />
-                ) : (
-                  <span style={{
-                    width: 40, height: 40, borderRadius: 'var(--r-tile)', flex: 'none',
-                    display: 'grid', placeItems: 'center', background: 'var(--surface-2)', color: row.colour,
-                  }}>
-                    <Icon name={row.icon} size={19} />
-                  </span>
-                )}
-                <div className="grow stack" style={{ gap: 1, minWidth: 0 }}>
-                  <span className="t-callout strong">{row.title}</span>
-                  <span className="t-caption dim2" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</span>
-                </div>
-                {row.time && <span className="t-caption dim2 num none">{row.time}</span>}
-                {row.open && <Icon name="chevron" size={16} style={{ color: 'var(--ink-3)', flex: 'none' }} />}
-                {row.remove && (
-                  <button
-                    className="icon-btn" aria-label={`Remove ${row.title}`}
-                    onClick={(e) => confirm((e.stopPropagation(), {
-                      title: 'Remove this entry?',
-                      body: 'It comes out of today and out of your long-term pattern. This cannot be undone.',
-                      confirmLabel: 'Remove',
-                      onConfirm: () => { row.remove!(); haptic('impactHeavy'); toast({ text: 'Entry removed', icon: 'trash' }) },
-                    }))}
-                  >
-                    <Icon name="trash" size={17} />
-                  </button>
-                )}
-              </li>
-            ))}
+            {shown.map((row) => {
+              const meta = CATEGORIES.find((c) => c.id === row.category)
+              return (
+                <li
+                  className={`reccard${row.open ? ' reccard--tap' : ''}`}
+                  key={row.id}
+                  style={meta ? ({ '--tint': meta.tint } as React.CSSProperties) : undefined}
+                  {...(row.open ? {
+                    role: 'button', tabIndex: 0, onClick: row.open,
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.open!() }
+                    },
+                  } : {})}
+                >
+                  {row.photo !== undefined ? (
+                    <AssetImage
+                      asset="mealPhoto" src={row.photo} alt="" width={72} height={72}
+                      rounded="tile" className="reccard__shot"
+                    />
+                  ) : (
+                    <span className="reccard__shot reccard__shot--icon">
+                      <Icon name={meta?.icon ?? 'note'} size={26} strokeWidth={1.9} />
+                    </span>
+                  )}
+
+                  <div className="reccard__body">
+                    {meta ? (
+                      <span className="reccard__pill">
+                        <Icon name={meta.icon} size={16} strokeWidth={2} />
+                        {meta.id}
+                      </span>
+                    ) : (
+                      <span className="reccard__pill reccard__pill--plain">
+                        <Icon name="note" size={16} strokeWidth={2} />
+                        Note
+                      </span>
+                    )}
+                    <span className="reccard__value">{row.value}</span>
+                    <span className="reccard__sub">{row.sub}</span>
+                  </div>
+
+                  <div className="reccard__end">
+                    {row.time && <span className="reccard__time">{clockTime(row.time)}</span>}
+                    {row.open && <Icon name="chevron" size={18} className="reccard__chev" />}
+                    {row.remove && (
+                      <button
+                        className="icon-btn" aria-label={`Remove ${row.category ?? 'note'}, ${row.value}`}
+                        onClick={(e) => confirm((e.stopPropagation(), {
+                          title: 'Remove this entry?',
+                          body: 'It comes out of today and out of your long-term pattern. This cannot be undone.',
+                          confirmLabel: 'Remove',
+                          onConfirm: () => { row.remove!(); haptic('impactHeavy'); toast({ text: 'Entry removed', icon: 'trash' }) },
+                        }))}
+                      >
+                        <Icon name="trash" size={18} />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
@@ -305,7 +420,7 @@ function WorkoutSheet({ open, onClose, date }: { open: boolean; onClose: () => v
 
   const save = () => {
     const workout: WorkoutEntry = {
-      id: `w-${uid()}`, type, minutes, intensity, perceivedEffort: rpe,
+      id: `w-${uid()}`, time: nowClock(), type, minutes, intensity, perceivedEffort: rpe,
       note: note.trim() || undefined, source: 'manual',
     }
     dispatch({ type: 'logWorkout', date, workout })

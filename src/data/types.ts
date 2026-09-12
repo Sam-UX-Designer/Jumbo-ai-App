@@ -38,6 +38,14 @@ export interface DayRecord {
 
 export interface WorkoutEntry {
   id: string
+  /**
+   * Local wall-clock, "18:26", the same shape and the same meaning as
+   * MealEntry.time. It is the moment the session was saved, and it is what
+   * orders this workout against the day's meals. Absent on a workout that
+   * arrived from a wearable without one: those sync as a daily total, and
+   * inventing a time for them would be a guess presented as a record.
+   */
+  time?: string
   type: WorkoutType
   minutes: number
   intensity: 1 | 2 | 3          // easy / moderate / hard

@@ -68,6 +68,8 @@ export function generateHistory(todayISO: string): DayRecord[] {
       const rampIntensity: 1 | 2 | 3 = rampWeek ? (intensity < 3 ? ((intensity + 1) as 2 | 3) : 3) : intensity
       workout = {
         id: `w-${date}`,
+        // Morning or evening, from the same seeded stream as everything else.
+        time: rnd() < 0.45 ? '07:10' : '18:26',
         type,
         minutes: Math.round((base + (rnd() - 0.4) * 22 + progress * 6) * (rampWeek ? 1.22 : 1)),
         intensity: rampIntensity,

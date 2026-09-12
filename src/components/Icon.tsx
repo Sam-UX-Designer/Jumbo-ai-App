@@ -13,6 +13,7 @@ export type IconName =
   | 'bell' | 'sound' | 'external' | 'flag'
   | 'search' | 'filter' | 'bookmark' | 'more' | 'mic' | 'arrow-up' | 'chevron-down'
   | 'target' | 'sprout' | 'shield' | 'sparkles' | 'settings' | 'signout'
+  | 'list' | 'cutlery' | 'bowl' | 'cloche' | 'apple'
 
 type Motion = 'none' | 'idle' | 'active' | 'celebrate'
 
@@ -72,6 +73,15 @@ const PATHS: Record<IconName, string> = {
   sprout: 'M12 21v-7.4M12 13.6C12 9.4 14.8 6.6 19 6.6c0 4.2-2.8 7-7 7ZM12 15.4c0-3.2-2-5.2-5.2-5.2 0 3.2 2 5.2 5.2 5.2Z',
   shield: 'M12 3.2 20 6v6.1c0 4.4-3.2 7.4-8 8.7-4.8-1.3-8-4.3-8-8.7V6l8-2.8ZM8.8 12.1l2.3 2.3 4.1-4.4',
   sparkles: 'M11 3.6l1.5 4.4 4.4 1.5-4.4 1.5L11 15.4 9.5 11 5.1 9.5 9.5 8 11 3.6ZM18.2 14.6l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8.8-2.3Z',
+
+  /* The meal slots and the filter that shows all of them. Drawn on the same
+     24 grid at the same stroke as everything else, so a row of six reads as
+     one set rather than six borrowed marks. */
+  list: 'M4.6 7.4h14.8M4.6 12h14.8M4.6 16.6h9.4',
+  cutlery: 'M7.4 3.4v7.2M10.2 3.4v7.2M8.8 10.6V20.6M15.4 20.6v-6.4h-1.6V8.2c0-2.6 1.4-4.8 3.4-4.8v17.2',
+  bowl: 'M3.8 11.6h16.4a8.2 8.2 0 0 1-8.2 8.2 8.2 8.2 0 0 1-8.2-8.2ZM12 8.8c0-2.8 2-4.6 4.8-4.6 0 2.8-2 4.6-4.8 4.6Z',
+  cloche: 'M3.4 18.4h17.2M4.8 15.6a7.2 7.2 0 0 1 14.4 0ZM12 8.4V5.6M10.6 5.6h2.8',
+  apple: 'M12 8.2c-1-1.1-2.4-1.7-3.8-1.7-2.6 0-4.6 2.3-4.6 5.6 0 4.2 3 8.4 5.4 8.4 1.1 0 1.9-.6 3-.6s1.9.6 3 .6c2.4 0 5.4-4.2 5.4-8.4 0-3.3-2-5.6-4.6-5.6-1.4 0-2.8.6-3.8 1.7ZM12 8.2V5.4M12 5.4c0-1.3 1.1-2.4 2.4-2.4',
 }
 
 /** Which icons carry their own motion class. */

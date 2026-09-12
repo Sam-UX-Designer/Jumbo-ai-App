@@ -78,6 +78,27 @@ export function relativeTime(minutesAgo: number) {
   return d === 1 ? 'yesterday' : `${d} days ago`
 }
 
+/**
+ * "18:26" as the clock a person reads: "6:26 PM".
+ *
+ * The stored value is local wall-clock already, so this only formats it. It
+ * never shifts it into or out of a timezone: doing that to a wall-clock
+ * string moves the meal.
+ */
+export function clockTime(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm
+  const suffix = h < 12 ? 'AM' : 'PM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+/** Now, in the same shape the records store. */
+export const nowClock = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export const uid = () => Math.random().toString(36).slice(2, 10)
 
 export function formatSigned(v: number, dp = 1, unit = '') {
