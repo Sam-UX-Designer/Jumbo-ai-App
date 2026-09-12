@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './styles/base.css'
 import { NavProvider, Sidebar, TabBar, type ChatFocus, type Route } from './components/Nav'
 import { AskDock } from './components/AskDock'
@@ -10,6 +10,7 @@ import { Capture } from './screens/Capture'
 import { Explore } from './screens/Explore'
 import { Measurements } from './screens/Measurements'
 import { You } from './screens/You'
+import { Settings } from './screens/Settings'
 import { Chat } from './screens/Chat'
 import { StoreProvider, useStore } from './state/store'
 import { consistencyStreak } from './lib/analytics'
@@ -19,7 +20,7 @@ import { haptic } from './lib/feedback'
 const TITLES: Record<Route, string> = {
   today: 'Today', future: 'AI Future', capture: 'Capture',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
-  chat: 'Ask Jumbo',
+  chat: 'Ask Jumbo', settings: 'Settings',
 }
 
 function Shell() {
@@ -33,6 +34,16 @@ function Shell() {
   // What the conversation is about, when it was opened from a specific
   // thing — a meal, so far. Kept across the trip so going back reopens it.
   const [focus, setFocus] = useState<ChatFocus | null>(null)
+  /**
+   * The group inside Settings a menu row asked for. Settings is one scroll
+   * rather than seven pushed screens, so arriving lands on the right group
+   * instead of always at the top.
+   *
+   * A ref, not state: clearing it after the scroll would re-run the effect
+   * below, which would then take its scroll-to-top branch and undo the very
+   * scroll it had just performed.
+   */
+  const anchor = useRef<string | null>(null)
   const toast = useToast()
 
   const navigate = (next: Route, question?: string, nextFocus?: ChatFocus) => {
@@ -49,8 +60,14 @@ function Shell() {
   }
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' })
     document.title = `${TITLES[route]} · Jumbo`
+    const to = anchor.current
+    anchor.current = null
+    // The group is in the DOM by now: effects run after the commit that
+    // rendered the new route.
+    const el = to ? document.getElementById(to) : null
+    if (el) el.scrollIntoView({ block: 'start', behavior: 'auto' })
+    else window.scrollTo({ top: 0, behavior: 'auto' })
   }, [route])
 
   // Reminders fire while Jumbo is open; Profile says so plainly. Acting on
@@ -75,7 +92,7 @@ function Shell() {
         <div className="shell">
           <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
           <main
-            className={`main${route === 'chat' ? '' : ' main--dock'}`}
+            className={`main${route === 'chat' || route === 'settings' ? '' : ' main--dock'}`}
             id="main" key={route} tabIndex={-1}
           >
             {route === 'today' && <Today />}
@@ -88,11 +105,14 @@ function Shell() {
             {route === 'chat' && (
               <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
             )}
-            {route === 'you' && <You onNavigate={setRoute} />}
+            {route === 'you' && (
+              <You onNavigate={(r, to) => { anchor.current = to ?? null; setRoute(r) }} />
+            )}
+            {route === 'settings' && <Settings onNavigate={setRoute} />}
           </main>
         </div>
-        {route !== 'chat' && <AskDock screen={route} />}
-        <TabBar route={route} onNavigate={setRoute} />
+        {route !== 'chat' && route !== 'settings' && <AskDock screen={route} />}
+        <TabBar route={route} origin={origin} onNavigate={setRoute} />
       </div>
     </NavProvider>
   )

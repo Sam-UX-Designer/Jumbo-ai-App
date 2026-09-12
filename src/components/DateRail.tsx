@@ -63,8 +63,12 @@ export function DateRail({
           >
             <span className="daterail__label">{d.label}</span>
             <span className="daterail__num num">{d.number}</span>
-            <span className="daterail__ring"><DayRing progress={d.progress} size={26} /></span>
-            {d.isToday && <span className="daterail__today">Today</span>}
+            {/* The selected day's filled disc already carries its state, so
+                the marker takes the ring's place rather than sitting below
+                it and stretching the row. */}
+            {isSelected && d.isToday
+              ? <span className="daterail__today">Today</span>
+              : <span className="daterail__ring"><DayRing progress={d.progress} size={24} /></span>}
           </button>
         )
       })}

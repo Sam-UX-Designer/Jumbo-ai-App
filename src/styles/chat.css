@@ -309,3 +309,19 @@
 }
 .md__table th { color: var(--ink-3); font-weight: 620; }
 .md__table tr:last-child td { border-bottom: 0; }
+
+/* ============================================================
+   The answer arriving
+
+   The mark stays exactly where it was while it was working, so the reply
+   comes from the same presence rather than replacing it. Only the words
+   are new, and they arrive on one short fade rather than appearing all at
+   once mid-scroll. This is the one authored moment in the conversation.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  .bubble--jumbo { animation: answer-in 380ms var(--ease) both; }
+}
+@keyframes answer-in {
+  from { opacity: 0; transform: translateY(4px) }
+  to   { opacity: 1; transform: translateY(0) }
+}

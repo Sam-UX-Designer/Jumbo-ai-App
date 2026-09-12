@@ -164,15 +164,13 @@ export function Explore() {
   return (
     <div className="stack stack-5">
       <header className="scr-head">
-        <div style={{ minWidth: 0 }}>
-          <h1 className="scr-head__title">Explore</h1>
-          <p className="scr-head__sub">
-            Real videos from YouTube, chosen against your goals. Their views are their own.
-          </p>
-        </div>
+        <h1 className="scr-head__title">Explore</h1>
         <div className="scr-head__actions">
           <AvatarButton size={42} />
         </div>
+        <p className="scr-head__sub">
+          Real videos from YouTube, chosen against your goals. Their views are their own.
+        </p>
       </header>
 
       <form
@@ -236,19 +234,17 @@ export function Explore() {
         value={tab}
         onChange={(v) => setTab(v as Tab)}
         options={[
-          { value: 'for-you', label: 'For you' },
+          { value: 'for-you', label: 'Discover' },
           { value: 'saved', label: `Saved ${state.savedVideos.length}` },
           { value: 'following', label: `Following ${followed.length}` },
         ]}
       />
 
-      <div className="notice" role="note">
-        <Icon name="info" size={18} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
-        <p className="t-caption dim">
-          Everything here is third-party content. A large audience is not a qualification and
-          popularity is not evidence. Nothing in Explore feeds your insights or your Future.
-        </p>
-      </div>
+      <p className="source-note" role="note">
+        <Icon name="info" size={15} />
+        Third-party content. Popularity is not evidence, and nothing here feeds your insights
+        or your Future.
+      </p>
 
       {problem?.kind === 'setup' && (
         <UnavailableNotice
@@ -273,16 +269,14 @@ export function Explore() {
       )}
 
       {tab === 'for-you' && !problem && (
-        <div className="row row--top card card--brand" style={{ gap: 'var(--s-3)' }}>
+        <p className="source-note">
           <AiOrb size="sm" />
-          <p className="t-callout">
-            {curated
-              ? <>The latest from creators Jumbo follows for {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}. Pulled from their own channels just now.</>
-              : personalise
-                ? <>Searched for <span className="strong">“{resolvedQuery || query}”</span> because your goals are {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}.</>
-                : <>Personalisation is off, so this is a general search. Turn it on in Profile to match your goals.</>}
-          </p>
-        </div>
+          {curated
+            ? <>The latest from creators Jumbo follows for {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}, pulled from their own channels.</>
+            : personalise
+              ? <>Searched for <span className="strong" style={{ color: 'var(--ink-2)' }}>“{resolvedQuery || query}”</span> because your goals are {goals.map((g) => GOAL_LABEL[g]).join(', ').toLowerCase()}.</>
+              : <>Personalisation is off, so this is a general search. Turn it on in Profile to match your goals.</>}
+        </p>
       )}
 
       {/* ────────────────────────────── the one to watch first */}
@@ -295,18 +289,19 @@ export function Explore() {
                 asset="videoThumbnail" src={featured.thumbnail} alt=""
                 rounded="none" className="feature__img"
               />
+              <span className="feature__badge">Featured</span>
               <span className="feature__play" aria-hidden="true">
                 <Icon name="play" size={26} />
               </span>
               {isoDurationMinutes(featured.durationIso) !== null && (
                 <span className="feature__len num">{isoDurationMinutes(featured.durationIso)} min</span>
               )}
-            </span>
-            <span className="stack stack-1" style={{ padding: 'var(--s-4)', textAlign: 'left', minWidth: 0 }}>
-              <span className="t-title3">{featured.title}</span>
-              <span className="t-caption dim2">
-                {featured.channelTitle}
-                {compactCount(featured.viewCount) ? ` · ${compactCount(featured.viewCount)} views` : ''}
+              <span className="feature__over">
+                <span className="feature__title">{featured.title}</span>
+                <span className="feature__by">
+                  {featured.channelTitle}
+                  {compactCount(featured.viewCount) ? ` · ${compactCount(featured.viewCount)} views` : ''}
+                </span>
               </span>
             </span>
           </button>
@@ -466,7 +461,7 @@ function VideoRow({
         onClick={onSave}
         style={{ color: saved ? 'var(--brand)' : undefined }}
       >
-        <Icon name={saved ? 'check' : 'plus'} size={19} />
+        <Icon name="bookmark" size={19} style={saved ? { fill: 'currentColor' } : undefined} />
       </button>
     </li>
   )

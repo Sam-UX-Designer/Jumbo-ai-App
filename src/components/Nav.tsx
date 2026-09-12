@@ -5,6 +5,7 @@ import { haptic } from '../lib/feedback'
 
 export type Route =
   | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
+  | 'settings'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -70,15 +71,28 @@ const SIDEBAR: NavItem[] = [
   ...RIGHT,
 ]
 
-export function TabBar({ route, onNavigate }: { route: Route; onNavigate: (r: Route) => void }) {
+export function TabBar({
+  route, origin, onNavigate,
+}: {
+  route: Route
+  /**
+   * The screen Ask Jumbo was opened from. The conversation has no tab of its
+   * own, and it can be opened from any of them, so the tab that stays lit is
+   * the one Back will return to — anything else tells you that you are
+   * somewhere you are not.
+   */
+  origin?: Route
+  onNavigate: (r: Route) => void
+}) {
   const go = (r: Route) => { haptic('selection'); onNavigate(r) }
 
   const tab = (item: NavItem) => {
-    // Measurements and the chat are reached from within a section, so the tab
-    // they belong to stays lit rather than nothing being current.
+    // Measurements, settings and the conversation are reached from inside a
+    // section, so the tab they belong to stays lit rather than nothing being
+    // current.
     const current = route === item.route
-      || (item.route === 'you' && route === 'measurements')
-      || (item.route === 'future' && route === 'chat')
+      || (item.route === 'you' && (route === 'measurements' || route === 'settings'))
+      || (route === 'chat' && item.route === origin)
     return (
       <button
         key={item.route}

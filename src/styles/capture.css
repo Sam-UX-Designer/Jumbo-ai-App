@@ -1,22 +1,48 @@
 /* ============================================================
    Capture surfaces
    ============================================================ */
-.cap-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
-@media (min-width: 720px) { .cap-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Four across, one line, as the reference has them. These are the four
+   things a wearable cannot see, and putting them on one row says that
+   they are peers — a two-by-two grid implied a ranking. */
+.cap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+@media (min-width: 520px) { .cap-tiles { gap: var(--s-3); } }
 
 .cap-tile {
-  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3);
-  padding: var(--s-5) var(--s-4); min-height: 132px; cursor: pointer; text-align: left;
-  border: 1px solid var(--hairline); border-radius: var(--r-card);
-  background: var(--surface); color: var(--ink);
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2);
+  padding: var(--s-3) 10px; cursor: pointer; text-align: left;
+  /* --tint is the subject's own colour, set per tile. Each card is washed
+     in it so the row reads as four subjects rather than four grey boxes. */
+  border: 1px solid color-mix(in srgb, var(--tint, var(--brand)) 26%, transparent);
+  border-radius: var(--r-tile);
+  background:
+    linear-gradient(158deg, color-mix(in srgb, var(--tint, var(--brand)) 16%, transparent), transparent 72%),
+    var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
   transition: transform var(--d-fast) var(--ease), border-color var(--d-fast), background var(--d-fast);
 }
-.cap-tile:hover { border-color: var(--hairline-firm); background: var(--surface-2); }
-.cap-tile:active { transform: scale(0.985); }
-.cap-tile--primary { border-color: var(--brand-line); background: linear-gradient(155deg, var(--brand-dim), transparent 60%), var(--surface); }
-.cap-tile__icon { width: 44px; height: 44px; border-radius: var(--r-tile); display: grid; place-items: center; }
-.cap-tile__title { font-size: var(--t-title3); font-weight: 640; letter-spacing: -0.015em; }
-.cap-tile__sub   { font-size: var(--t-caption); color: var(--ink-3); }
+@media (min-width: 520px) { .cap-tile { padding: var(--s-4); gap: var(--s-3); } }
+.cap-tile:hover {
+  border-color: color-mix(in srgb, var(--tint, var(--brand)) 42%, transparent);
+  background:
+    linear-gradient(158deg, color-mix(in srgb, var(--tint, var(--brand)) 24%, transparent), transparent 72%),
+    var(--surface);
+}
+.cap-tile:active { transform: scale(0.97); }
+.cap-tile:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cap-tile__icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center;
+}
+@media (min-width: 520px) { .cap-tile__icon { width: 40px; height: 40px; border-radius: var(--r-chip); } }
+.cap-tile__title {
+  font-size: 12.5px; font-weight: 640; letter-spacing: -0.015em; line-height: 1.2;
+}
+@media (min-width: 520px) { .cap-tile__title { font-size: var(--t-title3); } }
+.cap-tile__sub {
+  font-size: 10px; color: var(--ink-3); line-height: 1.25;
+}
+@media (min-width: 520px) { .cap-tile__sub { font-size: var(--t-caption); } }
 
 /* ---------------------------------------------------------------- camera */
 .camera {
@@ -97,21 +123,39 @@
 .shot-preview img { width: 100%; max-height: 260px; object-fit: cover; }
 
 /* ------------------------------------------------ the camera-first route */
+/* The photograph route, in the colour of the thing it captures. The dashed
+   rim says this is a slot waiting to be filled rather than a card that has
+   already been filled in. */
 .snap {
   display: flex; align-items: center; gap: var(--s-4);
   width: 100%; padding: var(--s-4);
-  border: 1px dashed var(--brand-line);
+  border: 1px dashed color-mix(in srgb, var(--meal) 46%, transparent);
   border-radius: var(--r-card);
-  background: linear-gradient(150deg, var(--brand-dim), transparent 58%), var(--surface);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--meal) 14%, transparent), transparent 62%),
+    var(--surface);
+  box-shadow: var(--card-lip);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
   transition: transform var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
 }
-.snap:hover  { border-color: var(--brand); }
+.snap:hover  { border-color: var(--meal); }
 .snap:active { transform: scale(0.99); }
 .snap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.snap__shot { width: 92px; height: 92px; flex: none; }
+.snap__shot { width: 88px; height: 88px; flex: none; }
+
+/* The one control on this card takes the meal colour rather than the app's
+   green, so the card reads as one idea. */
+.snap__cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  align-self: flex-start; pointer-events: none;
+  min-height: 34px; padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  background: linear-gradient(120deg, var(--meal), var(--ai));
+  color: #fff;
+  font-size: var(--t-caption); font-weight: 640; letter-spacing: -0.01em;
+}
 
 /* The microphone is live. */
 .btn.is-listening { border-color: var(--brand); color: var(--accent-text); }

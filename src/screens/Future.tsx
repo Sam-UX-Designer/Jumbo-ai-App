@@ -91,26 +91,26 @@ export function Future() {
     return [
       {
         label: 'Aerobic fitness', icon: 'bolt' as IconName, colour: 'var(--movement)',
-        value: base.vo2max > 0 ? base.vo2max.toFixed(1) : '—', unit: 'ml/kg/min',
-        note: base.vo2max > 0 ? 'VO₂ max estimate' : 'Not supplied',
+        value: base.vo2max > 0 ? base.vo2max.toFixed(1) : '-', unit: 'ml/kg/min',
+        note: base.vo2max > 0 ? 'VO₂ max' : 'Not supplied',
         good: null as boolean | null,
       },
       {
         label: 'Resting heart rate', icon: 'heart' as IconName, colour: 'var(--training)',
-        value: base.restingHR > 0 ? String(Math.round(base.restingHR)) : '—', unit: 'bpm',
-        note: base.restingHR > 0 ? `${Math.round(base.hrv)} ms HRV baseline` : 'Not supplied',
+        value: base.restingHR > 0 ? String(Math.round(base.restingHR)) : '-', unit: 'bpm',
+        note: base.restingHR > 0 ? `HRV ${Math.round(base.hrv)} ms` : 'Not supplied',
         good: null,
       },
       {
         label: 'Sleep quality', icon: 'sleep' as IconName, colour: 'var(--sleep)',
         value: String(Math.round(nowProgress.sleep * 100)), unit: '/ 100',
-        note: `${round(mean(week.map((d) => d.sleepHours)), 1)} h average this week`,
+        note: `${round(mean(week.map((d) => d.sleepHours)), 1)} h a night`,
         good: nowProgress.sleep >= 0.75 ? true : null,
       },
       {
         label: 'Activity load', icon: 'training' as IconName, colour: 'var(--recovery)',
-        value: loadDelta === null ? '—' : `${loadDelta > 0 ? '+' : ''}${loadDelta}%`, unit: 'this week',
-        note: loadDelta === null ? 'Needs two weeks' : loadDelta > 40 ? 'A sharp rise' : 'Against last week',
+        value: loadDelta === null ? '-' : `${loadDelta > 0 ? '+' : ''}${loadDelta}%`, unit: 'this week',
+        note: loadDelta === null ? 'Needs 2 weeks' : loadDelta > 40 ? 'A sharp rise' : 'vs last week',
         good: loadDelta !== null && loadDelta > 40 ? false : null,
       },
     ]
@@ -148,15 +148,27 @@ export function Future() {
 
   return (
     <div className="stack stack-6">
-      <header className="stack stack-4" style={{ marginBottom: 'calc(var(--s-8) * -1)' }}>
+      <header className="stack stack-4">
         <div className="scr-head">
-          <div style={{ minWidth: 0 }}>
-            <h1 className="scr-head__title">AI Future</h1>
-            <p className="scr-head__sub">Ask. Learn. Live longer.</p>
-          </div>
+          <h1 className="scr-head__title">Future AI</h1>
           <div className="scr-head__actions">
+            {/* The plan is the scenario further down this screen — the one
+                place the habits are actually set — so this goes there
+                rather than to a page that would only link back. */}
+            <button
+              className="plan-btn"
+              onClick={() => {
+                haptic('selection')
+                document.getElementById('your-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              <Icon name="target" size={15} style={{ color: 'var(--ai)' }} />
+              Your plan
+              <Icon name="chevron" size={13} style={{ color: 'var(--ink-3)' }} />
+            </button>
             <AvatarButton size={42} />
           </div>
+          <p className="scr-head__sub">Ask. Learn. Improve. Live longer.</p>
         </div>
         {state.dataMode === 'demo' && (
           <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>
@@ -169,7 +181,7 @@ export function Future() {
         <div className="ai-hero">
           <span className="ai-hero__mascot">
             <Mascot
-              size={82}
+              size={92}
               thinking={narrative.loading}
               onClick={() => navigate('chat')}
               label="Ask Jumbo"
@@ -188,18 +200,15 @@ export function Future() {
 
       {/* ────────────────────────────── the numbers Jumbo actually holds */}
       <section className="section">
-        <SectionHead
-          title="Your AI insights"
-          sub="Measured by your sources, read against your own history."
-        />
-        <ul className="metric-grid">
+        <SectionHead title="Your AI insights" />
+        <ul className="rail">
           {vitals.map((v) => (
-            <li key={v.label} className="metric" style={{ cursor: 'default' }}>
-              <Icon name={v.icon} size={22} className="metric__icon" style={{ color: v.colour }} />
-              <span className="metric__label">{v.label}</span>
-              <span className="metric__value num">{v.value}</span>
-              <span className="metric__unit">{v.unit}</span>
-              <span className={`metric__delta${v.good === true ? ' is-up' : v.good === false ? ' is-down' : ''}`}>
+            <li key={v.label} className="vital">
+              <Icon name={v.icon} size={21} className="vital__icon" style={{ color: v.colour }} />
+              <span className="vital__label">{v.label}</span>
+              <span className="vital__value num">{v.value}</span>
+              <span className="vital__unit">{v.unit}</span>
+              <span className={`vital__note${v.good === true ? ' is-good' : v.good === false ? ' is-caution' : ''}`}>
                 {v.note}
               </span>
             </li>
@@ -218,21 +227,20 @@ export function Future() {
           title="Your longevity outlook"
           sub={`Where ${scenarioId === 'current' ? 'your current pattern' : 'this scenario'} points, over ${HORIZON_LABEL[months].toLowerCase()}.`}
         />
-        <Segmented
-          ariaLabel="How far ahead"
-          value={months}
-          onChange={(v) => { haptic('selection'); setMonths(v as Horizon) }}
-          options={MONTH_OPTIONS.map((m) => ({ value: m, label: HORIZON_LABEL[m] }))}
-        />
         <div className="card stack stack-4">
-          <div className="row row--between row--top" style={{ gap: 'var(--s-4)' }}>
-            <div className="stack stack-1">
-              <span className="row t-title1 num" style={{ gap: 6, color: jumboIndex >= 0 ? 'var(--accent-text)' : 'var(--caution)' }}>
+          <div className="row row--between row--top" style={{ gap: 'var(--s-3)' }}>
+            <div className="stack stack-1" style={{ minWidth: 0 }}>
+              <span className="t-hero num" style={{ fontSize: 34, lineHeight: 1, color: jumboIndex >= 0 ? 'var(--accent-text)' : 'var(--caution)' }}>
                 {jumboIndex > 0 ? '+' : ''}{jumboIndex}
               </span>
               <span className="t-caption dim">Jumbo Index, a model estimate</span>
             </div>
-            <ProvenanceTag kind="model" />
+            <Segmented
+              ariaLabel="How far ahead"
+              value={months}
+              onChange={(v) => { haptic('selection'); setMonths(v as Horizon) }}
+              options={MONTH_OPTIONS.map((m) => ({ value: m, label: HORIZON_LABEL[m] }))}
+            />
           </div>
 
           <ProjectionChart
@@ -253,10 +261,10 @@ export function Future() {
 
           <Disclosure summary="What the Jumbo Index is">
             <p className="t-callout dim">
-              A single 0–100 composite of the projection’s recovery index — heart-rate variability
-              and sleep consistency — expressed as the change from where you are now. It is Jumbo’s
-              own model, not a clinical measure, and it says nothing about disease or life
-              expectancy.
+              A single 0 to 100 composite of the projection’s recovery index: heart-rate
+              variability and sleep consistency, expressed as the change from where you are now.
+              It is Jumbo’s own model, not a clinical measure, and it says nothing about disease
+              or life expectancy.
             </p>
           </Disclosure>
         </div>
@@ -271,9 +279,13 @@ export function Future() {
               <li key={r.id}>
                 <button
                   className="reco"
+                  style={{ ['--tint' as string]: r.colour }}
                   onClick={() => { haptic('selection'); navigate('chat', r.question) }}
                 >
-                  <Icon name={r.icon} size={20} style={{ color: r.colour }} />
+                  <span className="reco__top">
+                    <Icon name={r.icon} size={19} style={{ color: r.colour }} />
+                    <Icon name="chevron" size={14} style={{ color: 'var(--ink-3)' }} />
+                  </span>
                   <span className="reco__title">{r.title}</span>
                   <span className="reco__sub">{r.sub}</span>
                 </button>
@@ -284,7 +296,7 @@ export function Future() {
       )}
 
       {/* ────────────────────────────── choose a life, and a horizon */}
-      <section className="stack stack-4">
+      <section className="stack stack-4" id="your-plan" style={{ scrollMarginTop: 'var(--s-5)' }}>
         <SectionHead title="Explore a change" sub="Change one habit and the model updates." />
         <div className="rail" role="group" aria-label="Choose a scenario">
           {[...SCENARIOS, { id: 'custom', label: 'Tune it yourself', blurb: '', accent: 'var(--brand)' }].map((s) => (
@@ -408,7 +420,7 @@ export function Future() {
                   </span>
                   <span className="t-caption dim2">from {round(now, 1)}</span>
                 </div>
-                <span className="t-caption dim2 num">range {round(then - band, 1)}–{round(then + band, 1)}</span>
+                <span className="t-caption dim2 num">range {round(then - band, 1)} to {round(then + band, 1)}</span>
               </div>
             )
           })}
@@ -760,7 +772,15 @@ function InsightCard({
   const [open, setOpen] = useState(false)
 
   return (
-    <li className="card stack stack-4" style={{ borderLeft: `3px solid ${colour}` }}>
+    <li
+      className="card stack stack-4"
+      /* The domain's colour arrives as a wash from the corner the eye starts
+         in, rather than as a stripe bolted to the edge. */
+      style={{
+        background: `linear-gradient(158deg, color-mix(in srgb, ${colour} 13%, transparent), transparent 58%), var(--surface)`,
+        borderColor: `color-mix(in srgb, ${colour} 22%, transparent)`,
+      }}
+    >
       {/* The claim and how sure Jumbo is, always visible. */}
       <button
         className="stack stack-3"

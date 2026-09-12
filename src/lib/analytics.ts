@@ -422,6 +422,8 @@ export interface KeyMetric {
   deltaPct: number | null
   /** Used instead of a percentage where a percentage would mislead. */
   note?: string
+  /** Sleep only: the efficiency figure, shown in the metric's own sheet. */
+  efficiency?: number | null
   ring: number
 }
 
@@ -452,8 +454,11 @@ export function keyMetrics(days: DayRecord[], date: string, base: Baseline): Key
       label: 'Sleep',
       icon: 'sleep',
       colour: 'var(--sleep)',
-      value: day.sleepHours > 0 ? hoursToHM(day.sleepHours) : '—',
-      unit: day.sleepEfficiency ? `${day.sleepEfficiency}% efficiency` : 'not recorded',
+      value: day.sleepHours > 0 ? hoursToHM(day.sleepHours) : '-',
+      // A quarter of a phone's width holds about eight characters. The
+      // efficiency figure is in the metric's own sheet, where it has room.
+      unit: day.sleepHours > 0 ? 'asleep' : 'not recorded',
+      efficiency: day.sleepEfficiency ?? null,
       deltaPct: change(day.sleepHours, prior.map((d) => d.sleepHours)),
       ring: progress.sleep,
     },
@@ -462,7 +467,7 @@ export function keyMetrics(days: DayRecord[], date: string, base: Baseline): Key
       label: 'Movement',
       icon: 'steps',
       colour: 'var(--movement)',
-      value: day.steps > 0 ? day.steps.toLocaleString() : '—',
+      value: day.steps > 0 ? day.steps.toLocaleString() : '-',
       unit: 'steps',
       deltaPct: change(day.steps, prior.map((d) => d.steps)),
       ring: progress.movement,
@@ -472,12 +477,12 @@ export function keyMetrics(days: DayRecord[], date: string, base: Baseline): Key
       label: 'Nutrition',
       icon: 'plate',
       colour: 'var(--nutrition)',
-      value: kcal > 0 ? kcal.toLocaleString() : '—',
+      value: kcal > 0 ? kcal.toLocaleString() : '-',
       unit: 'kcal',
       deltaPct: null,
       note: day.meals.length === 0
-        ? 'Nothing logged'
-        : protein >= proteinTarget ? 'On target' : `${protein} of ${proteinTarget} g protein`,
+        ? 'Not logged'
+        : protein >= proteinTarget ? 'On target' : `${protein}/${proteinTarget} g`,
       ring: progress.nourish,
     },
     {
@@ -485,7 +490,7 @@ export function keyMetrics(days: DayRecord[], date: string, base: Baseline): Key
       label: 'Recovery',
       icon: 'heart',
       colour: 'var(--recovery)',
-      value: day.hrv > 0 ? String(Math.round(progress.recovery * 100)) : '—',
+      value: day.hrv > 0 ? String(Math.round(progress.recovery * 100)) : '-',
       unit: '/ 100',
       deltaPct: change(day.hrv, prior.map((d) => d.hrv)),
       ring: progress.recovery,

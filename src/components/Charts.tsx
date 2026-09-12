@@ -92,12 +92,18 @@ export function BarChart({
                 background: 'none', border: 0, padding: 0, cursor: 'pointer', minWidth: 0,
               }}
             >
+              {/* The bar is drawn at full height and scaled down from its
+                  base, so growing it is a transform rather than a re-layout
+                  of every bar beside it. */}
               <span
                 style={{
-                  display: 'block', width: '100%', height: h, borderRadius: 5,
+                  // Full height in pixels; the scale below is what varies.
+                  display: 'block', width: '100%', height, borderRadius: 5,
                   background: d.muted ? 'var(--hairline-firm)' : color,
                   opacity: active === null || isActive ? 1 : 0.42,
-                  transition: 'opacity var(--d-fast), height var(--d-slow) var(--ease-out)',
+                  transformOrigin: 'bottom',
+                  transform: `scaleY(${h / height})`,
+                  transition: 'opacity var(--d-fast), transform var(--d-slow) var(--ease)',
                 }}
               />
             </button>
@@ -187,7 +193,7 @@ export function LineChart({
       </svg>
       <div className="row row--between t-caption dim2" style={{ marginTop: 'var(--s-2)' }}>
         <span>{labels[0]}</span>
-        <span className="num">{round(lo, dp)}–{round(hi, dp)} {unit}</span>
+        <span className="num">{round(lo, dp)} to {round(hi, dp)} {unit}</span>
         <span>{labels[labels.length - 1]}</span>
       </div>
     </div>

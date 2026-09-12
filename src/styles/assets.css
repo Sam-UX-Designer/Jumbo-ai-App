@@ -87,37 +87,51 @@ button.mascot:active { transform: scale(0.96); }
   .mascot            { animation: mascot-float 4.2s var(--ease) infinite; }
 
   .mascot.is-thinking {
-    animation: mascot-float 2.1s var(--ease) infinite,
-               mascot-breathe 2.1s var(--ease) infinite;
+    /* One slow breath. Four seconds is beyond the rate anything reads as
+       progress, which is the point: this is presence, not a countdown. */
+    animation: mascot-breathe 4.2s ease-in-out infinite;
   }
-  /* The expanding ring. */
-  .mascot.is-thinking::after {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 1.5px solid var(--brand);
-    opacity: 0.5;
-    animation: orb-ring 1.6s var(--ease) infinite;
-  }
-  /* A second, half a beat behind, so the pulse never reads as a single blip. */
+
+  /* A halo that swells with the breath and fades back. Luminosity only. */
   .mascot.is-thinking::before {
     content: '';
     position: absolute;
-    inset: -6px;
+    inset: -12px;
     border-radius: 50%;
-    border: 1.5px solid var(--brand);
-    opacity: 0.32;
-    animation: orb-ring 1.6s var(--ease) 0.8s infinite;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--brand) 26%, transparent) 0%,
+      transparent 66%
+    );
+    animation: mascot-halo 4.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* One point of light, once round every seven seconds. Slow enough that it
+     never reads as a spinner, and there is no track behind it to read as a
+     proportion of anything. The dot is painted at the top of a full-bleed
+     box, so rotating the box carries it around the mark's own centre and
+     the orbit scales with whatever size the mark is drawn at. */
+  .mascot.is-thinking::after {
+    content: '';
+    position: absolute;
+    inset: -9px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle 5px at 50% 0%, color-mix(in srgb, var(--brand) 40%, transparent) 0%, transparent 100%),
+      radial-gradient(circle 2px at 50% 0%, var(--brand) 0%, var(--brand) 100%, transparent 100%);
+    animation: mascot-orbit 7s linear infinite;
+    pointer-events: none;
   }
 }
 
-/* The state still has to read with motion turned down: a steady ring, no
-   movement. */
-@media (prefers-reduced-motion: reduce) {
-  .mascot.is-thinking {
-    box-shadow: 0 0 0 1.5px var(--brand-line), 0 0 18px -4px var(--brand-glow);
-  }
+@keyframes mascot-halo {
+  0%, 100% { opacity: .34; transform: scale(.94) }
+  50%      { opacity: .62; transform: scale(1.04) }
+}
+@keyframes mascot-orbit {
+  from { transform: rotate(0deg) }
+  to   { transform: rotate(360deg) }
 }
 
 @keyframes mascot-breathe {
@@ -187,17 +201,32 @@ button.mascot:active { transform: scale(0.96); }
   gap: var(--s-3);
 }
 
+.think__say { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
 .think__word {
   font-size: var(--t-callout);
-  font-weight: 540;
-  color: var(--ink-3);
+  font-weight: 560;
+  color: var(--ink-2);
   letter-spacing: -0.01em;
+  line-height: 1.25;
   /* Opacity alone, so the word never shifts as it changes. */
   opacity: 1;
-  transition: opacity 260ms var(--ease);
+  transition: opacity 280ms var(--ease);
 }
 .think__word[data-visible='false'] { opacity: 0; }
 
+/* How long it has been. Secondary to the word in size, weight and colour,
+   and absent until the wait is long enough to be worth acknowledging. */
+.think__secs {
+  font-size: var(--t-micro);
+  font-weight: 560;
+  color: var(--ink-4);
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 420ms var(--ease);
+}
+.think__secs[data-visible='true'] { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
-  .think__word { transition: none; }
+  .think__word, .think__secs { transition: none; }
 }

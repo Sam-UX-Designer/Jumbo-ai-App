@@ -57,7 +57,7 @@ export function Measurements() {
   if (!state.measurements.length) {
     return (
       <div className="stack stack-8">
-        <ScreenHead eyebrow="Measurements" title="Point-in-time measurements" />
+        <ScreenHead title="Measurements" />
         <Empty
           icon="measure" title="No measurements yet"
           body="Connect a lab or DEXA source, or add a result by hand from Capture. Jumbo keeps the source with every number."
@@ -69,8 +69,7 @@ export function Measurements() {
   return (
     <div className="stack stack-10">
       <ScreenHead
-        eyebrow="Measurements"
-        title="The numbers you measure now and then"
+        title="Measurements"
         sub="Lab panels, scans and tests, kept next to the daily data so you can see them move together."
       />
 

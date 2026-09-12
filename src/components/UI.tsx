@@ -267,9 +267,8 @@ export function SectionHead({
  * part of the header, not something each screen remembers to add.
  */
 export function ScreenHead({
-  eyebrow, title, sub, actions, sample = false,
+  title, sub, actions, sample = false,
 }: {
-  eyebrow?: string
   title: string
   sub?: string
   /** Round controls that sit to the left of the profile photo. */
@@ -279,16 +278,15 @@ export function ScreenHead({
 }) {
   return (
     <header className="stack stack-4" style={{ marginBottom: 'var(--s-6)' }}>
+      {/* The subtitle is a direct child so it can take the full width under
+          the title rather than sharing a column with the controls. */}
       <div className="scr-head">
-        <div style={{ minWidth: 0 }}>
-          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-          <h1 className="scr-head__title">{title}</h1>
-          {sub && <p className="scr-head__sub">{sub}</p>}
-        </div>
+        <h1 className="scr-head__title">{title}</h1>
         <div className="scr-head__actions">
           {actions}
           <AvatarButton size={42} />
         </div>
+        {sub && <p className="scr-head__sub">{sub}</p>}
       </div>
       {sample && (
         <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>

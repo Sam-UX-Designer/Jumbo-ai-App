@@ -22,7 +22,7 @@ export const RING_DEFS = [
  * then tracks state.
  */
 export function Rings({
-  progress, size = 212, children,
+  progress, size = 156, children,
 }: {
   progress: DailyProgress
   size?: number
@@ -34,8 +34,8 @@ export function Rings({
     return () => window.clearTimeout(t)
   }, [])
 
-  const stroke = size * 0.049
-  const gap = stroke * 0.62
+  const stroke = size * 0.05
+  const gap = stroke * 0.5
   const cx = size / 2
   const step = stroke + gap
 
@@ -55,7 +55,7 @@ export function Rings({
               {/* The unfilled track: the ring's own colour, well back. */}
               <circle
                 cx={cx} cy={cx} r={r} fill="none" stroke={ring.colour}
-                strokeWidth={stroke} opacity={0.18}
+                strokeWidth={stroke} opacity={0.07}
               />
               <circle
                 className="rings__fill"

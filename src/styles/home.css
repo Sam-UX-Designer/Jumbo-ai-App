@@ -7,11 +7,23 @@
 
 /* ── Screen header shared by Today, Capture, Explore, Future ───────── */
 .scr-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--s-4);
+  /* Two rows: the title and its controls on the first, the subtitle across
+     the full width on the second. Keeping the subtitle inside the title's
+     column squeezed it into three words a line the moment a control
+     appeared beside it. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title actions"
+    "sub   sub";
+  align-items: center;
+  column-gap: var(--s-3);
 }
+.scr-head__title   { grid-area: title; min-width: 0; }
+.scr-head__actions { grid-area: actions; }
+.scr-head__sub     { grid-area: sub; }
+/* The greeting on Today occupies the title cell as a unit. */
+.greet             { grid-area: title; min-width: 0; }
 
 .scr-head__title {
   font-size: var(--t-display);
@@ -24,8 +36,9 @@
 .scr-head__sub {
   font-size: var(--t-callout);
   color: var(--ink-2);
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   line-height: 1.4;
+  max-width: 42ch;
 }
 
 /* The cluster of round controls at top right. */
@@ -54,20 +67,27 @@
   border: 2px solid var(--surface);
 }
 
-/* ── Greeting ───────────────────────────────────────────────────────── */
+/* ── Greeting ─────────────────────────────────────────────────────────
+   The photograph leads the row, the way it does on the reference: you
+   see whose day this is before you read the greeting. */
+.greet {
+  display: flex; align-items: center; gap: var(--s-3); min-width: 0;
+}
 .greet__hello {
   font-size: var(--t-callout);
   color: var(--ink-2);
   margin: 0;
+  line-height: 1.2;
 }
 .greet__name {
-  font-size: var(--t-display);
+  font-size: 1.75rem;
   font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.04;
+  letter-spacing: -0.038em;
+  line-height: 1.08;
   color: var(--ink);
-  margin: 2px 0 0;
-  display: flex; align-items: center; gap: 10px;
+  margin: 1px 0 0;
+  display: flex; align-items: center; gap: 8px;
+  white-space: nowrap;
 }
 
 /* ── Date strip ─────────────────────────────────────────────────────── */
@@ -84,14 +104,14 @@
 
 .daterail__day {
   flex: 1 0 auto;
-  min-width: 48px;
+  min-width: 46px;
   /* Every cell reserves the marker's line, so the day carrying it is no
      taller than its neighbours and the row reads as one band. */
   position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 9px 6px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 8px 5px;
   border: 1.5px solid transparent;
-  border-radius: 18px;
+  border-radius: 16px;
   background: none;
   cursor: pointer;
   transition: background var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
@@ -101,46 +121,54 @@
 .daterail__day:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .daterail__label {
-  font-size: var(--t-caption);
-  font-weight: 500;
+  font-size: var(--t-micro);
+  font-weight: 560;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--ink-3);
   line-height: 1;
 }
 .daterail__num {
-  font-size: 20px; font-weight: 620; line-height: 1;
+  /* The disc is drawn here rather than on a wrapper, so the selected day
+     needs no extra element and the row's rhythm never shifts. */
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-size: 17px; font-weight: 640; line-height: 1;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+  transition: background var(--d-base) var(--ease), color var(--d-base) var(--ease);
 }
-.daterail__ring { display: block; height: 26px; }
+.daterail__ring { display: block; height: 24px; }
 
-/* The selected day: a green outline and a green label, per the reference. */
+/* The selected day: a soft green surround, and the number reversed out of
+   a filled green disc, exactly as the reference draws it. */
 .daterail__day.is-selected {
-  border-color: var(--brand);
+  border-color: var(--brand-line);
   background: var(--brand-dim);
 }
-.daterail__day.is-selected .daterail__label { color: var(--accent-text); font-weight: 620; }
+.daterail__day.is-selected .daterail__label { color: var(--accent-text); font-weight: 660; }
+.daterail__day.is-selected .daterail__num {
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+
 
 .daterail__today {
-  position: absolute; bottom: 7px; left: 0; right: 0;
-  font-size: 9px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase;
+  display: grid; place-items: center;
+  height: 24px;
+  font-size: 10px; font-weight: 680; letter-spacing: .005em;
   color: var(--accent-text);
   line-height: 1;
 }
 
 /* ── Health score card ──────────────────────────────────────────────── */
 .rings { position: relative; flex: none; }
-/* A whisper of the ring's own colour behind it, so the arcs read as lit
-   rather than printed. `color` is set per ring, and the shadow is small
-   enough to add depth without tipping into neon. */
+/* The arcs carry themselves. A zero-offset halo behind them is decoration,
+   and at this diameter it turns four clean rings into neon. */
 .rings__fill {
   transition: stroke-dashoffset var(--d-story) var(--ease);
-  filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 30%, transparent));
-}
-/* The light theme paints on white, where a glow only muddies the edge. */
-:root[data-theme="light"] .rings__fill { filter: none; }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .rings__fill { filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .rings__fill { transition: none; } }
 
@@ -151,47 +179,59 @@
   pointer-events: none;
 }
 
+/* The rings sit beside the reading of the day, not above it. Putting the
+   verdict on the same line as the arcs is what stops this card reading as
+   an analytics widget: you get the sentence and the evidence at once. */
 .score-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--s-4);
-  padding: var(--s-5) var(--s-5) var(--s-5);
+  column-gap: var(--s-4);
+  row-gap: var(--s-4);
+  padding: var(--s-4);
   border-radius: var(--r-card);
   background: var(--surface);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--card-lip);
 }
-@media (min-width: 520px) {
-  .score-card { flex-direction: row; align-items: center; gap: var(--s-6); }
+@media (min-width: 520px) { .score-card { padding: var(--s-5); column-gap: var(--s-6); } }
+
+/* Narrower than a phone: the arcs go back on top rather than squeeze the
+   sentence into two words a line. */
+@media (max-width: 349px) {
+  .score-card { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .score__say { text-align: center; align-items: center; }
 }
 
 .score__num {
   display: block;
-  font-size: 42px; font-weight: 680; line-height: 1;
-  letter-spacing: -0.04em;
+  font-size: 30px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.045em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .score__cap {
   display: block;
-  margin-top: 6px;
-  font-size: var(--t-micro); font-weight: 560; line-height: 1.25;
+  margin-top: 3px;
+  font-size: 9px; font-weight: 580; line-height: 1.2;
+  letter-spacing: 0.005em;
   color: var(--ink-3);
 }
 
-.score__say { display: flex; flex-direction: column; gap: 6px; text-align: center; min-width: 0; }
-@media (min-width: 520px) { .score__say { text-align: left; } }
+.score__say { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 
 .score__state {
-  display: flex; align-items: center; gap: 9px;
-  justify-content: center;
-  font-size: var(--t-title2); font-weight: 660;
-  letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 8px;
+  font-size: var(--t-title2); font-weight: 680;
+  letter-spacing: -0.025em;
   color: var(--ink);
 }
-@media (min-width: 520px) { .score__state { justify-content: flex-start; } }
 
-.score__body { font-size: var(--t-callout); color: var(--ink-2); line-height: 1.45; margin: 0; }
+.score__body { font-size: var(--t-callout); color: var(--ink-2); line-height: 1.42; margin: 0; }
+
+/* The insight sits inside the score card, under the sentence it qualifies,
+   and spans the full width once the arcs have had their column. */
+.score-card > .insight-card { grid-column: 1 / -1; }
 
 /* ── The AI's read of the day ───────────────────────────────────────── */
 .insight-card {
@@ -220,53 +260,60 @@
 /* ── The four metric cards ──────────────────────────────────────────── */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-3);
+  /* Four across at phone width. The reference puts sleep, movement,
+     nutrition and recovery on one line, and splitting them over two rows
+     turns a glance into a scan. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
 }
-@media (min-width: 620px) { .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 520px) { .metric-grid { gap: var(--s-3); } }
 
 .metric {
+  width: 100%;
   display: flex; flex-direction: column; align-items: flex-start;
-  width: 100%; height: 100%;
-  gap: 2px;
-  padding: var(--s-4) var(--s-4) var(--s-5);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-card);
+  gap: 0;
+  padding: var(--s-3) 10px var(--s-3);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
   background: var(--surface);
+  box-shadow: var(--card-lip);
   color: var(--ink);
-  min-width: 0;
   text-align: left;
   cursor: pointer;
   transition: background var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
 }
+@media (min-width: 520px) { .metric { padding: var(--s-4); } }
 .metric:hover  { background: var(--surface-2); }
-.metric:active { transform: scale(0.985); }
+.metric:active { transform: scale(0.97); }
 .metric:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-.metric__icon { margin-bottom: 10px; }
+.metric__icon { margin-bottom: 8px; }
 
 .metric__label {
-  font-size: var(--t-callout); font-weight: 500;
-  color: var(--ink-2);
+  font-size: 10.5px; font-weight: 560; color: var(--ink-2);
+  line-height: 1.2;
+  /* One line. A wrapped label makes the four cards different heights. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 .metric__value {
-  font-size: 26px; font-weight: 680; letter-spacing: -0.035em;
-  line-height: 1.12; color: var(--ink);
+  font-size: 17px; font-weight: 680; line-height: 1.16;
+  letter-spacing: -0.03em;
+  margin-top: 3px;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
-.metric__unit { font-size: var(--t-caption); color: var(--ink-3); }
+@media (min-width: 400px) { .metric__value { font-size: 18px; } }
+.metric__unit { font-size: 10px; color: var(--ink-3); line-height: 1.2; }
 
 .metric__delta {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-top: 10px;
-  font-size: var(--t-caption); font-weight: 620;
-  color: var(--ink-3);
+  display: flex; align-items: center; gap: 2px;
+  margin-top: 7px;
+  font-size: 10px; font-weight: 620; color: var(--ink-3);
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 .metric__delta.is-up   { color: var(--positive); }
 .metric__delta.is-down { color: var(--caution); }
 
-/* ── Ask Jumbo ──────────────────────────────────────────────────────── */
 .ask-card {
   display: flex; align-items: center; gap: var(--s-4);
   width: 100%;
@@ -287,30 +334,55 @@
 .ask-card__sub   { font-size: var(--t-caption); color: var(--ink-2); line-height: 1.42; }
 
 /* ── Today's focus ──────────────────────────────────────────────────── */
-.focus-row { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
-@media (min-width: 620px) { .focus-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.focus-row {
+  display: grid;
+  /* Three across, as the reference has them: small, glanceable, each with
+     its own ring rather than a shared progress bar. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+@media (min-width: 520px) { .focus-row { gap: var(--s-3); } }
 
 .focus {
-  display: flex; align-items: center; gap: var(--s-3);
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 6px;
   width: 100%;
-  padding: var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-card);
+  padding: var(--s-3) 10px;
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
   background: var(--surface);
+  box-shadow: var(--card-lip);
   color: var(--ink);
   text-align: left;
-  min-width: 0;
+  cursor: pointer;
+  transition: background var(--d-fast) var(--ease), transform var(--d-fast) var(--ease),
+              border-color var(--d-fast) var(--ease);
+}
+@media (min-width: 520px) { .focus { padding: var(--s-4); } }
+.focus:hover  { background: var(--surface-2); }
+.focus:active { transform: scale(0.97); }
+.focus:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* The icon and the ring share the top line: the ring is the state, the
+   icon is the subject. */
+.focus__top {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; gap: var(--s-2);
 }
 .focus__icon {
-  width: 34px; height: 34px; flex: none;
+  width: 28px; height: 28px; flex: none;
   display: grid; place-items: center;
-  border-radius: 11px;
+  border-radius: 9px;
 }
-.focus__title { font-size: var(--t-callout); font-weight: 620; }
-.focus__sub   { font-size: var(--t-caption); color: var(--ink-3); }
-.focus.is-done { border-color: var(--brand-line); }
+.focus__title {
+  font-size: 12.5px; font-weight: 620; line-height: 1.25;
+  letter-spacing: -0.012em;
+}
+.focus__sub {
+  font-size: 10.5px; color: var(--ink-3); line-height: 1.25;
+}
+.focus.is-done { border-color: var(--brand-line); background: var(--brand-dim); }
 
-/* ── Section headers ────────────────────────────────────────────────── */
 .sec-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: var(--s-4);
@@ -323,7 +395,8 @@
   font-size: var(--t-callout); font-weight: 560;
   color: var(--ink-2); background: none; border: 0; cursor: pointer;
   display: inline-flex; align-items: center; gap: 3px;
-  padding: 4px 0;
+  /* The text is small; the target it sits in is not. */
+  min-height: 32px; padding: 4px 2px;
 }
 .sec-head__link:hover { color: var(--ink); }
 .sec-head__link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
@@ -349,14 +422,12 @@
    greeting beside it and the quick questions under it.
    ============================================================ */
 
+/* The mark stands on the page and speaks into a card beside it, the way
+   the reference stages it: Jumbo is present in the room, and the words are
+   the thing in a container. Wrapping both in one card made the mascot
+   read as an avatar in a list row. */
 .ai-hero {
-  display: flex; align-items: center; gap: var(--s-4);
-  padding: var(--s-5);
-  border-radius: var(--r-card);
-  border: 1px solid var(--hairline);
-  background:
-    radial-gradient(120% 140% at 12% 0%, var(--brand-dim), transparent 62%),
-    var(--surface);
+  display: flex; align-items: center; gap: var(--s-3);
 }
 
 /* A slow, shallow float. Enough to feel alive, not enough to distract. */
@@ -369,14 +440,23 @@
   50%      { transform: translateY(-7px) }
 }
 
-.speech { min-width: 0; }
+.speech {
+  min-width: 0;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--ai) 12%, transparent), transparent 66%),
+    var(--surface);
+  box-shadow: var(--card-lip);
+}
 .speech__hi {
-  font-size: var(--t-title3); font-weight: 660;
-  letter-spacing: -0.015em; color: var(--ink);
+  font-size: var(--t-title3); font-weight: 680;
+  letter-spacing: -0.018em; color: var(--ink);
 }
 .speech__body {
-  margin-top: 4px;
-  font-size: var(--t-callout); color: var(--ink-2); line-height: 1.45;
+  margin-top: 3px;
+  font-size: var(--t-callout); color: var(--ink-2); line-height: 1.42;
 }
 
 /* The quick questions. A single scrolling row, brand-tinted. */
@@ -442,3 +522,87 @@
   border-radius: 50%;
   background: var(--brand); color: var(--brand-ink);
 }
+
+/* ============================================================
+   AI FUTURE — insight rail and recommendations
+
+   The four vitals run as a rail rather than a four-across grid: unlike
+   Today's rings, these carry units like "ml/kg/min" and a line of
+   context each, and a quarter of a phone cannot hold that without
+   truncating the thing you came to read.
+   ============================================================ */
+.vital {
+  width: 148px;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 0;
+  padding: var(--s-4);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  text-align: left;
+}
+.vital__icon { margin-bottom: var(--s-2); }
+.vital__label {
+  font-size: var(--t-caption); font-weight: 560; color: var(--ink-2);
+  line-height: 1.25;
+}
+.vital__value {
+  font-size: 22px; font-weight: 700; line-height: 1.15;
+  letter-spacing: -0.035em; margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.vital__unit { font-size: var(--t-micro); color: var(--ink-3); line-height: 1.3; }
+/* The status reads as a badge, the way the reference marks "Normal" and
+   "Good" — a state, not a sentence trailing off the card. */
+.vital__note {
+  margin-top: var(--s-3);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px var(--s-2);
+  border-radius: 7px;
+  font-size: var(--t-micro); font-weight: 620; line-height: 1.35;
+  background: var(--surface-2); color: var(--ink-2);
+  max-width: 100%;
+}
+.vital__note.is-good    { background: var(--brand-dim);    color: var(--accent-text); }
+.vital__note.is-caution { background: var(--nutrition-dim); color: var(--nutrition); }
+
+/* ── Recommendations ────────────────────────────────────────────────
+   Each carries a wash of the colour of the thing it is about, so the
+   row reads as three different subjects rather than three grey cards. */
+.reco {
+  position: relative;
+  /* --tint is set per card from the subject's own colour. */
+  background:
+    linear-gradient(158deg, color-mix(in srgb, var(--tint, var(--brand)) 15%, transparent), transparent 70%),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--tint, var(--brand)) 24%, transparent);
+  box-shadow: var(--card-lip);
+}
+.reco:hover {
+  background:
+    linear-gradient(158deg, color-mix(in srgb, var(--tint, var(--brand)) 22%, transparent), transparent 70%),
+    var(--surface);
+}
+.reco__top {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; gap: var(--s-2);
+}
+
+/* ── The header's way into the plan ─────────────────────────────────── */
+.plan-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 38px; padding: 0 var(--s-3) 0 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  font-size: var(--t-caption); font-weight: 600; white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
+}
+.plan-btn:hover  { background: var(--surface-2); }
+.plan-btn:active { transform: scale(0.97); }
+.plan-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }

@@ -22,12 +22,18 @@
 
   /* ── Surfaces ────────────────────────────────────────────────
      The reference sits on near-black with cards only just above it. */
-  --bg:         #050506;
+  --bg:         #08090B;
   --bg-deep:    #000000;
-  --surface:    #121316;
-  --surface-2:  #1A1B1F;
-  --surface-3:  #232429;
-  --glass:      rgba(10, 10, 12, 0.82);
+  --surface:    #141619;
+  --surface-2:  #1C1E23;
+  --surface-3:  #25282E;
+  --glass:      rgba(10, 11, 13, 0.72);
+
+  /* The rim of an iOS material card: a hairline, and a single highlight
+     along the top edge where the light would catch it. Both together are
+     what separate a card from a coloured rectangle. */
+  --card-line:  rgba(255, 255, 255, 0.08);
+  --card-lip:   inset 0 1px 0 rgba(255, 255, 255, 0.045);
 
   /* ── Ink ─────────────────────────────────────────────────────── */
   --ink:    #FFFFFF;
@@ -35,8 +41,8 @@
   --ink-3:  #6E7079;
   --ink-4:  #46484F;
 
-  --hairline:      rgba(255, 255, 255, 0.07);
-  --hairline-firm: rgba(255, 255, 255, 0.14);
+  --hairline:      rgba(255, 255, 255, 0.075);
+  --hairline-firm: rgba(255, 255, 255, 0.145);
 
   /* ── The four rings ──────────────────────────────────────────
      Named by the specification and matched to the reference:
@@ -67,7 +73,8 @@
   /* ── Radius — the reference is generously rounded ───────────── */
   --r-input: 14px;
   --r-card:  22px;
-  --r-tile:  16px;
+  --r-tile:  18px;
+  --r-chip:  12px;
   --r-sheet: 28px;
   --r-pill:  999px;
 
@@ -92,15 +99,27 @@
 
   /* ── Motion ──────────────────────────────────────────────────── */
   --ease:        cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.28, 0.48, 1);
+  /* A slight overshoot, kept for the things that model a physical control:
+     the centre button under a thumb, a switch knob travelling, the tick on a
+     completed capture. iOS is built on springs and a toggle that arrives dead
+     reads as unresponsive. The overshoot is 14% rather than the 28% it was —
+     enough to feel sprung, not enough to read as bounce. */
+  --ease-spring: cubic-bezier(0.34, 1.14, 0.5, 1);
   --d-fast: 140ms;
   --d-base: 240ms;
   --d-slow: 420ms;
   --d-story: 900ms;
 
-  --tab-h: 64px;
-  --fab:   58px;
+  --tab-h: 60px;
+  --fab:   56px;
   --maxw: 1120px;
+
+  /* iOS insets. Named here so the tab bar, the dock and the scroll padding
+     all read the same number rather than each guessing at the notch. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  /* What a fixed bottom surface occupies, for content to clear. */
+  --bottom-inset: calc(var(--tab-h) + var(--safe-b));
 }
 
 /* Light: a designed theme, not an inversion. The green stays a fill. */
@@ -120,7 +139,10 @@
   --surface:   #FFFFFF;
   --surface-2: #F0F2EE;
   --surface-3: #E6E9E1;
-  --glass:     rgba(255, 255, 255, 0.84);
+  --glass:     rgba(250, 251, 249, 0.76);
+
+  --card-line: rgba(17, 19, 17, 0.10);
+  --card-lip:  inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   --ink:   #111311;
   --ink-2: #5E635D;

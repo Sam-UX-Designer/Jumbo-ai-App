@@ -102,17 +102,15 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
     <div className="stack stack-6">
       <header className="stack stack-5">
         <div className="scr-head">
-          <div style={{ minWidth: 0 }}>
-            <h1 className="scr-head__title">Capture</h1>
-            <p className="scr-head__sub">
-              {isToday
-                ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
-                : `Adding to ${prettyDate(date)}.`}
-            </p>
-          </div>
+          <h1 className="scr-head__title">Capture</h1>
           <div className="scr-head__actions">
             <AvatarButton size={42} />
           </div>
+          <p className="scr-head__sub">
+            {isToday
+              ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
+              : `Adding to ${prettyDate(date)}.`}
+          </p>
         </div>
         {state.dataMode === 'demo' && (
           <span className="sample-pill"><Icon name="flag" size={12} /> Sample data</span>
@@ -122,19 +120,19 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
 
       <section className="cap-tiles stagger">
         <CaptureTile
-          icon="camera" colour="var(--nutrition)" title="Meal" sub="Photo, then AI"
-          primary onClick={() => openMeal('camera')}
+          icon="camera" colour="var(--meal)" title="Meal" sub="Photo + AI"
+          onClick={() => openMeal('camera')}
         />
         <CaptureTile
-          icon="training" colour="var(--training)" title="Workout" sub="Type, time, effort"
+          icon="training" colour="var(--movement)" title="Workout" sub="Type, effort"
           onClick={() => { haptic('selection'); setModal('workout') }}
         />
         <CaptureTile
-          icon="measure" colour="var(--measure)" title="Measurement" sub="Lab, DEXA, tape"
+          icon="measure" colour="var(--measure)" title="Measure" sub="Lab, DEXA"
           onClick={() => { haptic('selection'); setModal('measurement') }}
         />
         <CaptureTile
-          icon="note" colour="var(--sleep)" title="Note" sub="How today felt"
+          icon="note" colour="var(--note)" title="Note" sub="How it felt"
           onClick={() => { haptic('selection'); setDictate(false); setModal('note') }}
         />
       </section>
@@ -148,42 +146,6 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
           </p>
         </div>
       )}
-
-      {/* ────────────────────────────── the camera-first route, up front */}
-      <button className="snap" onClick={() => openMeal('camera')}>
-        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="snap__shot" />
-        <span className="stack stack-2 grow" style={{ minWidth: 0, textAlign: 'left' }}>
-          <span className="t-title3">Snap your meal</span>
-          <span className="t-caption dim">
-            Take a photo and Jumbo’s AI estimates the foods, portions and nutrition. You correct
-            it before anything is saved.
-          </span>
-          <span className="btn btn--primary btn--sm" style={{ alignSelf: 'flex-start', pointerEvents: 'none' }}>
-            <Icon name="camera" size={15} /> Take photo
-          </span>
-        </span>
-      </button>
-
-      {/* ────────────────────────────── the other ways in */}
-      <section className="stack stack-3">
-        <SectionHead title="More ways to add" />
-        <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
-          <button className="chip" onClick={() => openMeal('manual')}>
-            <Icon name="search" size={16} /> Search food
-          </button>
-          {dictation.supported && (
-            <button
-              className="chip"
-              onClick={() => { haptic('selection'); setDictate(true); setModal('note') }}
-            >
-              <Icon name="mic" size={16} /> Voice log
-            </button>
-          )}
-          <button className="chip" onClick={() => openMeal('manual')}>
-            <Icon name="note" size={16} /> Type manually
-          </button>
-        </div>
-      </section>
 
       <section className="section">
         <SectionHead
@@ -251,6 +213,42 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
         )}
       </section>
 
+      {/* ────────────────────────────── the camera-first route, up front */}
+      <button className="snap" onClick={() => openMeal('camera')}>
+        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="snap__shot" />
+        <span className="stack stack-2 grow" style={{ minWidth: 0, textAlign: 'left' }}>
+          <span className="t-title3">Snap your meal</span>
+          <span className="t-caption dim">
+            Take a photo and Jumbo’s AI estimates the foods and nutrition. You correct it
+            before anything is saved.
+          </span>
+          <span className="snap__cta">
+            <Icon name="camera" size={15} /> Take photo
+          </span>
+        </span>
+      </button>
+
+      {/* ────────────────────────────── the other ways in */}
+      <section className="stack stack-3">
+        <SectionHead title="More ways to add" />
+        <div className="rail" role="group" aria-label="Other ways to add">
+          <button className="chip" onClick={() => openMeal('manual')}>
+            <Icon name="search" size={16} /> Search food
+          </button>
+          {dictation.supported && (
+            <button
+              className="chip"
+              onClick={() => { haptic('selection'); setDictate(true); setModal('note') }}
+            >
+              <Icon name="mic" size={16} /> Voice log
+            </button>
+          )}
+          <button className="chip" onClick={() => openMeal('manual')}>
+            <Icon name="note" size={16} /> Type manually
+          </button>
+        </div>
+      </section>
+
       <MealDetail
         open={openMealId !== null}
         onClose={() => setOpenMealId(null)}
@@ -277,17 +275,17 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
 }
 
 function CaptureTile({
-  icon, colour, title, sub, onClick, primary,
-}: { icon: IconName; colour: string; title: string; sub: string; onClick: () => void; primary?: boolean }) {
+  icon, colour, title, sub, onClick,
+}: { icon: IconName; colour: string; title: string; sub: string; onClick: () => void }) {
   return (
-    <button className={`cap-tile${primary ? ' cap-tile--primary' : ''}`} onClick={onClick}>
+    <button className="cap-tile" style={{ ['--tint' as string]: colour }} onClick={onClick}>
       <span
         className="cap-tile__icon"
-        style={{ background: `color-mix(in srgb, ${colour} 16%, transparent)`, color: colour }}
+        style={{ background: `color-mix(in srgb, ${colour} 20%, transparent)`, color: colour }}
       >
-        <Icon name={icon} size={21} />
+        <Icon name={icon} size={18} />
       </span>
-      <span className="stack" style={{ gap: 2 }}>
+      <span className="stack" style={{ gap: 2, minWidth: 0 }}>
         <span className="cap-tile__title">{title}</span>
         <span className="cap-tile__sub">{sub}</span>
       </span>

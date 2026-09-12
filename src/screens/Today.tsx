@@ -76,11 +76,15 @@ export function Today() {
       {/* ─────────────────────────── greeting left, bell and profile right */}
       <header className="stack stack-4">
         <div className="scr-head">
-          <div className="stack stack-1" style={{ minWidth: 0 }}>
-            <p className="greet__hello">{greeting},</p>
-            <h1 className="greet__name">
-              {firstName || 'there'} <span aria-hidden="true">👋</span>
-            </h1>
+          <div className="greet">
+            {/* The photograph leads: whose day this is, before the greeting. */}
+            <AvatarButton size={46} />
+            <div className="stack stack-1" style={{ minWidth: 0 }}>
+              <p className="greet__hello">{greeting},</p>
+              <h1 className="greet__name">
+                {firstName || 'there'} <span aria-hidden="true">👋</span>
+              </h1>
+            </div>
           </div>
           <div className="scr-head__actions">
             <button
@@ -88,11 +92,16 @@ export function Today() {
               aria-label="Reminders"
               onClick={() => { haptic('selection'); navigate('you') }}
             >
-              <Icon name="bell" size={19} />
+              <Icon name="bell" size={18} />
               {state.reminders.enabled && <span className="round-btn__dot" />}
             </button>
-            {/* The profile photo lives top right, on every screen. */}
-            <AvatarButton size={42} />
+            <button
+              className="round-btn"
+              aria-label="Add to today"
+              onClick={() => { haptic('selection'); navigate('capture') }}
+            >
+              <Icon name="plus" size={19} strokeWidth={2.2} />
+            </button>
           </div>
         </div>
 
@@ -115,46 +124,49 @@ export function Today() {
         </h2>
 
         <div className="score-card">
-          <Rings progress={progress} size={212}>
+          <Rings progress={progress} size={156}>
             <span className="score__num num">{Math.round(progress.overall * 100)}</span>
             <span className="score__cap">Health<br />Score</span>
           </Rings>
 
           <div className="score__say">
             <p className="score__state">
-              <Icon name="sprout" size={21} style={{ color: 'var(--brand)', flex: 'none' }} />
+              <Icon name="sprout" size={20} style={{ color: 'var(--brand)', flex: 'none' }} />
               {status.headline}
             </p>
             <p className="score__body">{status.body}</p>
           </div>
+
+          {/* Jumbo's read of the day, inside the card it is a read of. */}
+          {insights.problem?.kind === 'setup' ? null
+            : insights.loading && !top ? (
+              <div className="insight-card">
+                <Thinking size={30} />
+              </div>
+            ) : top ? (
+              <button
+                className="insight-card insight-card--tap"
+                onClick={() => { haptic('selection'); navigate('future') }}
+              >
+                <span className="insight-card__spark">
+                  <Icon name="sparkles" size={16} />
+                </span>
+                <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
+                  <span className="t-caption">{top.changed}</span>
+                  <Confidence value={top.confidence} compact />
+                </span>
+                <Icon name="chevron" size={15} style={{ flex: 'none', color: 'var(--ink-3)' }} />
+              </button>
+            ) : null}
         </div>
 
-        {/* The AI's read of the day, tappable through to the whole thing. */}
-        {insights.problem?.kind === 'setup' ? (
+        {insights.problem?.kind === 'setup' && (
           <UnavailableNotice
             title="Jumbo’s read of today isn’t available"
             message="Your own numbers below are unaffected."
             compact
           />
-        ) : insights.loading && !top ? (
-          <div className="insight-card">
-            <Thinking size={32} />
-          </div>
-        ) : top ? (
-          <button
-            className="insight-card insight-card--tap"
-            onClick={() => { haptic('selection'); navigate('future') }}
-          >
-            <span className="insight-card__spark">
-              <Icon name="sparkles" size={17} />
-            </span>
-            <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
-              <span className="t-callout">{top.changed}</span>
-              <Confidence value={top.confidence} compact />
-            </span>
-            <Icon name="chevron" size={16} style={{ flex: 'none', color: 'var(--ink-3)' }} />
-          </button>
-        ) : null}
+        )}
       </section>
 
       {/* ───────────────────────────────────────── the four that matter */}
@@ -166,7 +178,11 @@ export function Today() {
               <button
                 className="metric"
                 onClick={() => { haptic('selection'); setDetail(m) }}
-                aria-label={`${m.label}: ${m.value} ${m.unit}. Open details.`}
+                aria-label={
+                  `${m.label}: ${m.value} ${m.unit}`
+                  + (m.note ? `, ${m.note}` : m.deltaPct !== null ? `, ${m.deltaPct > 0 ? 'up' : 'down'} ${Math.abs(m.deltaPct)} percent against the past week` : '')
+                  + '. Open details.'
+                }
               >
                 <Icon name={m.icon} size={22} className="metric__icon" style={{ color: m.colour }} />
                 <span className="metric__label">{m.label}</span>
@@ -178,7 +194,7 @@ export function Today() {
                     {m.note}
                   </span>
                 ) : m.deltaPct === null ? (
-                  <span className="metric__delta">No basis yet</span>
+                  <span className="metric__delta">No basis</span>
                 ) : (
                   <span className={`metric__delta${m.deltaPct > 0 ? ' is-up' : m.deltaPct < 0 ? ' is-down' : ''}`}>
                     {m.deltaPct !== 0 && (
@@ -187,7 +203,7 @@ export function Today() {
                         style={{ transform: m.deltaPct < 0 ? 'rotate(180deg)' : undefined }}
                       />
                     )}
-                    {m.deltaPct > 0 ? '+' : ''}{m.deltaPct}% vs week
+                    {m.deltaPct > 0 ? '+' : ''}{m.deltaPct}%
                   </span>
                 )}
               </button>
@@ -224,7 +240,10 @@ export function Today() {
               <MiniRing value={detail.ring} colour={detail.colour} size={56} label={detail.label} />
               <div className="stack stack-1 grow" style={{ minWidth: 0 }}>
                 <span className="t-display num" style={{ fontSize: 32, lineHeight: 1 }}>{detail.value}</span>
-                <span className="t-caption dim2">{detail.unit}</span>
+                <span className="t-caption dim2">
+                  {detail.unit}
+                  {detail.efficiency ? ` · ${detail.efficiency}% efficiency` : ''}
+                </span>
               </div>
             </div>
 
@@ -280,34 +299,36 @@ export function Today() {
         <ul className="focus-row">
           {focus.map((f) => (
             <li key={f.id} className={`focus${f.done ? ' is-done' : ''}`}>
-              <span
-                className="focus__icon"
-                style={{ background: f.done ? 'var(--brand-dim)' : 'var(--surface-2)' }}
-              >
-                <Icon name={f.icon} size={18} style={{ color: f.done ? 'var(--brand)' : f.colour }} />
+              <span className="focus__top">
+                <span
+                  className="focus__icon"
+                  style={{ background: f.done ? 'var(--brand-dim)' : 'var(--surface-2)' }}
+                >
+                  <Icon name={f.icon} size={16} style={{ color: f.done ? 'var(--brand)' : f.colour }} />
+                </span>
+                <MiniRing
+                  value={f.progress}
+                  colour={f.done ? 'var(--brand)' : f.colour}
+                  size={26}
+                  label={f.title}
+                />
               </span>
-              <span className="stack stack-1 grow" style={{ minWidth: 0 }}>
+              <span className="stack" style={{ minWidth: 0, gap: 2 }}>
                 <span className="focus__title">{f.title}</span>
                 <span className="focus__sub">{f.sub}</span>
               </span>
-              <MiniRing
-                value={f.progress}
-                colour={f.done ? 'var(--brand)' : f.colour}
-                size={30}
-                label={f.title}
-              />
             </li>
           ))}
         </ul>
       </section>
 
       {/* ────────────────────────────────────────────────────── consistency */}
-      <section className="card card--quiet row row--between">
-        <div className="stack stack-1">
+      <section className="card card--quiet row row--between" style={{ gap: 'var(--s-4)' }}>
+        <div className="stack stack-1 none">
           <span className="t-caption dim">Consistency</span>
           <span className="t-title3 num">{streak} {streak === 1 ? 'day' : 'days'}</span>
         </div>
-        <p className="t-caption dim2" style={{ maxWidth: '24ch', textAlign: 'right' }}>
+        <p className="t-caption dim2 grow" style={{ maxWidth: '26ch' }}>
           {progress.restDay
             ? 'Rest day. Recovery counts for more today.'
             : 'Built on sleeping and moving enough. One off day is forgiven.'}

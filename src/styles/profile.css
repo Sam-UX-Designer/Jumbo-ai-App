@@ -1,0 +1,130 @@
+/* ============================================================
+   YOU and SETTINGS
+
+   Two screens in one language. You is a summary you glance at; Settings
+   is a grouped list you work through. The grouped list is the platform's
+   own pattern and is used here as the platform uses it — rows in a
+   rounded container, hairlines between them and nowhere else.
+   ============================================================ */
+
+/* ── The profile card ─────────────────────────────────────────────────
+   Identity on top, the four numbers underneath, divided once. */
+.prof {
+  display: flex; flex-direction: column;
+  padding: 0; overflow: hidden;
+}
+
+.prof__top {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  background: none; border: 0; color: inherit;
+  text-align: left; cursor: pointer;
+  transition: background var(--d-fast) var(--ease);
+}
+.prof__top:hover  { background: var(--surface-2); }
+.prof__top:active { background: var(--surface-3); }
+.prof__top:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+
+.prof__name {
+  display: flex; align-items: center; gap: var(--s-2);
+  font-size: var(--t-title2); font-weight: 700; letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.prof__meta { font-size: var(--t-caption); color: var(--ink-2); line-height: 1.35; }
+.prof__say  { font-size: var(--t-caption); color: var(--ink-3); line-height: 1.35; }
+
+/* The membership marker. Green because it is the brand's own state, not a
+   gold sticker borrowed from somewhere else. */
+.prof__badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px var(--s-2); border-radius: var(--r-pill);
+  background: var(--brand-dim); color: var(--accent-text);
+  border: 1px solid var(--brand-line);
+  font-size: var(--t-micro); font-weight: 700; letter-spacing: 0;
+}
+
+/* Four figures, evenly divided, sharing one rule with the card above. */
+.prof__stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--hairline);
+}
+.prof__stat {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: var(--s-3) var(--s-2);
+  min-width: 0;
+}
+.prof__stat + .prof__stat { border-left: 1px solid var(--hairline); }
+.prof__stat b {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.prof__stat span {
+  font-size: 10px; color: var(--ink-3); line-height: 1.2; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+
+/* ── The grouped list ─────────────────────────────────────────────────
+   One rounded container per group, rows inside it, a hairline between
+   rows and none at the ends. */
+.group {
+  display: flex; flex-direction: column;
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  overflow: hidden;
+}
+.group__label {
+  font-size: var(--t-caption); font-weight: 600; color: var(--ink-3);
+  padding: 0 var(--s-1) var(--s-2);
+}
+.group__note {
+  font-size: var(--t-caption); color: var(--ink-3); line-height: 1.4;
+  padding: var(--s-2) var(--s-1) 0;
+}
+
+.grow-row,
+.row-item {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  min-height: 54px;
+  background: none; border: 0; color: var(--ink);
+  text-align: left;
+  transition: background var(--d-fast) var(--ease);
+}
+.row-item + .row-item,
+.row-item + .grow-row,
+.grow-row + .row-item { border-top: 1px solid var(--hairline); }
+
+button.row-item { cursor: pointer; }
+button.row-item:hover  { background: var(--surface-2); }
+button.row-item:active { background: var(--surface-3); }
+button.row-item:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+
+.row-item__icon {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 9px;
+}
+.row-item__title { font-size: var(--t-callout); font-weight: 560; line-height: 1.3; }
+.row-item__sub   { font-size: var(--t-caption); color: var(--ink-3); line-height: 1.35; }
+.row-item__value { font-size: var(--t-caption); color: var(--ink-3); white-space: nowrap; }
+.row-item--danger .row-item__title { color: var(--critical); font-weight: 620; }
+
+/* A row that carries a control rather than a destination sits taller and
+   lets its explanation wrap under the title. */
+.row-item--stacked { align-items: flex-start; padding-block: var(--s-4); }
+.row-item--stacked .row-item__icon { margin-top: 1px; }
+
+/* ── Settings header ──────────────────────────────────────────────────
+   A back control and a title, the way a pushed screen is titled. */
+.sub-head {
+  display: flex; align-items: center; gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+}
+.sub-head__title {
+  font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.1;
+}
