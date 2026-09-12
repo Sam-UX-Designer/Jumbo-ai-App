@@ -63,13 +63,15 @@
 .round-btn__dot {
   position: absolute; top: 8px; right: 9px;
   width: 8px; height: 8px; border-radius: 50%;
-  background: #FF3B30;
+  /* The same red as the unread badges on the notifications screen: one
+     colour for one meaning, rather than two reds for the same thing. */
+  background: var(--critical);
   border: 2px solid var(--surface);
 }
 
 /* ── Greeting ─────────────────────────────────────────────────────────
-   The photograph leads the row, the way it does on the reference: you
-   see whose day this is before you read the greeting. */
+   The photograph used to lead this row. It now has one home, the profile
+   tab, so the greeting stands on its own and takes the width back. */
 .greet {
   display: flex; align-items: center; gap: var(--s-3); min-width: 0;
 }

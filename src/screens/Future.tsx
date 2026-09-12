@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/home.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
-import { AvatarButton, Mascot } from '../components/Asset'
+import { Mascot } from '../components/Asset'
 import { Thinking } from '../components/Thinking'
 import { useNavigate } from '../components/Nav'
 import { DayCurve, ProjectionChart } from '../components/Charts'
@@ -166,7 +166,6 @@ export function Future() {
               Your plan
               <Icon name="chevron" size={13} style={{ color: 'var(--ink-3)' }} />
             </button>
-            <AvatarButton size={42} />
           </div>
           {/* The feature keeps its name; the line under it says what the
               feature is for. */}

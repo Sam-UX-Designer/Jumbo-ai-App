@@ -1,0 +1,211 @@
+/* ============================================================
+   Notifications
+
+   A pushed screen: a back control, a title, and a list of things that
+   happened. The list is the surface. There is no panel around it, and
+   no card containing the whole section.
+   ============================================================ */
+
+.noti-head {
+  /* Two rows. The controls and the title share the first; the subtitle
+     takes the full width of the second, because at phone width it does
+     not fit beside an action and a back control. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "back title mark"
+    "back sub   sub";
+  align-items: center;
+  column-gap: var(--s-3);
+}
+.noti-head__back { grid-area: back; flex: none; align-self: start; }
+.noti-head__title { grid-area: title; }
+.noti-head__sub { grid-area: sub; margin-top: 3px; }
+.noti-head__mark { grid-area: mark; align-self: start; }
+.noti-head__title {
+  font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.noti-head__sub {
+  font-size: var(--t-caption); color: var(--ink-3); line-height: 1.35;
+}
+
+/* The action reads as an action, not as a second title: it borrows the
+   chip's shape and the secondary ink, and goes quiet when there is
+   nothing left to mark. */
+.noti-head__mark {
+  flex: none;
+  min-height: 36px; padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--card-line);
+  background: var(--surface); color: var(--ink-2);
+  font-size: var(--t-caption); font-weight: 580;
+  white-space: nowrap; cursor: pointer;
+  transition: background var(--d-fast) var(--ease), color var(--d-fast) var(--ease),
+              opacity var(--d-base) var(--ease), transform var(--d-fast) var(--ease);
+}
+.noti-head__mark:hover:not([disabled]) { background: var(--surface-2); color: var(--ink); }
+.noti-head__mark:active:not([disabled]) { transform: scale(0.97); }
+.noti-head__mark:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.noti-head__mark[disabled] { opacity: 0.4; cursor: default; }
+
+/* Below iPhone SE width the title and the action stop fitting side by
+   side at display size. The title gives way, not the action: the action
+   is the only way to clear the list. */
+@media (max-width: 379px) {
+  .noti-head__title { font-size: var(--t-title2); }
+  .noti-head__mark { padding: 0 var(--s-2); }
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────
+   One row that scrolls. `.rail` owns the scrolling and the edge fade. */
+.noti-filters { padding-block: 6px 2px; }
+
+.notifilter {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 44px; padding: 0 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--t-callout); font-weight: 560; letter-spacing: -0.01em;
+  white-space: nowrap; cursor: pointer;
+  transition: background 180ms var(--ease), border-color 180ms var(--ease),
+              color 180ms var(--ease), transform var(--d-fast) var(--ease);
+}
+.notifilter svg { color: var(--tint); flex: none; }
+.notifilter:hover  { border-color: var(--ink-4); }
+.notifilter:active { transform: scale(0.97); }
+.notifilter:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.notifilter.is-on {
+  color: var(--tint);
+  border-color: color-mix(in srgb, var(--tint) 62%, transparent);
+  background: color-mix(in srgb, var(--tint) 12%, var(--surface));
+}
+
+/* The count of what has not been read. One colour for all five, because
+   the number means the same thing in each: unread. A per-category colour
+   would say the categories differ in urgency, which they do not. */
+.notibadge {
+  position: absolute; top: -5px; right: -3px;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  display: grid; place-items: center;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--bg);
+  background: var(--critical); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: noti-badge var(--d-base) var(--ease-spring) both;
+}
+@keyframes noti-badge {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Groups ───────────────────────────────────────────────────────── */
+.noti-group {
+  font-size: var(--t-callout); font-weight: 600; color: var(--ink-3);
+  letter-spacing: -0.01em;
+  padding-left: 2px;
+}
+.noti-none { padding: var(--s-5) var(--s-1); }
+
+/* ── A notification ───────────────────────────────────────────────────
+   Mark, message, moment. The chevron is at the end because tapping the
+   card is the gesture; it is a hint, not a target of its own. */
+.noti {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-3);
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  text-align: left; cursor: pointer;
+  transition: background var(--d-fast) var(--ease), border-color var(--d-base) var(--ease),
+              transform 120ms var(--ease);
+}
+.noti:hover  { background: var(--surface-2); }
+.noti:active { transform: scale(0.98); }
+.noti:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Unread is carried by the dot alone. Outlining the whole card in its
+   category colour turned seven notifications into seven glowing frames,
+   which is a different product. Read is the resting state, not a faded
+   one: a notification you have seen is still worth reading. */
+
+.noti__mark {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
+  color: var(--tint);
+}
+
+.noti__body {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  flex: 1; min-width: 0;
+  padding-top: 1px;
+}
+.noti__title {
+  font-size: var(--t-title3); font-weight: 640; letter-spacing: -0.018em;
+  line-height: 1.25;
+}
+.noti__text {
+  font-size: var(--t-callout); color: var(--ink-3); line-height: 1.4;
+}
+
+/* A figure the app actually knows, shown as the share it is. */
+.noti__bar {
+  position: relative;
+  display: flex; align-items: center; gap: var(--s-2);
+  width: 100%; margin-top: 7px;
+}
+.noti__bar::before {
+  content: '';
+  flex: 1; height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+}
+.noti__fill {
+  position: absolute; left: 0; top: 0;
+  width: calc(100% - 42px); height: 6px;
+  transform-origin: left center;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  animation: noti-fill var(--d-slow) var(--ease) both;
+}
+@keyframes noti-fill { from { transform: scaleX(0) !important; } }
+.noti__pct {
+  flex: none;
+  font-size: var(--t-caption); font-weight: 620; color: var(--tint);
+  font-variant-numeric: tabular-nums;
+}
+
+.noti__end {
+  display: flex; align-items: center; gap: 4px;
+  flex: none; padding-top: 2px;
+}
+.noti__when {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-caption); color: var(--ink-3);
+  white-space: nowrap;
+}
+/* Read is the transition: the dot leaves, the row stays. */
+.noti__dot {
+  width: 7px; height: 7px; flex: none;
+  border-radius: 50%;
+  background: var(--critical);
+}
+.noti__chev { color: var(--ink-4); flex: none; }
+
+/* Narrow phones: the moment moves under the message rather than
+   squeezing it, and the mark comes in a size. */
+@media (max-width: 379px) {
+  .noti { padding: var(--s-3); gap: var(--s-2); }
+  .noti__mark { width: 40px; height: 40px; }
+  .noti__end { flex-direction: column; align-items: flex-end; gap: 2px; }
+}

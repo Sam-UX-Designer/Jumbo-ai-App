@@ -7,6 +7,7 @@ import type {
   Reminders, WorkoutEntry,
 } from '../data/types'
 import { generateHistory, generateMeasurements, TODAY } from '../data/generate'
+import type { AppNotification } from '../data/notifications'
 import { computeBaseline } from '../lib/analytics'
 import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
@@ -86,6 +87,18 @@ export interface Persisted {
   reminders: Reminders
   levers: Levers | null
   milestones: string[]
+  /**
+   * Things that actually happened, written at the moment they happened.
+   *
+   * This is the notification feed's real source. The reducer appends to it
+   * when a meal is saved, a workout is logged or a milestone is reached, so
+   * every entry carries the instant of the event rather than a time chosen
+   * later to look plausible. Nothing else writes to it, and the sample set
+   * in data/notifications.ts is never mixed into it.
+   */
+  events: AppNotification[]
+  /** Ids of notifications that have been read. Survives a reload. */
+  readNotifications: string[]
   addedMeals: Record<string, MealEntry[]>
   addedWorkouts: Record<string, WorkoutEntry>
   addedNotes: Record<string, string>
@@ -154,6 +167,8 @@ const defaultPersisted: Persisted = {
   reminders: defaultReminders,
   levers: null,
   milestones: [],
+  events: [],
+  readNotifications: [],
   addedMeals: {},
   addedWorkouts: {},
   addedNotes: {},
@@ -192,6 +207,8 @@ export type Action =
   | { type: 'setReminders'; patch: Partial<Reminders> }
   | { type: 'setLevers'; levers: Levers }
   | { type: 'awardMilestone'; id: string }
+  | { type: 'readNotification'; id: string }
+  | { type: 'readAllNotifications'; ids: string[] }
   | { type: 'serverConfig'; config: ServerConfig | null; reachable: boolean }
   | { type: 'setProviders'; providers: ProviderInfo[] }
   | { type: 'syncStart' }
@@ -220,6 +237,34 @@ function fromLive(rows: SyncedDay[]): DayRecord[] {
     meals: [],
     restDay: !r.workout,
   }))
+}
+
+/**
+ * Add an event to the feed, newest first, and keep the feed bounded.
+ *
+ * An event already in the feed is left alone rather than duplicated: saving
+ * the same meal twice is one meal, and re-entering a screen is not news.
+ */
+const EVENT_LIMIT = 60
+function record(events: AppNotification[], event: AppNotification): AppNotification[] {
+  if (events.some((e) => e.id === event.id)) return events
+  return [event, ...events].slice(0, EVENT_LIMIT)
+}
+
+/** The milestones the app can put into words. */
+const MILESTONE_COPY: Record<string, { title: string; body: string }> = {
+  'first-meal': {
+    title: 'First meal logged',
+    body: 'Food is the one thing a wearable cannot see. You have started filling that gap.',
+  },
+  'first-workout': {
+    title: 'First workout logged',
+    body: 'How a session felt is now part of your record, not just how long it was.',
+  },
+  'baseline-ready': {
+    title: 'Your baseline is ready',
+    body: 'Jumbo now has something to compare each day against.',
+  },
 }
 
 function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
@@ -382,11 +427,33 @@ function reducer(state: State, action: Action): State {
       })
 
     case 'addMeal':
-      return next({ addedMeals: { ...p.addedMeals, [action.date]: [...(p.addedMeals[action.date] ?? []), action.meal] } })
+      return next({
+        addedMeals: { ...p.addedMeals, [action.date]: [...(p.addedMeals[action.date] ?? []), action.meal] },
+        events: record(p.events, {
+          id: `ev-meal-${action.meal.id}`,
+          kind: 'meal',
+          route: 'capture',
+          at: new Date().toISOString(),
+          title: action.meal.method === 'camera' ? 'Meal analysis complete' : 'Meal saved',
+          body: action.meal.method === 'camera'
+            ? `Your ${action.meal.slot.toLowerCase()} photo was read and added to the day.`
+            : `${action.meal.slot} was added to the day.`,
+        }),
+      })
     case 'removeMeal':
       return next({ addedMeals: { ...p.addedMeals, [action.date]: (p.addedMeals[action.date] ?? []).filter((m) => m.id !== action.mealId) } })
     case 'logWorkout':
-      return next({ addedWorkouts: { ...p.addedWorkouts, [action.date]: action.workout } })
+      return next({
+        addedWorkouts: { ...p.addedWorkouts, [action.date]: action.workout },
+        events: record(p.events, {
+          id: `ev-workout-${action.workout.id}`,
+          kind: 'workout',
+          route: 'capture',
+          at: new Date().toISOString(),
+          title: 'Workout saved',
+          body: `${action.workout.type}, ${action.workout.minutes} minutes, added to the day.`,
+        }),
+      })
     case 'removeWorkout': {
       const w = { ...p.addedWorkouts }; delete w[action.date]
       return next({ addedWorkouts: w })
@@ -421,8 +488,31 @@ function reducer(state: State, action: Action): State {
     case 'setSetting': return next({ settings: { ...p.settings, [action.key]: action.value } })
     case 'setReminders': return next({ reminders: { ...p.reminders, ...action.patch } })
     case 'setLevers': return next({ levers: action.levers })
-    case 'awardMilestone':
-      return p.milestones.includes(action.id) ? state : next({ milestones: [...p.milestones, action.id] })
+    case 'awardMilestone': {
+      if (p.milestones.includes(action.id)) return state
+      const said = MILESTONE_COPY[action.id]
+      return next({
+        milestones: [...p.milestones, action.id],
+        // Only a milestone the app has words for becomes a notification.
+        // A bare id is not something to tell someone about.
+        events: said
+          ? record(p.events, {
+            id: `ev-milestone-${action.id}`,
+            kind: 'achievement',
+            route: 'you',
+            at: new Date().toISOString(),
+            ...said,
+          })
+          : p.events,
+      })
+    }
+
+    case 'readNotification':
+      return p.readNotifications.includes(action.id)
+        ? state
+        : next({ readNotifications: [...p.readNotifications, action.id] })
+    case 'readAllNotifications':
+      return next({ readNotifications: [...new Set([...p.readNotifications, ...action.ids])] })
 
     case 'serverConfig': return next({}, { server: action.config, serverReachable: action.reachable })
     case 'setProviders': return next({}, { providers: action.providers })

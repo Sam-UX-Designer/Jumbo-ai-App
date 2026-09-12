@@ -4,7 +4,6 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, type IconName } from './Icon'
-import { AvatarButton } from './Asset'
 import { haptic } from '../lib/feedback'
 import { uid } from '../lib/util'
 
@@ -271,7 +270,7 @@ export function ScreenHead({
 }: {
   title: string
   sub?: string
-  /** Round controls that sit to the left of the profile photo. */
+  /** Round controls in the head's top right. */
   actions?: ReactNode
   /** Shown when the screen is displaying sample rather than recorded data. */
   sample?: boolean
@@ -282,10 +281,7 @@ export function ScreenHead({
           the title rather than sharing a column with the controls. */}
       <div className="scr-head">
         <h1 className="scr-head__title">{title}</h1>
-        <div className="scr-head__actions">
-          {actions}
-          <AvatarButton size={42} />
-        </div>
+        {actions && <div className="scr-head__actions">{actions}</div>}
         {sub && <p className="scr-head__sub">{sub}</p>}
       </div>
       {sample && (

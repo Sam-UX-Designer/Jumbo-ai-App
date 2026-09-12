@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import '../styles/chat.css'
 import { Icon } from '../components/Icon'
-import { AvatarButton, Mascot } from '../components/Asset'
+import { Mascot } from '../components/Asset'
 import { DataViz } from '../components/DataViz'
 import { Markdown } from '../components/Markdown'
 import { Thinking } from '../components/Thinking'
@@ -85,7 +85,6 @@ export function Chat({
         {chat.messages.length > 0 && (
           <button className="btn btn--ghost btn--sm" onClick={chat.clear}>Clear</button>
         )}
-        <AvatarButton size={36} />
       </header>
 
       <div className="chat__body" ref={threadRef}>

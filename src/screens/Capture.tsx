@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../styles/capture.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
-import { AssetImage, AvatarButton } from '../components/Asset'
+import { AssetImage } from '../components/Asset'
 import { DateRail } from '../components/DateRail'
 import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
 import { useDictation } from '../lib/useDictation'
@@ -174,9 +174,6 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
       <header className="stack stack-5">
         <div className="scr-head">
           <h1 className="scr-head__title">Capture</h1>
-          <div className="scr-head__actions">
-            <AvatarButton size={42} />
-          </div>
           <p className="scr-head__sub">
             {isToday
               ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'

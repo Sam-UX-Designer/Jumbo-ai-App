@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import '../styles/home.css'
 import { Icon } from '../components/Icon'
-import { AvatarButton, Mascot } from '../components/Asset'
+import { Mascot } from '../components/Asset'
 import { Thinking } from '../components/Thinking'
 import { DateRail } from '../components/DateRail'
 import { Rings, MiniRing } from '../components/Rings'
@@ -10,6 +10,7 @@ import { Confidence, Sheet, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useInsights } from '../lib/useInsights'
 import { useNavigate } from '../components/Nav'
+import { SAMPLE_NOTIFICATIONS } from '../data/notifications'
 import {
   consistencyStreak, dailyProgress, dayProtein, keyMetrics, lastN,
   motivationalStatus, todaysFocus, type KeyMetric,
@@ -71,14 +72,19 @@ export function Today() {
   const greeting = hour < 5 ? 'Still up' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
   const firstName = state.profile.name.trim().split(' ')[0]
 
+  // The dot on the bell is the count of what has not been read, from the
+  // same list the notifications screen shows.
+  const feed = state.dataMode === 'demo' ? SAMPLE_NOTIFICATIONS : state.events
+  const unread = feed.filter((n) => !state.readNotifications.includes(n.id)).length
+
   return (
     <div className="stack stack-5">
       {/* ─────────────────────────── greeting left, bell and profile right */}
       <header className="stack stack-4">
         <div className="scr-head">
+          {/* The photograph used to lead here. It now lives in one place
+              only, the profile tab, so this is the greeting alone. */}
           <div className="greet">
-            {/* The photograph leads: whose day this is, before the greeting. */}
-            <AvatarButton size={46} />
             <div className="stack stack-1" style={{ minWidth: 0 }}>
               <p className="greet__hello">{greeting},</p>
               <h1 className="greet__name">
@@ -89,11 +95,11 @@ export function Today() {
           <div className="scr-head__actions">
             <button
               className="round-btn"
-              aria-label="Reminders"
-              onClick={() => { haptic('selection'); navigate('you') }}
+              aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+              onClick={() => { haptic('selection'); navigate('notifications') }}
             >
               <Icon name="bell" size={18} />
-              {state.reminders.enabled && <span className="round-btn__dot" />}
+              {unread > 0 && <span className="round-btn__dot" />}
             </button>
             <button
               className="round-btn"

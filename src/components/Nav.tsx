@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
-import { BrandMark } from './Asset'
+import { Avatar, BrandMark } from './Asset'
+import { useStore } from '../state/store'
 import { haptic } from '../lib/feedback'
 
 export type Route =
   | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
-  | 'settings' | 'subscribe'
+  | 'settings' | 'subscribe' | 'notifications'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -86,6 +87,7 @@ export function TabBar({
 }) {
   const go = (r: Route) => { haptic('selection'); onNavigate(r) }
   const bar = useRef<HTMLElement>(null)
+  const { state: { profile } } = useStore()
 
   /**
    * Publish the bar's real height. The centre action is taller than a tab
@@ -114,15 +116,29 @@ export function TabBar({
     // current.
     const current = route === item.route
       || (item.route === 'you' && (route === 'measurements' || route === 'settings' || route === 'subscribe'))
+      // Notifications is reached from the bell on Today and Back returns
+      // there, so Today stays lit rather than no tab at all.
+      || (item.route === 'today' && route === 'notifications')
       || (route === 'chat' && item.route === origin)
+
+    /**
+     * The profile tab is the person, not a drawing of one. It is the only
+     * place in the app the photograph appears as navigation, so it has to
+     * be unmistakably the way to yourself. The ring is how it carries the
+     * current state that the other four carry with colour and weight.
+     */
+    const glyph = item.route === 'you'
+      ? <Avatar size={25} photo={profile.photo} name={profile.name} className="tabbar__face" />
+      : <Icon name={item.icon} size={23} strokeWidth={current ? 2.1 : 1.75} />
+
     return (
       <button
         key={item.route}
-        className="tabbar__item"
+        className={`tabbar__item${item.route === 'you' ? ' tabbar__item--face' : ''}`}
         aria-current={current ? 'page' : undefined}
         onClick={() => go(item.route)}
       >
-        <Icon name={item.icon} size={23} strokeWidth={current ? 2.1 : 1.75} />
+        {glyph}
         <span>{item.label}</span>
       </button>
     )

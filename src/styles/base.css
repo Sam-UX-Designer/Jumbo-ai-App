@@ -169,6 +169,21 @@ a { color: var(--accent-text); }
 .tabbar__item[aria-current="page"] { color: var(--brand); }
 .tabbar__item span { font-size: var(--t-micro); font-weight: 620; letter-spacing: 0.01em; text-transform: none; }
 
+/* The profile tab carries the photograph. The other four say "current"
+   with colour and weight; a photograph cannot, so this one says it with
+   a ring in the same green, sitting in the space the icon's stroke would
+   have used. The glyph slot stays 23px either way, so the row of five
+   keeps its baseline. */
+.tabbar__item--face .tabbar__face {
+  width: 25px; height: 25px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px transparent;
+  transition: box-shadow var(--d-base) var(--ease);
+}
+.tabbar__item--face[aria-current="page"] .tabbar__face {
+  box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px var(--brand);
+}
+
 /* The centre action. It lifts above the bar so adding something is the one
    control you can hit without looking. */
 .tabbar__fab {

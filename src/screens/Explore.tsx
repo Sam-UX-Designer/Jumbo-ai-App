@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import '../styles/explore.css'
 import { AiOrb, Icon } from '../components/Icon'
-import { AssetImage, AvatarButton } from '../components/Asset'
+import { AssetImage } from '../components/Asset'
 import {
   Empty, SectionHead, Segmented, Sheet, UnavailableNotice, useToast,
 } from '../components/UI'
@@ -165,9 +165,6 @@ export function Explore() {
     <div className="stack stack-5">
       <header className="scr-head">
         <h1 className="scr-head__title">Explore</h1>
-        <div className="scr-head__actions">
-          <AvatarButton size={42} />
-        </div>
         <p className="scr-head__sub">
           Real videos from YouTube, chosen against your goals. Their views are their own.
         </p>
