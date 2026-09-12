@@ -121,20 +121,45 @@ a { color: var(--accent-text); }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
   display: flex; align-items: center; justify-content: space-around;
   padding-bottom: var(--safe-b);
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(28px);
-  backdrop-filter: saturate(180%) blur(28px);
-  border-top: 1px solid var(--hairline);
+  /* Same reasoning as the dock: the material is drawn by a masked layer that
+     reaches above the bar, so screens without a dock get the same soft
+     transition rather than a rule across the page. */
+  background: none;
 }
-/* When the dock is present it draws the boundary, and a second hairline
-   four pixels below it reads as a seam. */
-body:has(.askdock) .tabbar { border-top-color: transparent; }
-/* Without backdrop-filter the bar must still be opaque enough to read. */
-@supports not (backdrop-filter: blur(1px)) {
-  .tabbar { background: color-mix(in srgb, var(--bg) 96%, transparent); }
+
+.tabbar::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(var(--feather) * -1);
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  /* Every stop is an absolute length measured from the top of the feather,
+     not a percentage. The pseudo-element is the feather plus the whole bar,
+     so a percentage puts the ramp below the bar's own top edge and nothing
+     actually softens in the zone this exists for. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    color-mix(in srgb, var(--glass) 55%, transparent) calc(var(--feather) * 0.62),
+    var(--glass) var(--feather)
+  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.5), #000 var(--feather));
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.5), #000 var(--feather));
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabbar::before {
+    background: linear-gradient(to bottom, transparent 0, var(--bg) var(--feather));
+    -webkit-mask-image: none; mask-image: none;
+  }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .tabbar { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .tabbar { background: var(--bg); border-top: 1px solid var(--hairline); }
+  .tabbar::before { display: none; }
 }
 .tabbar__item {
   flex: 1; min-height: var(--tab-h); min-width: 44px;
@@ -517,22 +542,85 @@ body:has(.askdock) .tabbar { border-top-color: transparent; }
   z-index: 45;
   display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
   padding: var(--s-3) var(--s-5) var(--s-3);
-  /* A material, not a panel. The screen reserves the dock's exact height so
-     nothing rests underneath it, but content still passes behind during a
-     scroll, and on this platform that is meant to be visible. */
-  background: var(--glass);
-  -webkit-backdrop-filter: saturate(180%) blur(28px);
-  backdrop-filter: saturate(180%) blur(28px);
-  border-top: 1px solid var(--hairline);
+  /* The dock itself carries no background, no blur and no border. All three
+     produced the same artefact: a crisp rectangle where the material began.
+     The glass is drawn by the two masked layers below, which reach above the
+     dock and feather in, so content dissolves into it rather than stopping
+     at a line. The dock's own children stay perfectly sharp. */
   pointer-events: none;
 }
-/* Where the blur is unavailable or unwanted, the surface goes solid rather
-   than letting text run through text. */
-@supports not (backdrop-filter: blur(1px)) {
-  .askdock { background: color-mix(in srgb, var(--bg) 96%, transparent); }
+
+/*
+ * The feather.
+ *
+ * Two layers, because one cannot ramp. A backdrop-filter has a single blur
+ * radius and a hard edge of its own; masking one layer fades how much of it
+ * you see, but the blur is the same strength all the way up. Stacking a light
+ * layer that starts high against a strong layer that starts low gives a real
+ * gradient of blur, which is what the platform does at the top of a scroll
+ * view — and the second layer samples the first, so the strength compounds
+ * towards the dock rather than stepping.
+ *
+ * Both are positioned rather than left in flow: the dock is a flex column,
+ * and a pseudo-element in a flex container is a flex item.
+ */
+.askdock::before,
+.askdock::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(var(--feather) * -1);
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
 }
+
+/* Light, and first to arrive. */
+.askdock::before {
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather));
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather));
+}
+
+/* Strong, and carrying the tint. Solid by the time it reaches the dock's own
+   top edge, so the field and the chips sit on a surface rather than on the
+   content behind them. */
+.askdock::after {
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  /* Absolute lengths, for the same reason as the tab bar: this box is the
+     feather plus the dock, so a percentage lands well below the dock's own
+     top edge and the tint never reaches the zone it is meant to soften. At
+     var(--feather) the surface is whole, which is exactly where the dock's
+     own children begin. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    color-mix(in srgb, var(--glass) 55%, transparent) calc(var(--feather) * 0.66),
+    var(--glass) var(--feather)
+  );
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.55), #000 var(--feather));
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(var(--feather) * 0.55), #000 var(--feather));
+}
+
+/* No blur available: the fade is still a fade, just without the softening. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .askdock::before { display: none; }
+  .askdock::after {
+    background: linear-gradient(to bottom, transparent 0, var(--bg) var(--feather));
+    -webkit-mask-image: none; mask-image: none;
+  }
+}
+
+/* Asked for less transparency: an opaque bar with a defined edge is the
+   platform's own answer here, and it is what this setting is for. */
 @media (prefers-reduced-transparency: reduce) {
-  .askdock { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .askdock {
+    background: var(--bg);
+    border-top: 1px solid var(--hairline);
+  }
+  .askdock::before, .askdock::after { display: none; }
 }
 .askdock > * { pointer-events: auto; width: 100%; max-width: 600px; }
 /* The chip row is the one child allowed to run past that width. */

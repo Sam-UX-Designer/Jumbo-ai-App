@@ -120,6 +120,11 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   /* What a fixed bottom surface occupies, for content to clear. */
   --bottom-inset: calc(var(--tab-h) + var(--safe-b));
+
+  /* How far the bottom material reaches above itself before it is fully
+     opaque. This is the whole soft edge: long enough to read as a dissolve
+     rather than a shadow, short enough that the last card is not veiled. */
+  --feather: 72px;
 }
 
 /* Light: a designed theme, not an inversion. The green stays a fill. */
