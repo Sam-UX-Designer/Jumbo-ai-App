@@ -138,7 +138,7 @@ export function Today() {
           />
         ) : insights.loading && !top ? (
           <div className="insight-card">
-            <Thinking size={32} lines={2} />
+            <Thinking size={32} />
           </div>
         ) : top ? (
           <button

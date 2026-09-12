@@ -309,10 +309,3 @@
 }
 .md__table th { color: var(--ink-3); font-weight: 620; }
 .md__table tr:last-child td { border-bottom: 0; }
-
-/* The bubble while the answer is still coming. Same shape as the reply that
-   replaces it, so nothing jumps when it arrives. */
-.bubble--working {
-  min-width: min(280px, 72vw);
-  padding: var(--s-4);
-}

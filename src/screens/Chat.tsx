@@ -127,9 +127,7 @@ export function Chat({
                   {m.pending ? (
                     // Fills the space the answer will occupy, so a long wait
                     // is never a blank rectangle with a mark beside it.
-                    <div className="bubble bubble--jumbo bubble--working">
-                      <Thinking size={38} lines={3} />
-                    </div>
+                    <Thinking size={34} />
                   ) : m.error ? (
                     <ErrorNotice
                       title="That answer did not come back"

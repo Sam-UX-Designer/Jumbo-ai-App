@@ -329,7 +329,7 @@ export function Future() {
           <LegendKey colour="var(--ink-3)" kind="dotted" label="How today runs" />
         </div>
 
-        {narrative.loading && <Thinking size={36} lines={3} />}
+        {narrative.loading && <Thinking size={34} />}
 
         {narrative.data && (
           <div className="stack stack-4 rise">
