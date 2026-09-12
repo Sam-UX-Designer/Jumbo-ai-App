@@ -173,3 +173,94 @@ button.mascot:active { transform: scale(0.96); }
   max-height: 200px;
   object-fit: cover;
 }
+
+/* ============================================================
+   Jumbo working
+
+   Built on .mascot.is-thinking above, not beside it. Four phases
+   change the orbit's character as the wait lengthens — wider,
+   then gathering, then drawn in, then settled — and the shimmer
+   lines stand in for the answer taking shape, so the response
+   area is never a blank rectangle. Nothing is written or implied
+   about what the model is doing.
+   ============================================================ */
+.think {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  width: 100%;
+}
+
+.think__orbit { position: relative; flex: none; display: grid; place-items: center; }
+
+/* Four points on one ring. They fade in with the second phase, tighten with
+   the third, and slow to a drift in the fourth. */
+.think__dust {
+  position: absolute; inset: -14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--d-slow) var(--ease), transform var(--d-slow) var(--ease);
+}
+.think__dust i {
+  position: absolute; top: 50%; left: 50%;
+  width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+.think__dust i:nth-child(1) { --a: 0deg }
+.think__dust i:nth-child(2) { --a: 90deg }
+.think__dust i:nth-child(3) { --a: 180deg }
+.think__dust i:nth-child(4) { --a: 270deg }
+
+/* Phase 2: the points appear and orbit. */
+.think--p2 .think__dust,
+.think--p3 .think__dust,
+.think--p4 .think__dust { opacity: 1; }
+
+/* Phase 3: drawn in closer. Phase 4: settled, and quieter. */
+.think--p3 .think__dust { transform: scale(0.82); }
+.think--p4 .think__dust { transform: scale(0.9); opacity: 0.55; }
+
+.think__lines {
+  display: flex; flex-direction: column; gap: 9px;
+  flex: 1; min-width: 0;
+  padding-top: 7px;
+}
+.think__line {
+  display: block; height: 9px;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.think__line:nth-child(1) { width: 92%; }
+.think__line:nth-child(2) { width: 78%; }
+.think__line:nth-child(3) { width: 54%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .think__dust i {
+    animation: think-orbit 5.2s linear infinite;
+    transform: rotate(var(--a)) translateX(26px);
+  }
+  /* Each phase turns a little faster, then eases off again. */
+  .think--p2 .think__dust i { animation-duration: 4.4s; }
+  .think--p3 .think__dust i { animation-duration: 2.8s; }
+  .think--p4 .think__dust i { animation-duration: 6.5s; }
+
+  .think__line { animation: think-shimmer 1.9s var(--ease) infinite; }
+  /* As the answer nears, the lines brighten and steady. */
+  .think--p4 .think__line { animation-duration: 2.8s; }
+}
+
+@keyframes think-orbit {
+  from { transform: rotate(var(--a)) translateX(26px) }
+  to   { transform: rotate(calc(var(--a) + 360deg)) translateX(26px) }
+}
+
+@keyframes think-shimmer {
+  0%, 100% { opacity: 0.45 }
+  50%      { opacity: 0.85 }
+}
+
+/* With motion turned down the state still reads: the points sit still and
+   the lines hold a steady tone. */
+@media (prefers-reduced-motion: reduce) {
+  .think__dust i { transform: rotate(var(--a)) translateX(26px); }
+  .think__line { opacity: 0.6; }
+}

@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
 import { DataViz } from '../components/DataViz'
 import { Markdown } from '../components/Markdown'
+import { Thinking } from '../components/Thinking'
 import { ErrorNotice, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
 import { useChat, QUICK_PROMPTS } from '../lib/useChat'
@@ -120,15 +121,15 @@ export function Chat({
           <ul className="chat__thread">
             {chat.messages.map((m) => (
               <li key={m.id} className={`bubble-row bubble-row--${m.role}`}>
-                {m.role === 'jumbo' && !m.error && (
-                  <Mascot size={m.pending ? 44 : 34} thinking={m.pending} />
-                )}
+                {m.role === 'jumbo' && !m.error && !m.pending && <Mascot size={34} />}
 
                 <div className="stack stack-3" style={{ minWidth: 0, maxWidth: '100%' }}>
                   {m.pending ? (
-                    // The mascot beside this row is already in its working
-                    // state. Nothing else is needed, and nothing narrates it.
-                    <span className="sr-only" role="status">Working on your question</span>
+                    // Fills the space the answer will occupy, so a long wait
+                    // is never a blank rectangle with a mark beside it.
+                    <div className="bubble bubble--jumbo bubble--working">
+                      <Thinking size={38} lines={3} />
+                    </div>
                   ) : m.error ? (
                     <ErrorNotice
                       title="That answer did not come back"

@@ -35,10 +35,16 @@ export const PRESET = '@preset/jumbo-ai'
 export const aiConfigured = () => has(env.openrouterKey)
 
 export class AiError extends Error {
-  constructor(message, { status = 502, code = 'upstream' } = {}) {
+  constructor(message, { status = 502, code = 'upstream', upstream = null } = {}) {
     super(message)
     this.status = status
     this.code = code
+    /**
+     * What the provider actually said. Never shown in the product — the
+     * self-test surfaces it so a deployment can be diagnosed without
+     * reading server logs.
+     */
+    this.upstream = upstream
   }
 }
 
@@ -141,11 +147,13 @@ async function attempt({ preset, messages, maxOutputTokens, temperature, signal 
   const body = await res.json().catch(() => null)
 
   if (!res.ok) {
-    // The upstream message can name the key or the account. It is logged for
-    // whoever runs the server and never forwarded to the browser.
-    const detail = body?.error?.message ?? `status ${res.status}`
-    const err = new Error(detail)
+    // Keep everything OpenRouter said. It is what tells an operator which
+    // setting is wrong, and guessing at it from the status alone is how a
+    // working key ends up being replaced for nothing.
+    const err = new Error(body?.error?.message ?? `status ${res.status}`)
     err.status = res.status
+    err.upstreamCode = body?.error?.code ?? null
+    err.upstreamMetadata = body?.error?.metadata ?? null
     throw err
   }
 
@@ -236,7 +244,15 @@ function toAiError(err, preset) {
   }
 
   const status = err.status ?? 0
-  console.warn(`[ai] ${preset} failed (${status || 'network'}): ${err.message}`)
+  const detail = String(err.message ?? '')
+
+  // Everything the upstream said, on one line, with anything key-shaped
+  // scrubbed. This is the only record of what actually went wrong.
+  console.error(
+    `[ai] ${preset} failed (${status || 'network'}): ${redact(detail)}`
+    + (err.upstreamCode ? ` [code ${err.upstreamCode}]` : '')
+    + (err.upstreamMetadata ? ` [metadata ${redact(JSON.stringify(err.upstreamMetadata)).slice(0, 500)}]` : ''),
+  )
 
   if (status === 401 || status === 403) {
     return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'bad_key' })
@@ -244,17 +260,36 @@ function toAiError(err, preset) {
   if (status === 402) {
     return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'no_credit' })
   }
-  if (status === 404) {
-    // The preset name did not resolve. Worth saying plainly in the log,
-    // because no amount of retrying fixes it.
-    console.error(`[ai] ${preset} was not found on this OpenRouter account`)
-    return new AiError('Jumbo’s AI is not available.', { status: 502, code: 'preset_missing' })
-  }
   if (status === 429) {
     return new AiError('Too many requests at once. Try again shortly.', { status: 429, code: 'rate_limited' })
   }
-  return new AiError('Jumbo’s AI could not answer.', { status: 502, code: 'upstream' })
+
+  // A server tool is something the preset is configured to call, not
+  // something Jumbo asks for — this request carries no tools at all. It is
+  // its own failure and must not be read as a missing preset.
+  if (/server tool|tool (call|request|use)/i.test(detail)) {
+    return new AiError('Jumbo’s AI could not answer.', {
+      status: 502, code: 'server_tool', upstream: detail,
+    })
+  }
+
+  // Only a message that genuinely says the preset or model is not there.
+  // A 404 alone does not mean that: OpenRouter returns 404 for several
+  // things, and assuming otherwise sends people to replace a working key.
+  if (/(preset|model|endpoint)s?\b[^.]*\b(not found|does not exist|no longer|unavailable|invalid)/i.test(detail)
+    || /no (allowed |)(providers|endpoints) (are |)(found|available)/i.test(detail)) {
+    return new AiError('Jumbo’s AI is not available.', {
+      status: 502, code: 'preset_missing', upstream: detail,
+    })
+  }
+
+  return new AiError('Jumbo’s AI could not answer.', { status: 502, code: 'upstream', upstream: detail })
 }
+
+/** Anything key-shaped, out of anything about to be logged. */
+const redact = (s) => String(s ?? '')
+  .replace(/sk-or-[A-Za-z0-9_-]+/g, 'sk-or-…')
+  .replace(/\bBearer\s+\S+/gi, 'Bearer …')
 
 /**
  * The one place an AI failure becomes an HTTP response. Product wording only:

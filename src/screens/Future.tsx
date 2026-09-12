@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/home.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
+import { Thinking } from '../components/Thinking'
 import { useNavigate } from '../components/Nav'
 import { DayCurve, ProjectionChart } from '../components/Charts'
 import {
@@ -328,11 +329,7 @@ export function Future() {
           <LegendKey colour="var(--ink-3)" kind="dotted" label="How today runs" />
         </div>
 
-        {narrative.loading && (
-          <div className="stack stack-2">
-            {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 14, width: `${92 - i * 12}%` }} />)}
-          </div>
-        )}
+        {narrative.loading && <Thinking size={36} lines={3} />}
 
         {narrative.data && (
           <div className="stack stack-4 rise">

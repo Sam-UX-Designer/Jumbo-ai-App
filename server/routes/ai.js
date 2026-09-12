@@ -553,6 +553,9 @@ ai.get('/selftest', async (_req, res) => {
       ms: Date.now() - started,
       code: err.code ?? 'unknown',
       reason: err.message,
+      // Exactly what OpenRouter said, so a deployment can be diagnosed
+      // without reading server logs. No credential can reach here.
+      ...(err.upstream ? { upstream: err.upstream } : {}),
       hint: HINTS[err.code] ?? 'See the deployment’s runtime logs for the upstream detail.',
     })
   }
@@ -561,7 +564,9 @@ ai.get('/selftest', async (_req, res) => {
 const HINTS = {
   bad_key: 'OpenRouter rejected the key. Check it is a valid OPENROUTER_API_KEY and that the account is active.',
   no_credit: 'The OpenRouter account has no credit left for these models.',
-  preset_missing: 'The preset was not found on this OpenRouter account. Check that @preset/jumbo-ai exists and is enabled for this key.',
+  preset_missing: 'OpenRouter reported that the preset or its models could not be resolved. Check that @preset/jumbo-ai exists, is saved, and that its models are still served.',
+  server_tool: 'OpenRouter failed on a server-side tool. Jumbo sends no tools, so this comes from the preset: open @preset/jumbo-ai in the OpenRouter dashboard and turn its tools/plugins off, then re-test. The upstream field above names the tool when OpenRouter identifies it.',
+  upstream: 'OpenRouter refused the request. The upstream field above is exactly what it said.',
   rate_limited: 'The project is over its quota for this model.',
   timeout: 'The model did not respond in time. A smaller model or a shorter prompt will help.',
   empty: 'The model returned no content.',

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import '../styles/home.css'
 import { Icon } from '../components/Icon'
 import { AvatarButton, Mascot } from '../components/Asset'
+import { Thinking } from '../components/Thinking'
 import { DateRail } from '../components/DateRail'
 import { Rings, MiniRing } from '../components/Rings'
 import { Sparkline } from '../components/Charts'
@@ -137,11 +138,7 @@ export function Today() {
           />
         ) : insights.loading && !top ? (
           <div className="insight-card">
-            <Mascot size={34} thinking />
-            <div className="stack stack-2 grow">
-              <div className="skeleton" style={{ height: 12, width: '84%' }} />
-              <div className="skeleton" style={{ height: 12, width: '58%' }} />
-            </div>
+            <Thinking size={32} lines={2} />
           </div>
         ) : top ? (
           <button
