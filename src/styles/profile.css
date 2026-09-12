@@ -7,6 +7,39 @@
    rounded container, hairlines between them and nowhere else.
    ============================================================ */
 
+/* ── The identity ─────────────────────────────────────────────────────
+   Every other screen carries the photograph as a small control. Here it
+   is the subject, centred under the title, with the camera badge still
+   attached to it so changing it is one tap from where you are looking. */
+.you-head {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-2);
+  text-align: center;
+}
+.you-head__title {
+  align-self: flex-start;
+  font-size: var(--t-display); font-weight: 700; letter-spacing: -0.035em;
+  line-height: 1.06;
+  margin: 0;
+}
+.you-head__say {
+  font-size: var(--t-callout); color: var(--ink-2); line-height: 1.4;
+  margin: 0;
+}
+/* At this size the badge sits on the rim rather than outside it. */
+.you-head .photo-edit__badge { width: 30px; height: 30px; right: 2px; bottom: 2px; }
+
+/* Removing the photograph belongs to the photograph, so it stays attached
+   to it. It is quiet, because it is the lesser of the two things you can
+   do here and it must not read as a step in the page's hierarchy. */
+.you-head .btn--ghost {
+  min-height: 26px;
+  font-size: var(--t-caption); font-weight: 520;
+  color: var(--ink-3);
+}
+.you-head .btn--ghost:hover { color: var(--ink-2); }
+
 /* ── The profile card ─────────────────────────────────────────────────
    Identity on top, the four numbers underneath, divided once. */
 .prof {

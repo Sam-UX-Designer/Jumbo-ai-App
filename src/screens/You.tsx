@@ -55,17 +55,19 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
 
   return (
     <div className="stack stack-5">
-      <header className="scr-head">
-        <h1 className="scr-head__title">You</h1>
-        <div className="scr-head__actions">
-          {/* Tapping the photograph here changes it, rather than sending you
-              somewhere to change it. */}
-          <ProfilePhotoPicker
-            size={48}
-            onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
-          />
-        </div>
-        <p className="scr-head__sub">
+      {/*
+        This is the one screen that is about the person rather than about
+        their day, so the photograph is the page rather than a control in
+        its corner. Tapping it changes it; it does not navigate, because
+        you are already here.
+      */}
+      <header className="you-head">
+        <h1 className="you-head__title">You</h1>
+        <ProfilePhotoPicker
+          size={104}
+          onError={(message) => toast({ text: message, icon: 'info', tone: 'warning' })}
+        />
+        <p className="you-head__say">
           {firstName ? `${firstName}, keep going` : 'Your profile and your progress'}
           {' '}<span aria-hidden="true">🌱</span>
         </p>

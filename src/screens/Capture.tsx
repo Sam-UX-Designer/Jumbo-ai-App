@@ -17,6 +17,54 @@ import { clockTime, nowClock, prettyDate, uid } from '../lib/util'
 type Modal = null | 'meal' | 'workout' | 'measurement' | 'note'
 
 /**
+ * What you came here to add.
+ *
+ * Capture is an action screen, not a history screen, so the four kinds sit
+ * at the top and picking one reveals its action directly underneath. Nobody
+ * should have to scroll past yesterday's lunch to photograph today's.
+ *
+ * Each takes the Jumbo colour that kind already has everywhere else, so the
+ * row reads as four subjects rather than four buttons.
+ */
+type CaptureKind = 'meal' | 'workout' | 'measurement' | 'note'
+
+const KINDS: Array<{
+  id: CaptureKind
+  label: string
+  icon: IconName
+  tint: string
+  heading: string
+  blurb: string
+  cta: string
+  ctaIcon: IconName
+}> = [
+  {
+    id: 'meal', label: 'Meal', icon: 'camera', tint: 'var(--nutrition)',
+    heading: 'Snap your meal',
+    blurb: 'Take a photo and Jumbo’s AI estimates the foods and nutrition. You correct it before anything is saved.',
+    cta: 'Take photo', ctaIcon: 'camera',
+  },
+  {
+    id: 'workout', label: 'Workout', icon: 'training', tint: 'var(--movement)',
+    heading: 'Log a workout',
+    blurb: 'Type, minutes and how hard it was. How it felt counts as much as how long it lasted.',
+    cta: 'Log a workout', ctaIcon: 'training',
+  },
+  {
+    id: 'measurement', label: 'Measure', icon: 'measure', tint: 'var(--measure)',
+    heading: 'Add a measurement',
+    blurb: 'Waist, grip, VO₂ max, a lab result. The slow numbers, entered on the days you have them.',
+    cta: 'Add a measurement', ctaIcon: 'plus',
+  },
+  {
+    id: 'note', label: 'Note', icon: 'note', tint: 'var(--note)',
+    heading: 'Write a note',
+    blurb: 'How the day actually felt, in your own words. The context the numbers cannot carry.',
+    cta: 'Write a note', ctaIcon: 'note',
+  },
+]
+
+/**
  * The categories a record can carry. They are labels and filters. They are
  * never the sort: see `byNewest`.
  *
@@ -86,6 +134,9 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
   const [filter, setFilter] = useState<Category | 'all'>('all')
+  // Meal first: it is the thing a wearable cannot see, which is why this
+  // screen exists at all.
+  const [kind, setKind] = useState<CaptureKind>('meal')
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
 
@@ -109,6 +160,15 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
     haptic('selection')
     setMealMode(mode)
     setModal('meal')
+  }
+
+  /** The action the picked kind offers. One place, so the row and the card
+      can never disagree about what a tap does. */
+  const startCapture = (which: CaptureKind) => {
+    haptic('impactLight')
+    if (which === 'meal') { setMealMode('camera'); setModal('meal'); return }
+    if (which === 'note') setDictate(false)
+    setModal(which)
   }
 
   /**
@@ -186,23 +246,26 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
         <DateRail selected={date} onSelect={(d) => dispatch({ type: 'selectDate', date: d })} />
       </header>
 
-      <section className="cap-tiles stagger">
-        <CaptureTile
-          icon="camera" colour="var(--meal)" title="Meal" sub="Photo + AI"
-          onClick={() => openMeal('camera')}
-        />
-        <CaptureTile
-          icon="training" colour="var(--movement)" title="Workout" sub="Type, effort"
-          onClick={() => { haptic('selection'); setModal('workout') }}
-        />
-        <CaptureTile
-          icon="measure" colour="var(--measure)" title="Measure" sub="Lab, DEXA"
-          onClick={() => { haptic('selection'); setModal('measurement') }}
-        />
-        <CaptureTile
-          icon="note" colour="var(--note)" title="Note" sub="How it felt"
-          onClick={() => { haptic('selection'); setDictate(false); setModal('note') }}
-        />
+      {/* ────────────────── what you came to add, and the way to add it */}
+      <section className="stack stack-3">
+        <div className="cap-tiles" role="group" aria-label="What to add">
+          {KINDS.map((k) => (
+            <button
+              key={k.id}
+              className={`cap-tile${kind === k.id ? ' is-on' : ''}`}
+              style={{ ['--tint' as string]: k.tint }}
+              aria-pressed={kind === k.id}
+              onClick={() => { haptic('selection'); setKind(k.id) }}
+            >
+              <span className="cap-tile__icon">
+                <Icon name={k.icon} size={19} />
+              </span>
+              <span className="cap-tile__title">{k.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <CaptureAction kind={kind} onStart={() => startCapture(kind)} />
       </section>
 
       {progress.recovery < 0.4 && !today.workout && (
@@ -325,21 +388,6 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
         )}
       </section>
 
-      {/* ────────────────────────────── the camera-first route, up front */}
-      <button className="snap" onClick={() => openMeal('camera')}>
-        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="snap__shot" />
-        <span className="stack stack-2 grow" style={{ minWidth: 0, textAlign: 'left' }}>
-          <span className="t-title3">Snap your meal</span>
-          <span className="t-caption dim">
-            Take a photo and Jumbo’s AI estimates the foods and nutrition. You correct it
-            before anything is saved.
-          </span>
-          <span className="snap__cta">
-            <Icon name="camera" size={15} /> Take photo
-          </span>
-        </span>
-      </button>
-
       {/* ────────────────────────────── the other ways in */}
       <section className="stack stack-3">
         <SectionHead title="More ways to add" />
@@ -386,20 +434,35 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
   )
 }
 
-function CaptureTile({
-  icon, colour, title, sub, onClick,
-}: { icon: IconName; colour: string; title: string; sub: string; onClick: () => void }) {
+/**
+ * The action for whichever kind is picked.
+ *
+ * The dashed rim is the same cue the photograph slot has always used: a
+ * space waiting to be filled, rather than a card already filled in. Only
+ * the meal shows a thumbnail, because only the meal is read from a picture.
+ */
+function CaptureAction({ kind, onStart }: { kind: CaptureKind; onStart: () => void }) {
+  const k = KINDS.find((x) => x.id === kind) ?? KINDS[0]
   return (
-    <button className="cap-tile" style={{ ['--tint' as string]: colour }} onClick={onClick}>
-      <span
-        className="cap-tile__icon"
-        style={{ background: `color-mix(in srgb, ${colour} 20%, transparent)`, color: colour }}
-      >
-        <Icon name={icon} size={18} />
-      </span>
-      <span className="stack" style={{ gap: 2, minWidth: 0 }}>
-        <span className="cap-tile__title">{title}</span>
-        <span className="cap-tile__sub">{sub}</span>
+    <button
+      className="capact"
+      key={k.id}
+      style={{ ['--tint' as string]: k.tint }}
+      onClick={onStart}
+    >
+      {k.id === 'meal' ? (
+        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="capact__shot" />
+      ) : (
+        <span className="capact__shot capact__shot--icon">
+          <Icon name={k.icon} size={30} strokeWidth={1.7} />
+        </span>
+      )}
+      <span className="capact__body">
+        <span className="capact__title">{k.heading}</span>
+        <span className="capact__blurb">{k.blurb}</span>
+        <span className="capact__cta">
+          <Icon name={k.ctaIcon} size={15} /> {k.cta}
+        </span>
       </span>
     </button>
   )
