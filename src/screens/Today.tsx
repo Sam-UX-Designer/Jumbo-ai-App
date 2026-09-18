@@ -13,8 +13,7 @@ import { useNavigate } from '../components/Nav'
 import { SAMPLE_NOTIFICATIONS } from '../data/notifications'
 import {
   consistencyStreak, dailyProgress, dayProtein, keyMetrics, lastN,
-  motivationalStatus, todaysFocus, type KeyMetric,
-} from '../lib/analytics'
+  motivationalStatus, todaysFocus, type KeyMetric, hasData } from '../lib/analytics'
 import { prettyDateLong } from '../lib/util'
 import { haptic } from '../lib/feedback'
 
@@ -52,6 +51,14 @@ export function Today() {
   const focus = useMemo(() => todaysFocus(day, base), [day, base])
   const streak = useMemo(() => consistencyStreak(state.days, base), [state.days, base])
   const status = motivationalStatus(progress)
+  /**
+   * Whether this particular day has anything on it.
+   *
+   * A score is a reading of a day. With nothing recorded there is no reading
+   * to give, and `dailyProgress` scoring a row of zeroes produces a number
+   * that looks like a verdict on the person rather than on the empty page.
+   */
+  const dayRecorded = hasData(day)
   const top = insights.insights.filter((i) => !state.dismissed.includes(i.id))[0]
   const [detail, setDetail] = useState<KeyMetric | null>(null)
 
@@ -131,16 +138,42 @@ export function Today() {
 
         <div className="score-card">
           <Rings progress={progress} size={156}>
-            <span className="score__num num">{Math.round(progress.overall * 100)}</span>
-            <span className="score__cap">Health<br />Score</span>
+            {dayRecorded ? (
+              <>
+                <span className="score__num num">{Math.round(progress.overall * 100)}</span>
+                <span className="score__cap">Health<br />Score</span>
+              </>
+            ) : (
+              <>
+                <span className="score__num num" aria-hidden="true">—</span>
+                <span className="score__cap">No data<br />yet</span>
+                <span className="sr-only">No health score: nothing recorded for this day.</span>
+              </>
+            )}
           </Rings>
 
           <div className="score__say">
-            <p className="score__state">
-              <Icon name="sprout" size={20} style={{ color: 'var(--brand)', flex: 'none' }} />
-              {status.headline}
-            </p>
-            <p className="score__body">{status.body}</p>
+            {dayRecorded ? (
+              <>
+                <p className="score__state">
+                  <Icon name="sprout" size={20} style={{ color: 'var(--brand)', flex: 'none' }} />
+                  {status.headline}
+                </p>
+                <p className="score__body">{status.body}</p>
+              </>
+            ) : (
+              <>
+                <p className="score__state">
+                  <Icon name="sprout" size={20} style={{ color: 'var(--brand)', flex: 'none' }} />
+                  {isToday ? 'Nothing recorded yet' : 'Nothing recorded'}
+                </p>
+                <p className="score__body">
+                  {isToday
+                    ? 'Log a meal, a workout or a measurement and your score starts here. Connect a health app in Settings and Jumbo fills the rest in for you.'
+                    : 'Jumbo has nothing for this day.'}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Jumbo's read of the day, inside the card it is a read of. */}
@@ -350,7 +383,7 @@ export function Today() {
           <Icon name="measure" size={17} /> Measurements
         </span>
         <span className="row t-caption dim2" style={{ gap: 6 }}>
-          VO₂ max {base.vo2max.toFixed(1)} <Icon name="chevron" size={14} />
+          VO₂ max {base.vo2max > 0 ? base.vo2max.toFixed(1) : '—'} <Icon name="chevron" size={14} />
         </span>
       </button>
 

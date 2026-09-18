@@ -31,7 +31,17 @@ export function useInsights(): InsightState {
   const [nonce, setNonce] = useState(0)
 
   const aiConfigured = Boolean(state.server?.ai.configured)
-  const enabled = state.settings.aiPatterns
+
+  /**
+   * There is nothing to interpret until something has been recorded.
+   *
+   * An account with an empty history has no patterns in it, so a "pattern"
+   * offered here could only have been invented — and it would arrive wearing
+   * a confidence score, which makes it worse. This also keeps Jumbo from
+   * spending a paid request on a summary full of zeroes.
+   */
+  const hasSomethingToRead = state.baseline.daysOfHistory > 0
+  const enabled = state.settings.aiPatterns && hasSomethingToRead
 
   const local = useMemo(
     () => (enabled ? buildInsights(state.days, state.baseline, state.measurements) : []),

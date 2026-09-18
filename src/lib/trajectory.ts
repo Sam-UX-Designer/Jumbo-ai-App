@@ -33,7 +33,13 @@ export function leversFromBaseline(b: Baseline): Levers {
     cardioMinutes: Math.round(clamp(b.weeklyActiveMinutes * 0.55, 40, 400) / 5) * 5,
     strengthSessions: Math.round(clamp(b.strengthPerWeek, 0, 6)),
     steps: Math.round(b.steps / 500) * 500,
-    proteinPerKg: round(clamp(b.proteinG / b.weightKg, 0.6, 2.4), 1),
+    // Guarded: a person whose weight nobody has measured divides by zero
+    // here, and NaN then spreads through every figure the projection makes.
+    // With no weight there is no per-kilo figure, so the lever starts at the
+    // bottom of its range rather than at "not a number".
+    proteinPerKg: b.weightKg > 0
+      ? round(clamp(b.proteinG / b.weightKg, 0.6, 2.4), 1)
+      : 0.6,
   }
 }
 

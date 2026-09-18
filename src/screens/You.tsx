@@ -4,7 +4,7 @@ import { AvatarButton, ProfilePhotoPicker } from '../components/Asset'
 import { DemoBadge, useConfirm, useToast } from '../components/UI'
 import { useStore } from '../state/store'
 import type { Route } from '../components/Nav'
-import { bestStreak, consistencyStreak, dailyProgress } from '../lib/analytics'
+import { bestStreak, consistencyStreak, dailyProgress, hasData } from '../lib/analytics'
 import { planById } from '../data/plans'
 import { haptic } from '../lib/feedback'
 
@@ -46,7 +46,9 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
   // The same figure Today shows in the middle of its rings, for the day
   // being looked at, rather than a second score computed a second way.
   const day = state.days[state.days.length - 1]
-  const score = day ? Math.round(dailyProgress(day, state.baseline).overall * 100) : 0
+  const score = day && hasData(day)
+    ? Math.round(dailyProgress(day, state.baseline).overall * 100)
+    : '—'
 
   const plan = planById(state.plan)
   const isFree = state.plan === 'free'
@@ -198,7 +200,7 @@ function Streak({
 
 function Stat({
   icon, colour, value, label,
-}: { icon: IconName; colour: string; value: number; label: string }) {
+}: { icon: IconName; colour: string; value: number | string; label: string }) {
   return (
     <div className="prof__stat">
       <Icon name={icon} size={15} style={{ color: colour }} />

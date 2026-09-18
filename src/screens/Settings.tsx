@@ -347,7 +347,37 @@ export function Settings({
       </Sheet>
 
       <Sheet open={panel === 'integrations'} onClose={close} title="Health and fitness apps" subtitle="Where Jumbo reads sleep, steps and heart data from.">
-        <Sources onNavigate={onNavigate} onSync={sync} onRefresh={refreshProviders} />
+        <div className="stack stack-5">
+          <Sources onNavigate={onNavigate} onSync={sync} onRefresh={refreshProviders} />
+
+          <hr className="hairline" />
+
+          {/* The other half of the choice made during setup. Onboarding tells
+              people they can switch back here, so here it is — and it is a
+              switch, not a door that only opens one way. */}
+          <div className="stack stack-3">
+            <div className="stack stack-1">
+              <span className="t-callout strong">Sample data</span>
+              <p className="t-caption dim">
+                {state.dataMode === 'demo'
+                  ? 'Jumbo is showing an example history so you can see the whole app. None of it is yours, and it is labelled as sample wherever it appears. Turn it off to go back to your own records.'
+                  : 'Jumbo is showing your own records. Turn this on to explore the app filled in with an example history instead. Nothing you have logged is deleted.'}
+              </p>
+            </div>
+            <SettingRow
+              label="Explore with sample data"
+              hint="Only changes what you are shown. Your own meals, workouts and measurements are kept either way."
+              checked={state.dataMode === 'demo'}
+              onChange={(v) => {
+                dispatch({ type: 'setDataMode', mode: v ? 'demo' : 'live' })
+                toast({
+                  text: v ? 'Showing sample data' : 'Showing your own data',
+                  icon: v ? 'flag' : 'check',
+                })
+              }}
+            />
+          </div>
+        </div>
       </Sheet>
 
       <Sheet open={panel === 'privacy'} onClose={close} title="Data and privacy" subtitle="Each switch changes what the app actually does.">

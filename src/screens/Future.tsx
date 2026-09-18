@@ -68,6 +68,16 @@ export function Future() {
    */
   const jumboIndex = round(projected.recoveryIndex - nowState.recoveryIndex, 1)
 
+  /**
+   * Whether there is a baseline worth projecting from.
+   *
+   * Every figure below this point is the model extended from what Jumbo has
+   * measured. With nothing measured the model is extending zeroes, and a
+   * trajectory drawn from zeroes is not a cautious estimate — it is a
+   * confident-looking picture of a person who does not exist.
+   */
+  const canProject = base.daysOfHistory > 0
+
   const outlookPath = useMemo(
     () => projectPath(base, activeLevers, months, PICK.recoveryIndex),
     [base, activeLevers, months],
@@ -87,6 +97,7 @@ export function Future() {
     const thisLoad = mean(week.map(load))
     const lastLoad = mean(priorWeek.map(load))
     const loadDelta = lastLoad > 0 ? Math.round(((thisLoad - lastLoad) / lastLoad) * 100) : null
+    const sleptHours = mean(week.map((d) => d.sleepHours))
 
     return [
       {
@@ -102,10 +113,12 @@ export function Future() {
         good: null,
       },
       {
+        // Matches its neighbours: a quality score of 0 out of 100 reads as a
+        // terrible week's sleep, not as a week nobody measured.
         label: 'Sleep quality', icon: 'sleep' as IconName, colour: 'var(--sleep)',
-        value: String(Math.round(nowProgress.sleep * 100)), unit: '/ 100',
-        note: `${round(mean(week.map((d) => d.sleepHours)), 1)} h a night`,
-        good: nowProgress.sleep >= 0.75 ? true : null,
+        value: sleptHours > 0 ? String(Math.round(nowProgress.sleep * 100)) : '-', unit: '/ 100',
+        note: sleptHours > 0 ? `${round(sleptHours, 1)} h a night` : 'Not supplied',
+        good: sleptHours > 0 && nowProgress.sleep >= 0.75 ? true : null,
       },
       {
         label: 'Activity load', icon: 'training' as IconName, colour: 'var(--recovery)',
@@ -193,7 +206,9 @@ export function Future() {
               {firstName ? `Hi ${firstName}!` : 'Hi!'} <span aria-hidden="true">👋</span>
             </p>
             <p className="speech__body">
-              I’ve read {base.daysOfHistory} days of your data. What would you like to know?
+              {canProject
+                ? `I’ve read ${base.daysOfHistory} ${base.daysOfHistory === 1 ? 'day' : 'days'} of your data. What would you like to know?`
+                : 'I haven’t read any of your data yet. Ask me anything in the meantime.'}
             </p>
           </div>
         </div>
@@ -222,6 +237,36 @@ export function Future() {
         </p>
       </section>
 
+      {!canProject ? (
+        /* Nothing measured yet: say so, and point at the two ways to change
+           it, rather than drawing a future out of an empty baseline. */
+        <section className="section">
+          <div className="card stack stack-4">
+            <div className="stack stack-2">
+              <span className="t-title3 strong">Your outlook needs some data first</span>
+              <p className="t-callout dim">
+                Jumbo builds your trajectory from what it has actually measured. Nothing has been
+                recorded yet, so there is no pattern to project — and a forecast drawn from an empty
+                history would be a guess dressed up as a number.
+              </p>
+            </div>
+            <div className="stack stack-3">
+              <p className="t-callout">
+                <span className="strong">Connect a health app</span> in Settings and Jumbo reads your
+                sleep, steps and heart data from the history you already have.
+              </p>
+              <p className="t-callout">
+                <span className="strong">Or log as you go</span> from Capture. A couple of weeks of
+                your own records is enough for the first projection.
+              </p>
+            </div>
+            <button className="btn btn--primary btn--block" onClick={() => { haptic('selection'); navigate('capture') }}>
+              Log something now
+            </button>
+          </div>
+        </section>
+      ) : (
+      <>
       {/* ────────────────────────────── the outlook, as a model estimate */}
       <section className="section">
         <SectionHead
@@ -557,6 +602,8 @@ export function Future() {
           </div>
         </div>
       </section>
+      </>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import type {
   Baseline, DayRecord, GoalKey, InsightDecision, MealEntry, Measurement, Profile,
   Reminders, WorkoutEntry,
 } from '../data/types'
-import { generateHistory, generateMeasurements, TODAY } from '../data/generate'
+import { generateEmptyHistory, generateHistory, generateMeasurements, TODAY } from '../data/generate'
 import type { AppNotification } from '../data/notifications'
 import { computeBaseline } from '../lib/analytics'
 import type { Levers } from '../lib/trajectory'
@@ -155,7 +155,10 @@ const defaultPersisted: Persisted = {
   permissions: { ...DEFAULT_PERMISSIONS },
   profile: { name: '', phone: '' },
   goals: [],
-  dataMode: 'demo',
+  // Nobody is given sample data without asking for it. A new install starts
+  // live and empty; 'demo' is reached only by choosing it on the connect
+  // step, or from Settings later.
+  dataMode: 'live',
   decisions: {},
   dismissed: [],
   followedChannels: [],
@@ -217,6 +220,7 @@ export type Action =
 /* ------------------------------------------------------- sample history */
 const sampleHistory = generateHistory(TODAY)
 const sampleMeasurements = generateMeasurements(TODAY)
+const emptyHistory = generateEmptyHistory(TODAY)
 
 /** Turns records that really came from a provider into Jumbo's day shape. */
 function fromLive(rows: SyncedDay[]): DayRecord[] {
@@ -268,7 +272,13 @@ const MILESTONE_COPY: Record<string, { title: string; body: string }> = {
 }
 
 function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
-  const base = p.dataMode === 'live' && live.length ? fromLive(live) : sampleHistory
+  // Sample data is shown only when the person chose it. In live mode with
+  // nothing synced yet the history is the empty calendar, not the sample
+  // one: someone who picked "I'll do it later" is told they have no data,
+  // rather than being shown somebody else's and left to assume it is theirs.
+  const base = p.dataMode === 'demo'
+    ? sampleHistory
+    : live.length ? fromLive(live) : emptyHistory
   return base.map((d) => {
     const extraMeals = p.addedMeals[d.date]
     const extraWorkout = p.addedWorkouts[d.date]

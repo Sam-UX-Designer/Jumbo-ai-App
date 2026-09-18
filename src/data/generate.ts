@@ -248,3 +248,35 @@ export function generateMeasurements(todayISO: string): Measurement[] {
 }
 
 export const TODAY = iso(new Date())
+
+/**
+ * The same six months of dates, carrying nothing.
+ *
+ * This is what a person sees when they have chosen to start without
+ * connecting a source. The calendar exists, so the date selector works and
+ * anything they log lands on the right day, but every metric is zero because
+ * nothing has measured them yet. Zero here means "not recorded", and the
+ * screens read it that way: a day with no steps is a day Jumbo has no steps
+ * for, not a day the person did not move.
+ *
+ * The alternative — falling back to the sample history — puts invented
+ * numbers in front of someone who never asked to see sample data. A figure
+ * nobody measured is not a gap in the UI, it is a wrong answer about their
+ * body.
+ */
+export function generateEmptyHistory(todayISO: string): DayRecord[] {
+  const start = addDays(todayISO, -(HISTORY_DAYS - 1))
+  const days: DayRecord[] = []
+  for (let i = 0; i < HISTORY_DAYS; i++) {
+    days.push({
+      date: addDays(start, i),
+      sleepHours: 0, sleepEfficiency: 0, bedtimeHour: 0,
+      steps: 0, activeMinutes: 0,
+      restingHR: 0, hrv: 0,
+      weightKg: 0, bodyFatPct: 0,
+      meals: [],
+      restDay: false,
+    })
+  }
+  return days
+}

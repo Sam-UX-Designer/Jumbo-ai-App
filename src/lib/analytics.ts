@@ -8,6 +8,20 @@ export const dayKcal = (d: DayRecord) => sum(d.meals.map((m) => mealTotals(m.ite
 export const dayProtein = (d: DayRecord) => round(sum(d.meals.map((m) => mealTotals(m.items).protein)), 0)
 
 /** A personal baseline, from the user's own imported history — not a population norm. */
+/**
+ * Whether this day carries anything at all.
+ *
+ * The history is a full calendar whether or not it has been filled, so the
+ * count of days cannot be the count of days Jumbo knows something about.
+ * A day counts once any signal has landed on it, from a source or from the
+ * person's own hand.
+ */
+export function hasData(d: DayRecord): boolean {
+  return d.sleepHours > 0 || d.steps > 0 || d.activeMinutes > 0
+    || d.restingHR > 0 || d.hrv > 0 || d.weightKg > 0 || d.bodyFatPct > 0
+    || d.meals.length > 0 || Boolean(d.workout) || Boolean(d.notes)
+}
+
 export function computeBaseline(days: DayRecord[], measurements: Measurement[]): Baseline {
   const w = lastN(days, 28)
   const settled = w.slice(0, Math.max(1, w.length - 1)) // exclude the partial current day
@@ -19,14 +33,18 @@ export function computeBaseline(days: DayRecord[], measurements: Measurement[]):
     steps: Math.round(median(settled.map((d) => d.steps))),
     restingHR: Math.round(median(settled.map((d) => d.restingHR))),
     hrv: Math.round(median(settled.map((d) => d.hrv))),
-    vo2max: vo2 ? vo2.value : 42,
+    // 0 means nobody has measured it. There is no sensible number to stand
+    // in for a person's aerobic fitness, and 42 was a guess wearing the
+    // clothes of a measurement.
+    vo2max: vo2 ? vo2.value : 0,
     bodyFatPct: round(mean(settled.slice(-7).map((d) => d.bodyFatPct)), 1),
     weightKg: round(mean(settled.slice(-7).map((d) => d.weightKg)), 1),
     proteinG: Math.round(median(settled.map(dayProtein))),
     weeklyActiveMinutes: Math.round(sum(settled.map((d) => d.activeMinutes)) / weeks),
     strengthPerWeek: round(settled.filter((d) => d.workout?.type === 'Strength').length / weeks, 1),
     computedAt: Date.now(),
-    daysOfHistory: days.length,
+    // Days Jumbo actually knows something about, not days on the calendar.
+    daysOfHistory: days.filter(hasData).length,
   }
 }
 
@@ -59,9 +77,17 @@ export function dailyProgress(day: DayRecord, base: Baseline): DailyProgress {
   const logged = day.meals.filter((m) => m.confirmed).length
   const nourish = clamp((dayProtein(day) / proteinTarget) * 0.65 + (logged / 3) * 0.35, 0, 1)
 
+  // The ratios fall back to 1 — "nothing unusual" — when one side of the
+  // comparison is missing. That is the right reading for a day with a gap in
+  // it, and the wrong one for a day with nothing in it at all: both halves
+  // defaulting to 1 scores an empty day at 90% recovered, which is a claim
+  // about a person nobody has measured.
+  const heartRecorded = day.hrv > 0 || day.restingHR > 0
   const hrvRatio = base.hrv > 0 ? day.hrv / base.hrv : 1
   const rhrRatio = day.restingHR > 0 ? base.restingHR / day.restingHR : 1
-  const recovery = clamp((hrvRatio * 0.55 + rhrRatio * 0.45 - 0.55) / 0.5, 0, 1)
+  const recovery = heartRecorded
+    ? clamp((hrvRatio * 0.55 + rhrRatio * 0.45 - 0.55) / 0.5, 0, 1)
+    : 0
 
   const weights = restDay ? [0.3, 0.15, 0.25, 0.3] : [0.28, 0.3, 0.24, 0.18]
   const overall = clamp(
@@ -341,7 +367,9 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
   const vo2 = measurements.filter((m) => m.kind === 'vo2max').sort((a, b) => (a.date < b.date ? -1 : 1))
 
   return {
-    daysOfHistory: days.length,
+    // The real count, so the model is never told there are months of data
+    // behind an empty calendar.
+    daysOfHistory: days.filter(hasData).length,
     baseline: {
       sleepHours: base.sleepHours,
       steps: base.steps,

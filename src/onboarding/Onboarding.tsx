@@ -48,11 +48,24 @@ export function Onboarding() {
   const idx = STEPS.indexOf(step)
   const go = (s: Step) => { haptic('selection'); setStep(s) }
 
+  /** The explicit choice: show me the app filled in, with sample data. */
   const exploreWithSamples = () => {
     dispatch({ type: 'setDataMode', mode: 'demo' })
     // A sample tour needs a name to greet. It is sample data, labelled as
     // such everywhere it appears, and the person can change it in You.
     if (!state.profile.name.trim()) dispatch({ type: 'setProfile', profile: { name: 'Alex' } })
+    dispatch({ type: 'finishOnboarding' })
+  }
+
+  /**
+   * The control in the corner: leave setup, go to the app.
+   *
+   * It skips the questions, not into someone else's data. Whoever taps this
+   * asked to stop answering things, which is not the same as asking to be
+   * shown a sample history — so the mode is left alone and the app opens
+   * empty, ready for the first thing they log.
+   */
+  const skipSetup = () => {
     dispatch({ type: 'finishOnboarding' })
   }
 
@@ -72,7 +85,7 @@ export function Onboarding() {
             {STEPS.map((s, i) => <span key={s} className={`ob__tick${i <= idx ? ' is-done' : ''}`} />)}
           </div>
           {idx > 0 && idx < STEPS.length - 1 && (
-            <button className="btn btn--ghost btn--sm" onClick={exploreWithSamples}>Skip</button>
+            <button className="btn btn--ghost btn--sm" onClick={skipSetup}>Skip</button>
           )}
         </div>
 
@@ -80,7 +93,17 @@ export function Onboarding() {
         {step === 'you' && <YouStep onNext={() => go('verify')} />}
         {step === 'verify' && <VerifyStep onNext={() => go('goals')} />}
         {step === 'goals' && <GoalsStep onNext={() => go('connect')} />}
-        {step === 'connect' && <ConnectStep onNext={() => go('permissions')} onSkip={() => { dispatch({ type: 'setDataMode', mode: 'demo' }); go('permissions') }} />}
+        {step === 'connect' && (
+          <ConnectStep
+            onNext={() => go('permissions')}
+            // Nothing connected and nothing pretended: stay live and empty, and
+            // skip the steps that exist to show what was imported. Reminders
+            // and the closing screen still apply, because logging by hand is
+            // exactly what this person will be doing.
+            onLater={() => { dispatch({ type: 'setDataMode', mode: 'live' }); go('reminders') }}
+            onSamples={() => { dispatch({ type: 'setDataMode', mode: 'demo' }); go('permissions') }}
+          />
+        )}
         {step === 'permissions' && <PermissionsStep onNext={() => go('import')} />}
         {step === 'import' && <ImportStep onNext={() => go('summary')} onSync={sync} />}
         {step === 'summary' && <SummaryStep onNext={() => go('insight')} />}
@@ -377,7 +400,7 @@ const SOURCE_ICON: Record<string, IconName> = {
   whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
 }
 
-function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLater: () => void; onSamples: () => void }) {
   const { state } = useStore()
   const [busy, setBusy] = useState<string | null>(null)
   const [failure, setFailure] = useState<{ id: string; message: string; missing?: string[]; docs?: string; kind: 'setup' | 'error' } | null>(null)
@@ -413,8 +436,9 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         <div className="stack stack-3">
           <h1 className="t-title1">Connect what you already use</h1>
           <p className="t-callout dim">
-            Jumbo reads history from these and never writes to them. You will see exactly what each
-            one shares before anything is imported.
+            Optional. Jumbo reads history from these and never writes to them, and you will see
+            exactly what each one shares before anything is imported. You can also carry on without
+            connecting anything — Jumbo works either way.
           </p>
         </div>
 
@@ -423,6 +447,22 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
             title="Sources can’t be reached right now"
             message="You can carry on with sample data and connect a source later from your profile."
           />
+        )}
+
+        {/* No list to show: either the server has not answered yet or it
+            could not be reached. Saying so beats an empty gap under a
+            heading that promises sources. */}
+        {state.providers.length === 0 && (
+          <div className="card stack stack-2">
+            <span className="t-callout strong">
+              {state.serverReachable === false ? 'Sources can’t be reached right now' : 'Looking for sources'}
+            </span>
+            <p className="t-caption dim">
+              {state.serverReachable === false
+                ? 'Jumbo can’t reach the list of health apps at the moment. Nothing is wrong with your account, and you can carry on and connect one later from Settings.'
+                : 'Checking which health apps you can connect.'}
+            </p>
+          </div>
         )}
 
         <div className="stack stack-3">
@@ -473,19 +513,68 @@ function ConnectStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
             reading from it immediately.
           </p>
         </div>
+
+        {/* Said plainly, because the buttons alone cannot carry it: there are
+            three ways forward here and none of them is a dead end. On the web
+            the native health apps cannot be connected at all, so leaving this
+            screen empty-handed has to feel like a choice rather than a
+            failure. */}
+        <div className="stack stack-3">
+          <h2 className="t-callout strong">Three ways to go on</h2>
+          <ul className="stack stack-2 ob__choices">
+            <li className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+              <Icon name="link" size={17} style={{ color: 'var(--brand)', flex: 'none', marginTop: 2 }} />
+              <p className="t-caption dim">
+                <span className="strong">Connect a source</span>
+                {state.providers.length > 0 ? ' above, and' : ' when one is available, and'} Jumbo
+                starts from the history you already have.
+              </p>
+            </li>
+            <li className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+              <Icon name="today" size={17} style={{ color: 'var(--ink-2)', flex: 'none', marginTop: 2 }} />
+              <p className="t-caption dim">
+                <span className="strong">Do it later</span> and use Jumbo now. You log meals,
+                workouts and measurements yourself, and your history builds from today. Sources can
+                be added any time from Settings.
+              </p>
+            </li>
+            <li className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+              <Icon name="flag" size={17} style={{ color: 'var(--note)', flex: 'none', marginTop: 2 }} />
+              <p className="t-caption dim">
+                <span className="strong">Explore with sample data</span> to see the whole app filled
+                in. It is one person’s example history, labelled as sample everywhere it appears, and
+                none of it is yours. You can switch back in Settings.
+              </p>
+            </li>
+          </ul>
+          {connectable.length === 0 && (
+            <p className="t-caption dim2">
+              Apple Health and Google Health connect from the Jumbo mobile app. On the web they
+              cannot be reached, which is why they show as unavailable above — it is not a problem
+              with your account.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="ob__foot">
-        <button
-          className="btn btn--primary btn--lg btn--block"
-          onClick={onNext}
-          disabled={connected.length === 0}
-        >
-          {connected.length ? `Import from ${connected.length} ${connected.length === 1 ? 'source' : 'sources'}` : 'Connect a source to continue'}
-        </button>
-        <button className="btn btn--ghost btn--block" onClick={onSkip}>
-          {connectable.length ? 'Not now, explore with sample data' : 'Explore with sample data'}
-        </button>
+        {connected.length > 0 ? (
+          <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>
+            Import from {connected.length} {connected.length === 1 ? 'source' : 'sources'}
+          </button>
+        ) : (
+          <>
+            {/* Nothing is connected, and that is a perfectly good place to be.
+                The primary action carries on into the app rather than sitting
+                disabled behind a source the person may have no way to give. */}
+            <button className="btn btn--primary btn--lg btn--block" onClick={onLater}>
+              I’ll do this later
+            </button>
+            <button className="btn btn--ghost btn--block" onClick={onSamples}>
+              Explore with sample data instead
+            </button>
+          </>
+        )}
       </div>
     </>
   )
