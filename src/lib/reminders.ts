@@ -82,7 +82,7 @@ function fire(kind: ReminderKind, onOpen: () => void) {
   if (!notificationsSupported() || Notification.permission !== 'granted') return
   const { title, body } = COPY[kind]
   try {
-    const n = new Notification(`Jumbo · ${title}`, { body, tag: `jumbo-${kind}`, icon: '/favicon.svg' })
+    const n = new Notification(`Jumbo · ${title}`, { body, tag: `jumbo-${kind}`, icon: '/assets/favicon.png' })
     n.onclick = () => { window.focus(); n.close(); onOpen() }
   } catch { /* some browsers require a service worker registration; degrade quietly */ }
 }
