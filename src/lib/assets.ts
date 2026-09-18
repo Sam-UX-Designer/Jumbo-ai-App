@@ -67,22 +67,22 @@ export const ASSETS = {
   },
   /* ── Illustrations ─────────────────────────────────────────────── */
   welcomeHero: {
-    file: 'illustrations/onboarding-welcome.png',
+    file: 'illustrations/onboarding-welcome.svg',
     alt: '',
     ratio: 1.5,
   },
   futurePath: {
-    file: 'illustrations/future-path.png',
+    file: 'illustrations/future-path.svg',
     alt: '',
     ratio: 3,
   },
   celebration: {
-    file: 'illustrations/celebration.png',
+    file: 'illustrations/celebration.svg',
     alt: '',
     ratio: 1,
   },
   ready: {
-    file: 'illustrations/ready-rocket.png',
+    file: 'illustrations/ready-rocket.svg',
     alt: '',
     ratio: 1,
   },

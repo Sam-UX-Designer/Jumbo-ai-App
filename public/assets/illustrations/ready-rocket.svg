@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800" role="img" aria-label="Ready illustration placeholder">
+  <title>Ready to go — placeholder artwork</title>
+  <ellipse cx="400" cy="640" rx="230" ry="54" fill="#17191C"/>
+  <path d="M400 116c78 62 116 152 116 252l-40 74H324l-40-74c0-100 38-190 116-252Z" fill="#E7EAE4"/>
+  <circle cx="400" cy="298" r="46" fill="#46C8F5"/>
+  <path d="M284 400l-58 62 78 6ZM516 400l58 62-78 6Z" fill="#92E82A"/>
+  <path d="M356 442h88l-20 78h-48Z" fill="#FFA53D"/>
+  <path d="M370 524h60l-30 84Z" fill="#FF5C7A"/>
+  <circle cx="400" cy="400" r="374" fill="none" stroke="#92E82A" stroke-width="4" stroke-dasharray="14 16" opacity="0.4"/>
+  <text x="400" y="762" fill="#7C817B" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="24" font-weight="600" letter-spacing="3" text-anchor="middle">READY PLACEHOLDER · 1:1</text>
+</svg>
