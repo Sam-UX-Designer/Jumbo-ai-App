@@ -8,7 +8,7 @@
    ── Replacing a placeholder with the finished artwork ──────────────
    Drop the real file into the matching folder under `public/assets/`,
    keeping the filename below. If your export has a different extension
-   (a .png where the placeholder is a .svg), change the one `file:` line
+   (an .svg or .webp where the placeholder is a .png), change the `file:` line
    for that asset — that is the only edit required.
 
    ── Hosting the artwork somewhere else ─────────────────────────────
@@ -42,12 +42,12 @@ export interface AssetDef {
 export const ASSETS = {
   /* ── Brand ─────────────────────────────────────────────────────── */
   brandMark: {
-    file: 'brand/jumbo-mark.svg',
+    file: 'brand/jumbo-mark.png',
     alt: 'Jumbo',
     ratio: 1,
   },
   brandWordmark: {
-    file: 'brand/jumbo-wordmark.svg',
+    file: 'brand/jumbo-wordmark.png',
     alt: 'Jumbo',
     ratio: 4,
   },
@@ -61,40 +61,40 @@ export const ASSETS = {
 
   /* ── People ────────────────────────────────────────────────────── */
   avatar: {
-    file: 'avatar/user-placeholder.svg',
+    file: 'avatar/user-placeholder.png',
     alt: 'Your profile photo',
     ratio: 1,
   },
   /* ── Illustrations ─────────────────────────────────────────────── */
   welcomeHero: {
-    file: 'illustrations/onboarding-welcome.svg',
+    file: 'illustrations/onboarding-welcome.png',
     alt: '',
     ratio: 1.5,
   },
   futurePath: {
-    file: 'illustrations/future-path.svg',
+    file: 'illustrations/future-path.png',
     alt: '',
     ratio: 3,
   },
   celebration: {
-    file: 'illustrations/celebration.svg',
+    file: 'illustrations/celebration.png',
     alt: '',
     ratio: 1,
   },
   ready: {
-    file: 'illustrations/ready-rocket.svg',
+    file: 'illustrations/ready-rocket.png',
     alt: '',
     ratio: 1,
   },
 
   /* ── Content ───────────────────────────────────────────────────── */
   videoThumbnail: {
-    file: 'content/video-thumbnail.svg',
+    file: 'content/video-thumbnail.png',
     alt: '',
     ratio: 16 / 9,
   },
   mealPhoto: {
-    file: 'content/meal-photo.svg',
+    file: 'content/meal-photo.png',
     alt: '',
     ratio: 1,
   },
@@ -103,13 +103,13 @@ export const ASSETS = {
      Placeholders only. Each provider's real mark must come from that
      company's own brand assets and follow their usage rules — see
      docs/ASSETS.md. Keys match the provider ids the server returns. */
-  'provider:apple_health':   { file: 'providers/apple-health.svg',   alt: 'Apple Health', ratio: 1 },
-  'provider:health_connect': { file: 'providers/health-connect.svg', alt: 'Health Connect', ratio: 1 },
-  'provider:whoop':          { file: 'providers/whoop.svg',          alt: 'WHOOP', ratio: 1 },
-  'provider:oura':           { file: 'providers/oura.svg',           alt: 'Oura', ratio: 1 },
-  'provider:fitbit':         { file: 'providers/fitbit.svg',         alt: 'Fitbit', ratio: 1 },
-  'provider:withings':       { file: 'providers/withings.svg',       alt: 'Withings', ratio: 1 },
-  'provider:garmin':         { file: 'providers/garmin.svg',         alt: 'Garmin', ratio: 1 },
+  'provider:apple_health':   { file: 'providers/apple-health.png',   alt: 'Apple Health', ratio: 1 },
+  'provider:health_connect': { file: 'providers/health-connect.png', alt: 'Health Connect', ratio: 1 },
+  'provider:whoop':          { file: 'providers/whoop.png',          alt: 'WHOOP', ratio: 1 },
+  'provider:oura':           { file: 'providers/oura.png',           alt: 'Oura', ratio: 1 },
+  'provider:fitbit':         { file: 'providers/fitbit.png',         alt: 'Fitbit', ratio: 1 },
+  'provider:withings':       { file: 'providers/withings.png',       alt: 'Withings', ratio: 1 },
+  'provider:garmin':         { file: 'providers/garmin.png',         alt: 'Garmin', ratio: 1 },
 } satisfies Record<string, AssetDef>
 
 export type AssetKey = keyof typeof ASSETS
