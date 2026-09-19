@@ -406,12 +406,23 @@ export function Empty({
 /* ============================================================
    Confirm — every destructive action asks first
    ============================================================ */
+interface ConfirmRequest {
+  title: string
+  body: string
+  confirmLabel: string
+  onConfirm: () => void
+  /**
+   * 'destructive' is the default and paints the confirm button in the
+   * critical colour. Use 'normal' for a choice that changes what is on
+   * screen rather than destroying something: a red button on a reversible
+   * switch teaches people to fear a control they should feel free to use.
+   */
+  tone?: 'destructive' | 'normal'
+}
+
 export function useConfirm() {
-  const [req, setReq] = useState<{ title: string; body: string; confirmLabel: string; onConfirm: () => void } | null>(null)
-  const confirm = useCallback(
-    (o: { title: string; body: string; confirmLabel: string; onConfirm: () => void }) => setReq(o),
-    [],
-  )
+  const [req, setReq] = useState<ConfirmRequest | null>(null)
+  const confirm = useCallback((o: ConfirmRequest) => setReq(o), [])
   const node = req ? (
     <Sheet
       open onClose={() => setReq(null)} title={req.title}
@@ -420,7 +431,7 @@ export function useConfirm() {
           <button className="btn btn--secondary grow" onClick={() => setReq(null)}>Cancel</button>
           <button
             className="btn btn--primary grow"
-            style={{ background: 'var(--critical)' }}
+            style={req.tone === 'normal' ? undefined : { background: 'var(--critical)' }}
             onClick={() => { req.onConfirm(); setReq(null) }}
           >
             {req.confirmLabel}

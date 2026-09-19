@@ -70,6 +70,33 @@ export function Settings({
     dispatch({ type: 'setSetting', key, value })
 
   const open = (p: Panel) => { haptic('selection'); setPanel(p) }
+
+  const enterSamples = () => {
+    dispatch({ type: 'setDataMode', mode: 'demo' })
+    toast({ text: 'Showing sample data', icon: 'flag' })
+  }
+
+  /**
+   * Leaving sample data asks first.
+   *
+   * Someone may have spent a while in here and not know what is waiting on
+   * the other side — for a person who chose "do it later" at setup, the
+   * answer is an empty app. Better to say that before the screen changes
+   * than to have them wonder where everything went. Nothing is destroyed
+   * either way, and the sheet says so.
+   */
+  const leaveSamples = () => {
+    confirm({
+      title: 'Turn off sample data?',
+      body: 'Jumbo will go back to showing only your own records. If you have not connected a source or logged anything yet, the app will look empty until you do. Nothing is deleted, and you can turn sample data back on here whenever you like.',
+      confirmLabel: 'Turn it off',
+      tone: 'normal',
+      onConfirm: () => {
+        dispatch({ type: 'setDataMode', mode: 'live' })
+        toast({ text: 'Showing your own data', icon: 'check' })
+      },
+    })
+  }
   const close = () => setPanel(null)
 
   const plan = planById(state.plan)
@@ -89,7 +116,17 @@ export function Settings({
         onBack={() => onNavigate('you')}
       />
 
-      {state.dataMode === 'demo' && <DemoBadge />}
+      {/* In sample mode the way out belongs here, at the top of Settings,
+          rather than only inside the sources sheet. This is where someone
+          goes when they want their own app back. */}
+      {state.dataMode === 'demo' && (
+        <div className="stack stack-3">
+          <DemoBadge />
+          <button className="btn btn--secondary btn--block" onClick={leaveSamples}>
+            <Icon name="check" size={16} /> Turn off sample data
+          </button>
+        </div>
+      )}
 
       {/* ───────────────────────────────────────────────────────── account */}
       <Group label="Account">
@@ -368,13 +405,7 @@ export function Settings({
               label="Explore with sample data"
               hint="Only changes what you are shown. Your own meals, workouts and measurements are kept either way."
               checked={state.dataMode === 'demo'}
-              onChange={(v) => {
-                dispatch({ type: 'setDataMode', mode: v ? 'demo' : 'live' })
-                toast({
-                  text: v ? 'Showing sample data' : 'Showing your own data',
-                  icon: v ? 'flag' : 'check',
-                })
-              }}
+              onChange={(v) => { if (v) enterSamples(); else leaveSamples() }}
             />
           </div>
         </div>

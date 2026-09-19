@@ -405,6 +405,20 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
   const [busy, setBusy] = useState<string | null>(null)
   const [failure, setFailure] = useState<{ id: string; message: string; missing?: string[]; docs?: string; kind: 'setup' | 'error' } | null>(null)
   const bridge = nativeBridge()
+  const sourceList = useRef<HTMLDivElement>(null)
+
+  /**
+   * The primary action takes you to the sources rather than replacing them.
+   * Connecting is a per-source decision — which one you own is not something
+   * a single button can know — so this scrolls the list into view and puts
+   * the keyboard on the first source that can actually be connected.
+   */
+  const goToSources = () => {
+    haptic('selection')
+    sourceList.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const first = sourceList.current?.querySelector<HTMLButtonElement>('button.btn--primary:not([disabled])')
+    first?.focus({ preventScroll: true })
+  }
 
   const connectable = state.providers.filter((p) => p.transport === 'oauth' ? p.ready : Boolean(bridge))
   const connected = state.providers.filter((p) => p.connection)
@@ -465,7 +479,7 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
           </div>
         )}
 
-        <div className="stack stack-3">
+        <div className="stack stack-3" ref={sourceList}>
           {state.providers.map((p) => {
             const isConnected = Boolean(p.connection)
             const canConnect = p.transport === 'oauth' ? p.ready : Boolean(bridge)
@@ -564,12 +578,26 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
           </button>
         ) : (
           <>
-            {/* Nothing is connected, and that is a perfectly good place to be.
-                The primary action carries on into the app rather than sitting
-                disabled behind a source the person may have no way to give. */}
-            <button className="btn btn--primary btn--lg btn--block" onClick={onLater}>
-              I’ll do this later
-            </button>
+            {/* Three choices, in the order they deserve. Connecting a source is
+                the one that makes Jumbo best, so it leads — but only while
+                there is a source that can actually be connected. On the web,
+                with every source unreachable, a primary button offering to
+                connect one would be an invitation to a dead end, so carrying
+                on takes the lead instead. Nothing is ever disabled. */}
+            {connectable.length > 0 ? (
+              <>
+                <button className="btn btn--primary btn--lg btn--block" onClick={goToSources}>
+                  Connect a source
+                </button>
+                <button className="btn btn--secondary btn--block" onClick={onLater}>
+                  I’ll do this later
+                </button>
+              </>
+            ) : (
+              <button className="btn btn--primary btn--lg btn--block" onClick={onLater}>
+                I’ll do this later
+              </button>
+            )}
             <button className="btn btn--ghost btn--block" onClick={onSamples}>
               Explore with sample data instead
             </button>
