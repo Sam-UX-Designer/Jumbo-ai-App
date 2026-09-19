@@ -7,6 +7,7 @@ import { haptic } from '../lib/feedback'
 
 const EMPTY: DailyProgress = {
   sleep: 0, movement: 0, nourish: 0, recovery: 0, overall: 0, restDay: false,
+  recoveryKnown: false,
 }
 
 /**

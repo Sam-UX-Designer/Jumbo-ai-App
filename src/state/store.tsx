@@ -288,6 +288,20 @@ function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
       ...d,
       meals: extraMeals ? [...d.meals, ...extraMeals].sort((a, b) => a.time.localeCompare(b.time)) : d.meals,
       workout: extraWorkout ?? d.workout,
+      // A session someone logged by hand is movement, and until this line it
+      // was not: the workout was stored, shown on Capture, and then ignored
+      // by every figure on Today, because movement is read from steps and
+      // active minutes and a logged workout touched neither. Someone with no
+      // wearable could record a two-hour ride and watch the app tell them
+      // they had done nothing.
+      //
+      // The larger of the two wins rather than the sum. A tracker's active
+      // minutes very likely already contain the ride, so adding them would
+      // count it twice; the max says "at least this much", which is the most
+      // the app can honestly claim from two overlapping accounts of one day.
+      activeMinutes: extraWorkout
+        ? Math.max(d.activeMinutes, extraWorkout.minutes)
+        : d.activeMinutes,
       restDay: extraWorkout ? false : d.restDay,
       notes: note ?? d.notes,
     }

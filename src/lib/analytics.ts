@@ -55,6 +55,14 @@ export interface DailyProgress {
   recovery: number
   overall: number
   restDay: boolean
+  /**
+   * Whether anything actually measured recovery today.
+   *
+   * Without it a recovery of 0 is indistinguishable from a recovery that is
+   * genuinely poor, and the app tells someone who owns no heart monitor that
+   * they are under-recovered — a diagnosis drawn from an empty field.
+   */
+  recoveryKnown: boolean
 }
 
 /**
@@ -94,7 +102,7 @@ export function dailyProgress(day: DayRecord, base: Baseline): DailyProgress {
     sleep * weights[0] + movement * weights[1] + nourish * weights[2] + recovery * weights[3],
     0, 1,
   )
-  return { sleep, movement, nourish, recovery, overall, restDay }
+  return { sleep, movement, nourish, recovery, overall, restDay, recoveryKnown: heartRecorded }
 }
 
 /**
@@ -105,7 +113,12 @@ export function dailyProgress(day: DayRecord, base: Baseline): DailyProgress {
 function kept(d: DayRecord, base: Baseline): boolean {
   const p = dailyProgress(d, base)
   const restedWell = d.sleepHours >= base.sleepHours - 0.9
-  const movedEnough = d.restDay ? true : d.steps >= Math.max(6000, base.steps * 0.72)
+  // Either measure will do. Requiring steps meant a person who cycles or
+  // swims every day, and owns nothing that counts steps, could never hold a
+  // streak no matter how much they logged.
+  const movedEnough = d.restDay
+    || d.steps >= Math.max(6000, base.steps * 0.72)
+    || d.activeMinutes >= 30
   return restedWell && movedEnough && p.overall > 0.45
 }
 
@@ -358,6 +371,17 @@ export function buildInsights(days: DayRecord[], base: Baseline, measurements: M
  * no meal photos, no notes, no name, no phone number — so the model sees the
  * shape of the person's data and nothing that identifies them.
  */
+/**
+ * A figure, or null when nothing measured it.
+ *
+ * Zero is a real reading for steps and a nonsensical one for a heart rate,
+ * but the day record stores both as 0 when they are absent. Sending that 0
+ * to the model is how Jumbo came to tell someone their "resting heart rate
+ * sits at 0 bpm against a baseline of 0" — the model was being accurate
+ * about the number it was given. null cannot be misread that way.
+ */
+const orNull = (v: number) => (Number.isFinite(v) && v > 0 ? v : null)
+
 export function buildSummary(days: DayRecord[], base: Baseline, measurements: Measurement[]) {
   const w28 = lastN(days, 28)
   const w7 = lastN(days, 7)
@@ -371,44 +395,46 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
     // behind an empty calendar.
     daysOfHistory: days.filter(hasData).length,
     baseline: {
-      sleepHours: base.sleepHours,
-      steps: base.steps,
-      restingHR: base.restingHR,
-      hrvMs: base.hrv,
-      vo2max: base.vo2max,
-      bodyFatPct: base.bodyFatPct,
-      weightKg: base.weightKg,
-      proteinG: base.proteinG,
+      sleepHours: orNull(base.sleepHours),
+      steps: orNull(base.steps),
+      restingHR: orNull(base.restingHR),
+      hrvMs: orNull(base.hrv),
+      vo2max: orNull(base.vo2max),
+      bodyFatPct: orNull(base.bodyFatPct),
+      weightKg: orNull(base.weightKg),
+      proteinG: orNull(base.proteinG),
       strengthSessionsPerWeek: base.strengthPerWeek,
-      weeklyActiveMinutes: base.weeklyActiveMinutes,
+      weeklyActiveMinutes: orNull(base.weeklyActiveMinutes),
     },
     last7Days: {
-      meanSleepHours: round(mean(w7.map((d) => d.sleepHours)), 2),
-      meanSteps: Math.round(mean(w7.map((d) => d.steps))),
-      meanRestingHR: round(mean(w7.map((d) => d.restingHR)), 1),
-      meanHrv: round(mean(w7.map((d) => d.hrv)), 1),
+      meanSleepHours: orNull(round(mean(w7.map((d) => d.sleepHours)), 2)),
+      meanSteps: orNull(Math.round(mean(w7.map((d) => d.steps)))),
+      meanRestingHR: orNull(round(mean(w7.map((d) => d.restingHR)), 1)),
+      meanHrv: orNull(round(mean(w7.map((d) => d.hrv)), 1)),
       trainingLoad: Math.round(sum(w7.map(load))),
       restDays: w7.filter((d) => d.restDay).length,
       medianProteinG: Math.round(median(w7.map(dayProtein))),
       loggedMeals: sum(w7.map((d) => d.meals.length)),
     },
     previous7Days: {
-      meanSleepHours: round(mean(prior7.map((d) => d.sleepHours)), 2),
-      meanRestingHR: round(mean(prior7.map((d) => d.restingHR)), 1),
-      meanHrv: round(mean(prior7.map((d) => d.hrv)), 1),
-      trainingLoad: Math.round(sum(prior7.map(load))),
+      meanSleepHours: orNull(round(mean(prior7.map((d) => d.sleepHours)), 2)),
+      meanRestingHR: orNull(round(mean(prior7.map((d) => d.restingHR)), 1)),
+      meanHrv: orNull(round(mean(prior7.map((d) => d.hrv)), 1)),
+      // A week with nothing in it is not a week of zero training, and a
+      // percentage change measured against it is arithmetic on an absence.
+      trainingLoad: prior7.some(hasData) ? Math.round(sum(prior7.map(load))) : null,
     },
     last28Days: {
-      meanSleepHours: round(mean(w28.map((d) => d.sleepHours)), 2),
+      meanSleepHours: orNull(round(mean(w28.map((d) => d.sleepHours)), 2)),
       nightsAfter2345: w28.filter((d) => d.bedtimeHour > 23.75).length,
-      hrvOnLateNights: round(mean(w28.filter((d) => d.bedtimeHour > 23.75).map((d) => d.hrv)), 1),
-      hrvOnEarlyNights: round(mean(w28.filter((d) => d.bedtimeHour <= 23.75).map((d) => d.hrv)), 1),
+      hrvOnLateNights: orNull(round(mean(w28.filter((d) => d.bedtimeHour > 23.75).map((d) => d.hrv)), 1)),
+      hrvOnEarlyNights: orNull(round(mean(w28.filter((d) => d.bedtimeHour <= 23.75).map((d) => d.hrv)), 1)),
       bedtimeToHrvCorrelation: round(correlate(w28.map((d) => d.bedtimeHour), w28.map((d) => d.hrv)), 2),
-      stepTrendPerDay: Math.round(trendPerDay(w28.map((d) => d.steps))),
-      medianProteinG: Math.round(median(w28.map(dayProtein))),
+      stepTrendPerDay: orNull(Math.round(trendPerDay(w28.map((d) => d.steps)))),
+      medianProteinG: orNull(Math.round(median(w28.map(dayProtein)))),
       restDays: w28.filter((d) => d.restDay).length,
-      hrvMorningAfterRest: round(mean(w28.filter((_, i) => i > 0 && w28[i - 1].restDay).map((d) => d.hrv)), 1),
-      hrvMorningAfterTraining: round(mean(w28.filter((_, i) => i > 0 && !w28[i - 1].restDay).map((d) => d.hrv)), 1),
+      hrvMorningAfterRest: orNull(round(mean(w28.filter((_, i) => i > 0 && w28[i - 1].restDay).map((d) => d.hrv)), 1)),
+      hrvMorningAfterTraining: orNull(round(mean(w28.filter((_, i) => i > 0 && !w28[i - 1].restDay).map((d) => d.hrv)), 1)),
     },
     /**
      * The day-by-day records behind the averages above. Aggregates cannot
@@ -417,12 +443,12 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
      */
     dailyRecords: lastN(days, 14).map((d) => ({
       date: d.date,
-      sleepHours: round(d.sleepHours, 2),
-      sleepEfficiency: d.sleepEfficiency,
-      steps: d.steps,
-      activeMinutes: d.activeMinutes,
-      restingHR: d.restingHR,
-      hrvMs: d.hrv,
+      sleepHours: orNull(round(d.sleepHours, 2)),
+      sleepEfficiency: orNull(d.sleepEfficiency),
+      steps: orNull(d.steps),
+      activeMinutes: orNull(d.activeMinutes),
+      restingHR: orNull(d.restingHR),
+      hrvMs: orNull(d.hrv),
       proteinG: Math.round(dayProtein(d)),
       kcal: Math.round(dayKcal(d)),
       restDay: d.restDay,
@@ -453,7 +479,9 @@ export function buildSummary(days: DayRecord[], base: Baseline, measurements: Me
       vo2maxLatest: vo2.length ? { value: vo2[vo2.length - 1].value, date: vo2[vo2.length - 1].date } : null,
       count: measurements.length,
     },
-    notes: 'All figures are this person\'s own records. Do not invent any number that is not present here.',
+    notes: 'All figures are this person\'s own records. Do not invent any number that is not present here. '
+      + 'A null means nothing has measured that figure yet: say it is not available, never report it as zero, '
+      + 'and do not compare against it or compute a change from it.',
   }
 }
 
@@ -513,13 +541,21 @@ export function keyMetrics(days: DayRecord[], date: string, base: Baseline): Key
       ring: progress.sleep,
     },
     {
+      // Steps are the headline when a tracker supplies them. Without one,
+      // active minutes are what this person has, and a card reading "-"
+      // beside a workout they logged an hour ago is the app calling them a
+      // liar. Minutes are labelled as minutes, so the two are never confused.
       key: 'movement',
       label: 'Movement',
       icon: 'steps',
       colour: 'var(--movement)',
-      value: day.steps > 0 ? day.steps.toLocaleString() : '-',
-      unit: 'steps',
-      deltaPct: change(day.steps, prior.map((d) => d.steps)),
+      value: day.steps > 0
+        ? day.steps.toLocaleString()
+        : day.activeMinutes > 0 ? String(Math.round(day.activeMinutes)) : '-',
+      unit: day.steps > 0 ? 'steps' : day.activeMinutes > 0 ? 'active min' : 'steps',
+      deltaPct: day.steps > 0
+        ? change(day.steps, prior.map((d) => d.steps))
+        : change(day.activeMinutes, prior.map((d) => d.activeMinutes)),
       ring: progress.movement,
     },
     {
@@ -562,6 +598,33 @@ export interface FocusItem {
  * Today's focus: three small, finishable things, each one derived from where
  * this person actually is against their own baseline. Never a fixed list.
  */
+/** The movement line on Today's focus, in steps or in minutes. */
+function moveFocus(
+  day: DayRecord, progress: DailyProgress, stepsShort: number, walkMinutes: number,
+): FocusItem {
+  const shared = { id: 'move', icon: 'steps' as const, colour: 'var(--movement)', progress: progress.movement }
+
+  if (day.steps > 0 || day.activeMinutes === 0) {
+    return {
+      ...shared,
+      title: stepsShort > 0 ? `${walkMinutes} min walk` : 'Movement done',
+      sub: stepsShort > 0 ? `${stepsShort.toLocaleString()} steps to go` : `${day.steps.toLocaleString()} steps`,
+      done: stepsShort === 0,
+    }
+  }
+
+  // The same target dailyProgress scores active minutes against, so the
+  // words and the ring agree.
+  const target = day.restDay ? 22 : 45
+  const short = Math.max(0, target - Math.round(day.activeMinutes))
+  return {
+    ...shared,
+    title: short > 0 ? `${short} min to go` : 'Movement done',
+    sub: `${Math.round(day.activeMinutes)} active min`,
+    done: short === 0,
+  }
+}
+
 export function todaysFocus(day: DayRecord, base: Baseline): FocusItem[] {
   const progress = dailyProgress(day, base)
   const stepTarget = day.restDay ? Math.max(4500, Math.round(base.steps * 0.6)) : Math.max(7000, Math.round(base.steps))
@@ -576,15 +639,11 @@ export function todaysFocus(day: DayRecord, base: Baseline): FocusItem[] {
   const bedLabel = `${Math.floor(bedHour)}:${String(Math.round((bedHour % 1) * 60)).padStart(2, '0')}`
 
   return [
-    {
-      id: 'move',
-      title: stepsShort > 0 ? `${walkMinutes} min walk` : 'Movement done',
-      sub: stepsShort > 0 ? `${stepsShort.toLocaleString()} steps to go` : `${day.steps.toLocaleString()} steps`,
-      icon: 'steps',
-      colour: 'var(--movement)',
-      progress: progress.movement,
-      done: stepsShort === 0,
-    },
+    // Someone with no step counter still moves, and telling them they have
+    // "7,000 steps to go" an hour after they logged a two-hour ride is the
+    // app arguing with its own records. When steps are the thing being
+    // counted, count steps; otherwise count the minutes they gave us.
+    moveFocus(day, progress, stepsShort, walkMinutes),
     {
       id: 'protein',
       title: 'Protein target',
@@ -620,7 +679,9 @@ export function motivationalStatus(p: DailyProgress): { headline: string; body: 
       body: 'You’re building a healthier, brighter tomorrow.',
     }
   }
-  if (p.recovery < 0.35) {
+  // Only when something measured it. "Take it easy" is advice about a body,
+  // and it needs a reading to stand on.
+  if (p.recoveryKnown && p.recovery < 0.35) {
     return {
       headline: 'Take it easy',
       body: 'Recovery is running low. An easy day will serve you better than a hard one.',
