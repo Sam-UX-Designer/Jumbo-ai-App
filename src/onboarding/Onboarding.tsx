@@ -412,12 +412,18 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
    * Connecting is a per-source decision — which one you own is not something
    * a single button can know — so this scrolls the list into view and puts
    * the keyboard on the first source that can actually be connected.
+   *
+   * When none can be, the list is still the right destination: it is where
+   * each source says what it needs and why it is out of reach here. Focus
+   * moves to the list itself so a screen reader reads those reasons rather
+   * than being left where it was with nothing announced.
    */
   const goToSources = () => {
     haptic('selection')
     sourceList.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     const first = sourceList.current?.querySelector<HTMLButtonElement>('button.btn--primary:not([disabled])')
-    first?.focus({ preventScroll: true })
+    if (first) first.focus({ preventScroll: true })
+    else sourceList.current?.focus({ preventScroll: true })
   }
 
   const connectable = state.providers.filter((p) => p.transport === 'oauth' ? p.ready : Boolean(bridge))
@@ -479,7 +485,13 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
           </div>
         )}
 
-        <div className="stack stack-3" ref={sourceList}>
+        <div
+          className="stack stack-3"
+          ref={sourceList}
+          tabIndex={-1}
+          role="group"
+          aria-label="Health and fitness apps you can connect"
+        >
           {state.providers.map((p) => {
             const isConnected = Boolean(p.connection)
             const canConnect = p.transport === 'oauth' ? p.ready : Boolean(bridge)
@@ -578,26 +590,19 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
           </button>
         ) : (
           <>
-            {/* Three choices, in the order they deserve. Connecting a source is
-                the one that makes Jumbo best, so it leads — but only while
-                there is a source that can actually be connected. On the web,
-                with every source unreachable, a primary button offering to
-                connect one would be an invitation to a dead end, so carrying
-                on takes the lead instead. Nothing is ever disabled. */}
-            {connectable.length > 0 ? (
-              <>
-                <button className="btn btn--primary btn--lg btn--block" onClick={goToSources}>
-                  Connect a source
-                </button>
-                <button className="btn btn--secondary btn--block" onClick={onLater}>
-                  I’ll do this later
-                </button>
-              </>
-            ) : (
-              <button className="btn btn--primary btn--lg btn--block" onClick={onLater}>
-                I’ll do this later
-              </button>
-            )}
+            {/* Three choices, in the order they deserve, and the order does
+                not change. Connecting a source is what makes Jumbo good, so
+                it leads on every device — including the web, where the native
+                health apps cannot be reached. It never becomes a dead end:
+                it takes you to the list, the list says which sources are
+                unavailable and why, and carrying on is the button underneath
+                it. Nothing here is ever disabled. */}
+            <button className="btn btn--primary btn--lg btn--block" onClick={goToSources}>
+              Connect a source
+            </button>
+            <button className="btn btn--secondary btn--block" onClick={onLater}>
+              I’ll do this later
+            </button>
             <button className="btn btn--ghost btn--block" onClick={onSamples}>
               Explore with sample data instead
             </button>
