@@ -570,7 +570,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let payload: Partial<Persisted> = {}
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) payload = JSON.parse(raw) as Partial<Persisted>
+      const parsed: unknown = raw ? JSON.parse(raw) : null
+      // Valid JSON is not necessarily a state. The literal `null`, an array
+      // or a number all parse cleanly and then throw the moment anything
+      // reads a field off them — which, on boot, is a white screen rather
+      // than a bad setting. Only an object is worth hydrating from.
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        payload = parsed as Partial<Persisted>
+      }
     } catch { /* corrupt storage must never block the app */ }
     dispatch({ type: 'hydrate', payload })
   }, [])

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
 import { NavProvider, Sidebar, TabBar, type ChatFocus, type Route } from './components/Nav'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { AskDock } from './components/AskDock'
 import { ToastProvider, useToast } from './components/UI'
 import { Onboarding } from './onboarding/Onboarding'
@@ -91,6 +92,10 @@ function Shell() {
             className={`main${route === 'chat' || route === 'settings' || route === 'subscribe' || route === 'notifications' ? '' : ' main--dock'}`}
             id="main" key={route} tabIndex={-1}
           >
+            {/* One screen failing must not take the app with it. The tab bar
+                lives outside this element, so the person can still walk away
+                from whatever went wrong. */}
+            <ErrorBoundary area="this screen" resetKey={route}>
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
             {route === 'capture' && (
@@ -109,6 +114,7 @@ function Shell() {
             )}
             {route === 'subscribe' && <Subscribe onNavigate={setRoute} />}
             {route === 'notifications' && <Notifications onNavigate={setRoute} />}
+            </ErrorBoundary>
           </main>
         </div>
         {route !== 'chat' && route !== 'settings' && route !== 'subscribe' && route !== 'notifications'

@@ -181,6 +181,42 @@ export interface YoutubeVideo {
 
 /* ------------------------------------------------------------------- api */
 
+/** Fills in whatever an insight arrived without, so the screens can trust it. */
+function soundInsight(i: Partial<AiInsight> | null | undefined): AiInsight {
+  const o = i ?? {}
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+  return {
+    id: typeof o.id === 'string' ? o.id : `insight-${Math.random().toString(36).slice(2, 9)}`,
+    domain: (['sleep', 'movement', 'nutrition', 'recovery', 'body'] as const)
+      .includes(o.domain as never) ? (o.domain as AiInsight['domain']) : 'recovery',
+    changed: typeof o.changed === 'string' ? o.changed : '',
+    why: typeof o.why === 'string' ? o.why : '',
+    evidence: strings(o.evidence),
+    confidence: typeof o.confidence === 'number' && Number.isFinite(o.confidence)
+      ? Math.max(0, Math.min(1, o.confidence)) : 0,
+    limitation: typeof o.limitation === 'string' ? o.limitation : '',
+    options: strings(o.options),
+    window: typeof o.window === 'string' ? o.window : '',
+    createdAt: typeof o.createdAt === 'number' ? o.createdAt : Date.now(),
+  }
+}
+
+/** The same guard for the Future narrative: arrays the screen maps over. */
+function soundNarrative(n: Partial<FutureNarrative> | null | undefined): FutureNarrative {
+  const o = n ?? {}
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+  return {
+    source: 'openrouter',
+    model: typeof o.model === 'string' ? o.model : '',
+    headline: typeof o.headline === 'string' ? o.headline : '',
+    lifeStory: strings(o.lifeStory),
+    whatDrivesIt: strings(o.whatDrivesIt),
+    honestly: typeof o.honestly === 'string' ? o.honestly : '',
+    confidence: typeof o.confidence === 'number' && Number.isFinite(o.confidence)
+      ? Math.max(0, Math.min(1, o.confidence)) : 0,
+  }
+}
+
 export const api = {
   config: () => call<ServerConfig>('/config'),
 
@@ -203,13 +239,23 @@ export const api = {
       body: JSON.stringify({ imageBase64, mediaType, note }),
     }),
 
-  insights: (summary: unknown) =>
-    call<{ insights: AiInsight[]; model: string }>('/ai/insights', {
+  insights: async (summary: unknown) => {
+    const r = await call<{ insights: AiInsight[]; model: string }>('/ai/insights', {
       method: 'POST', body: JSON.stringify({ summary }),
-    }),
+    })
+    // The screens read these fields directly, so one insight missing an
+    // array is a blank screen rather than a missing sentence. The server
+    // normalises its own output, but a stale deployment, a proxy or a
+    // half-written response is not the server — and none of them should be
+    // able to take a screen down.
+    if (r.ok) return { ...r, data: { ...r.data, insights: (r.data.insights ?? []).map(soundInsight) } }
+    return r
+  },
 
-  future: (payload: { baseline: unknown; levers: unknown; projection: unknown; horizonMonths: number }) =>
-    call<FutureNarrative>('/ai/future', { method: 'POST', body: JSON.stringify(payload) }),
+  future: async (payload: { baseline: unknown; levers: unknown; projection: unknown; horizonMonths: number }) => {
+    const r = await call<FutureNarrative>('/ai/future', { method: 'POST', body: JSON.stringify(payload) })
+    return r.ok ? { ...r, data: soundNarrative(r.data) } : r
+  },
 
   chat: (payload: {
     question: string
