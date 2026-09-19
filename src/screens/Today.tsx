@@ -169,7 +169,7 @@ export function Today() {
                 </p>
                 <p className="score__body">
                   {isToday
-                    ? 'Log a meal, a workout or a measurement and your score starts here. Connect a health app in Settings and Jumbo fills the rest in for you.'
+                    ? 'Log a meal, a workout or a measurement and your score starts here. Connect a source in Settings and Jumbo fills the rest in for you.'
                     : 'Jumbo has nothing for this day.'}
                 </p>
               </>

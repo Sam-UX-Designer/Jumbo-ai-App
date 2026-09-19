@@ -252,7 +252,7 @@ export function Future() {
             </div>
             <div className="stack stack-3">
               <p className="t-callout">
-                <span className="strong">Connect a health app</span> in Settings and Jumbo reads your
+                <span className="strong">Connect a source</span> in Settings and Jumbo reads your
                 sleep, steps and heart data from the history you already have.
               </p>
               <p className="t-callout">
