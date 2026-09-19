@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
-import { NavProvider, Sidebar, TabBar, type ChatFocus, type Route } from './components/Nav'
+import { NavProvider, Sidebar, TabBar, type ChatFocus, type QuickKind, type Route } from './components/Nav'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AskDock } from './components/AskDock'
 import { ToastProvider, useToast } from './components/UI'
@@ -21,7 +21,7 @@ import { scheduleReminders } from './lib/reminders'
 import { haptic } from './lib/feedback'
 
 const TITLES: Record<Route, string> = {
-  today: 'Today', future: 'AI Future', capture: 'Capture',
+  today: 'Today', future: 'Lifestyle', capture: 'Capture',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
   chat: 'Ask Jumbo', settings: 'Settings', subscribe: 'Plans',
   notifications: 'Notifications',
@@ -38,6 +38,12 @@ function Shell() {
   // What the conversation is about, when it was opened from a specific
   // thing — a meal, so far. Kept across the trip so going back reopens it.
   const [focus, setFocus] = useState<ChatFocus | null>(null)
+  /**
+   * The kind chosen from the centre button, handed to Capture so it opens
+   * that sheet on arrival. Cleared the moment Capture has used it, so
+   * coming back to the screen later does not reopen the form.
+   */
+  const [quickKind, setQuickKind] = useState<QuickKind | null>(null)
 /**
    * The panel inside Settings a row on Profile asked for, so "Reminders"
    * opens reminders rather than the index.
@@ -99,7 +105,11 @@ function Shell() {
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
             {route === 'capture' && (
-              <Capture reopenMeal={focus?.kind === 'meal' ? focus : null} />
+              <Capture
+                reopenMeal={focus?.kind === 'meal' ? focus : null}
+                openKind={quickKind}
+                onOpened={() => setQuickKind(null)}
+              />
             )}
             {route === 'explore' && <Explore />}
             {route === 'measurements' && <Measurements onBack={() => setRoute('today')} />}
@@ -119,7 +129,10 @@ function Shell() {
         </div>
         {route !== 'chat' && route !== 'settings' && route !== 'subscribe' && route !== 'notifications'
           && <AskDock screen={route} />}
-        <TabBar route={route} origin={origin} onNavigate={setRoute} />
+        <TabBar
+          route={route} origin={origin} onNavigate={setRoute}
+          onQuickAdd={(kind) => { setQuickKind(kind); setRoute('capture') }}
+        />
       </div>
     </NavProvider>
   )

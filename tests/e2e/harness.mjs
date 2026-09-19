@@ -206,6 +206,11 @@ export const aMeal = (over = {}) => ({
   ...over,
 })
 
+/** A night's sleep in the shape the app stores. */
+export const aSleep = (over = {}) => ({
+  hours: 7.5, bedtimeHour: 23.25, time: '07:10', source: 'manual', ...over,
+})
+
 export const aWorkout = (over = {}) => ({
   id: 'w-test', time: '11:30', type: 'Cycle', minutes: 130,
   intensity: 3, perceivedEffort: 10, source: 'manual', ...over,
@@ -258,10 +263,18 @@ export async function goTo(page, screen) {
   // A sheet left open puts a scrim over the tab bar, and the click then
   // waits thirty seconds for a target it will never reach.
   await dismissSheets(page)
-  const map = { today: 'Today', future: 'AI Future', explore: 'Explore' }
-  if (screen === 'capture') await page.locator('.tabbar__fab').click()
-  else if (screen === 'profile') await page.locator('.tabbar__item').last().click()
-  else await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
+  const map = { today: 'Today', future: 'Lifestyle', explore: 'Explore' }
+  if (screen === 'capture') {
+    // The centre button raises the quick-add menu rather than navigating;
+    // the records themselves are the last item in it.
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(600)
+    await page.locator('.quickadd__item').filter({ hasText: /records/i }).click()
+  } else if (screen === 'profile') {
+    await page.locator('.tabbar__item').last().click()
+  } else {
+    await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
+  }
   await page.waitForTimeout(800)
 }
 
@@ -356,4 +369,12 @@ export async function clickClear(page, locator) {
     await page.waitForTimeout(250)
   }
   await locator.click()
+}
+
+/** Open the centre button's quick-add menu and choose a kind. */
+export async function quickAdd(page, label) {
+  await page.locator('.tabbar__fab').click()
+  await page.waitForTimeout(600)
+  await page.locator('.quickadd__item').filter({ hasText: new RegExp(`^${label}$`, 'i') }).click()
+  await page.waitForTimeout(900)
 }

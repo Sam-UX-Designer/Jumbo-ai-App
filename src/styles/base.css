@@ -210,6 +210,89 @@ a { color: var(--accent-text); }
 .tabbar__fab.is-current { transform: rotate(45deg); }
 .tabbar__fab.is-current:active { transform: rotate(45deg) scale(0.9); }
 
+/* ── The quick-add menu ───────────────────────────────────────────────
+   Raised by the centre button, sitting directly above it so the thumb
+   travels the shortest possible distance from the thing that opened it. */
+/* Above its own scrim. The button turns into a close control and says it
+   is expanded, so it has to be the thing that a tap on it actually hits —
+   otherwise the only control that claims to close the menu is the one
+   control covered by it. */
+.tabbar__fab.is-open {
+  position: relative; z-index: 62;
+  transform: rotate(45deg);
+}
+.tabbar__fab.is-open:active { transform: rotate(45deg) scale(0.9); }
+
+.quickadd__scrim {
+  position: fixed; inset: 0;
+  z-index: 60;
+  border: 0; padding: 0;
+  background: var(--scrim, rgba(0, 0, 0, 0.45));
+  animation: qa-fade var(--d-fast) var(--ease) both;
+  cursor: default;
+}
+
+.quickadd {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - var(--s-2));
+  transform: translateX(-50%);
+  z-index: 61;
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-3); padding: 0;
+  list-style: none;
+  width: max-content; min-width: 190px;
+}
+
+.quickadd__item {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  min-height: 52px; padding: 0 var(--s-4) 0 var(--s-2);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--material-line, var(--card-line));
+  background: var(--material, var(--surface));
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--material-lift, var(--shadow-1));
+  color: var(--ink);
+  cursor: pointer;
+  /* Each one arrives just after the one below it, so the group reads as a
+     single movement out of the button rather than five separate ones. */
+  animation: qa-rise 220ms var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
+  transition: transform var(--d-fast) var(--ease), background var(--d-fast) var(--ease);
+}
+.quickadd__item:hover { background: var(--surface-2); }
+.quickadd__item:active { transform: scale(0.97); }
+.quickadd__item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.quickadd__icon {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint) 16%, transparent);
+  color: var(--tint);
+}
+.quickadd__item--quiet .quickadd__label { font-weight: 560; color: var(--ink-2); }
+
+.quickadd__label {
+  font-size: var(--t-callout); font-weight: 600; letter-spacing: -0.01em;
+}
+
+@keyframes qa-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes qa-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* The menu is a choice, not a performance. */
+@media (prefers-reduced-motion: reduce) {
+  .quickadd__item { animation: none; }
+  .quickadd__scrim { animation: none; }
+}
+
 .sidebar { display: none; }
 @media (min-width: 1024px) {
   .tabbar { display: none; }

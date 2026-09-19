@@ -4,7 +4,7 @@ import {
 import type { Viz } from '../components/DataViz'
 import type {
   Baseline, DayRecord, GoalKey, InsightDecision, MealEntry, Measurement, Profile,
-  Reminders, WorkoutEntry,
+  Reminders, SleepEntry, WorkoutEntry,
 } from '../data/types'
 import { generateEmptyHistory, generateHistory, generateMeasurements, TODAY } from '../data/generate'
 import type { AppNotification } from '../data/notifications'
@@ -13,7 +13,7 @@ import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
 import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type YoutubeVideo } from '../lib/api'
 import type { PlanId } from '../data/plans'
-import { uid } from '../lib/util'
+import { hoursToHM, uid } from '../lib/util'
 
 const STORAGE_KEY = 'jumbo.state.v2'
 
@@ -101,6 +101,8 @@ export interface Persisted {
   readNotifications: string[]
   addedMeals: Record<string, MealEntry[]>
   addedWorkouts: Record<string, WorkoutEntry>
+  /** Nights the person wrote down themselves, by date. */
+  addedSleep: Record<string, SleepEntry>
   addedNotes: Record<string, string>
   addedMeasurements: Measurement[]
 }
@@ -174,6 +176,7 @@ const defaultPersisted: Persisted = {
   readNotifications: [],
   addedMeals: {},
   addedWorkouts: {},
+  addedSleep: {},
   addedNotes: {},
   addedMeasurements: [],
 }
@@ -199,6 +202,8 @@ export type Action =
   | { type: 'removeMeal'; date: string; mealId: string }
   | { type: 'logWorkout'; date: string; workout: WorkoutEntry }
   | { type: 'removeWorkout'; date: string }
+  | { type: 'logSleep'; date: string; sleep: SleepEntry }
+  | { type: 'removeSleep'; date: string }
   | { type: 'setNote'; date: string; note: string }
   | { type: 'addMeasurement'; measurement: Measurement }
   | { type: 'toggleChannel'; channelId: string }
@@ -282,8 +287,9 @@ function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
   return base.map((d) => {
     const extraMeals = p.addedMeals[d.date]
     const extraWorkout = p.addedWorkouts[d.date]
+    const extraSleep = p.addedSleep[d.date]
     const note = p.addedNotes[d.date]
-    if (!extraMeals && !extraWorkout && !note) return d
+    if (!extraMeals && !extraWorkout && !extraSleep && !note) return d
     return {
       ...d,
       meals: extraMeals ? [...d.meals, ...extraMeals].sort((a, b) => a.time.localeCompare(b.time)) : d.meals,
@@ -302,6 +308,14 @@ function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
       activeMinutes: extraWorkout
         ? Math.max(d.activeMinutes, extraWorkout.minutes)
         : d.activeMinutes,
+      // A night written by hand fills a night nothing measured. A device's
+      // own reading is left alone: it saw the whole night, and a person
+      // remembering "about seven" should not overwrite it.
+      sleepHours: extraSleep && d.sleepHours === 0 ? extraSleep.hours : d.sleepHours,
+      bedtimeHour: extraSleep?.bedtimeHour !== undefined && d.bedtimeHour === 0
+        ? extraSleep.bedtimeHour : d.bedtimeHour,
+      sleepEfficiency: extraSleep?.efficiency !== undefined && d.sleepEfficiency === 0
+        ? extraSleep.efficiency : d.sleepEfficiency,
       restDay: extraWorkout ? false : d.restDay,
       notes: note ?? d.notes,
     }
@@ -481,6 +495,22 @@ function reducer(state: State, action: Action): State {
     case 'removeWorkout': {
       const w = { ...p.addedWorkouts }; delete w[action.date]
       return next({ addedWorkouts: w })
+    }
+    case 'logSleep':
+      return next({
+        addedSleep: { ...p.addedSleep, [action.date]: action.sleep },
+        events: record(p.events, {
+          id: `ev-sleep-${action.date}`,
+          kind: 'insight',
+          route: 'capture',
+          at: new Date().toISOString(),
+          title: 'Sleep saved',
+          body: `${hoursToHM(action.sleep.hours)} recorded for the night.`,
+        }),
+      })
+    case 'removeSleep': {
+      const sl = { ...p.addedSleep }; delete sl[action.date]
+      return next({ addedSleep: sl })
     }
     case 'setNote': return next({ addedNotes: { ...p.addedNotes, [action.date]: action.note } })
     case 'addMeasurement': return next({ addedMeasurements: [action.measurement, ...p.addedMeasurements] })

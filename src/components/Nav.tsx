@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
 import { Avatar, BrandMark } from './Asset'
 import { useStore } from '../state/store'
@@ -50,7 +50,7 @@ interface NavItem { route: Route; label: string; icon: IconName }
  */
 const LEFT: NavItem[] = [
   { route: 'today',  label: 'Today',     icon: 'today' },
-  { route: 'future', label: 'AI Future', icon: 'future' },
+  { route: 'future', label: 'Lifestyle', icon: 'future' },
 ]
 
 const RIGHT: NavItem[] = [
@@ -72,8 +72,27 @@ const SIDEBAR: NavItem[] = [
   ...RIGHT,
 ]
 
+/**
+ * What the centre button offers.
+ *
+ * These used to live one screen away: the + opened Capture, and the person
+ * picked a kind there. That is two taps and a screen change to write down a
+ * glass of water, and the kinds themselves were invisible until you had
+ * already committed to going. Putting them on the button makes the choice
+ * the first thing you see, and it is where a thumb already is.
+ */
+export type QuickKind = 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
+
+export const QUICK_ADD: Array<{ kind: QuickKind; label: string; icon: IconName; tint: string }> = [
+  { kind: 'meal',        label: 'Meal',    icon: 'camera',   tint: 'var(--nutrition)' },
+  { kind: 'workout',     label: 'Workout', icon: 'training', tint: 'var(--movement)' },
+  { kind: 'sleep',       label: 'Sleep',   icon: 'sleep',    tint: 'var(--sleep)' },
+  { kind: 'measurement', label: 'Measure', icon: 'measure',  tint: 'var(--measure)' },
+  { kind: 'note',        label: 'Note',    icon: 'note',     tint: 'var(--note)' },
+]
+
 export function TabBar({
-  route, origin, onNavigate,
+  route, origin, onNavigate, onQuickAdd,
 }: {
   route: Route
   /**
@@ -84,8 +103,23 @@ export function TabBar({
    */
   origin?: Route
   onNavigate: (r: Route) => void
+  /** Chosen from the centre button: go to Capture with this kind already open. */
+  onQuickAdd?: (kind: QuickKind) => void
 }) {
   const go = (r: Route) => { haptic('selection'); onNavigate(r) }
+  const [adding, setAdding] = useState(false)
+
+  // Escape closes it, as it closes everything else that covers the screen.
+  useEffect(() => {
+    if (!adding) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAdding(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [adding])
+
+  // Moving to another screen closes it too, so it can never be left hanging
+  // over a screen it does not belong to.
+  useEffect(() => { setAdding(false) }, [route])
   const bar = useRef<HTMLElement>(null)
   const { state: { profile } } = useStore()
 
@@ -148,11 +182,56 @@ export function TabBar({
     <nav className="tabbar" aria-label="Primary" ref={bar}>
       {LEFT.map(tab)}
 
+      {adding && (
+        <>
+          <button
+            className="quickadd__scrim"
+            aria-label="Close"
+            onClick={() => { haptic('selection'); setAdding(false) }}
+          />
+          <ul className="quickadd" role="menu" aria-label="What would you like to add?">
+            {QUICK_ADD.map((q, i) => (
+              <li key={q.kind} role="none" style={{ '--i': i } as React.CSSProperties}>
+                <button
+                  className="quickadd__item" role="menuitem"
+                  style={{ '--tint': q.tint } as React.CSSProperties}
+                  onClick={() => {
+                    haptic('impactLight')
+                    setAdding(false)
+                    if (onQuickAdd) onQuickAdd(q.kind)
+                    else onNavigate('capture')
+                  }}
+                >
+                  <span className="quickadd__icon"><Icon name={q.icon} size={20} /></span>
+                  <span className="quickadd__label">{q.label}</span>
+                </button>
+              </li>
+            ))}
+            {/* The way to the day itself. Without this the Capture screen —
+                where everything already recorded is listed — could only be
+                reached by opening a form and closing it again, which is a
+                strange price to pay for looking at what you logged. */}
+            <li role="none" style={{ '--i': QUICK_ADD.length } as React.CSSProperties}>
+              <button
+                className="quickadd__item quickadd__item--quiet" role="menuitem"
+                style={{ '--tint': 'var(--ink-3)' } as React.CSSProperties}
+                onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}
+              >
+                <span className="quickadd__icon"><Icon name="capture" size={20} /></span>
+                <span className="quickadd__label">See today’s records</span>
+              </button>
+            </li>
+          </ul>
+        </>
+      )}
+
       <button
-        className={`tabbar__fab${route === 'capture' ? ' is-current' : ''}`}
-        aria-label="Add to today"
-        aria-current={route === 'capture' ? 'page' : undefined}
-        onClick={() => go('capture')}
+        className={`tabbar__fab${route === 'capture' ? ' is-current' : ''}${adding ? ' is-open' : ''}`}
+        aria-label={adding ? 'Close the add menu' : 'Add to today'}
+        aria-expanded={adding}
+        aria-haspopup="menu"
+        aria-current={route === 'capture' && !adding ? 'page' : undefined}
+        onClick={() => { haptic('selection'); setAdding((v) => !v) }}
       >
         <Icon name="plus" size={26} strokeWidth={2.4} />
       </button>

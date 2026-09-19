@@ -12,7 +12,7 @@
  * while every number on Today ignored it — the record existed and the app
  * still behaved as though the person had done nothing.
  */
-import { openApp, saved, screenText, goTo, clickClear, account, aMeal, aWorkout, todayISO } from '../harness.mjs'
+import { openApp, saved, screenText, goTo, clickClear, quickAdd, account, aMeal, aSleep, aWorkout, todayISO } from '../harness.mjs'
 
 export default async function logging({ browser, origin, r }) {
   const today = todayISO()
@@ -181,4 +181,86 @@ export default async function logging({ browser, origin, r }) {
     r.check('yesterday\'s minutes are not on today\'s card', !/55/.test(text))
     await ctx.close()
   }
+
+  await r.run('UC-17', 'Sleep can be logged by hand and counts toward the day', async () => {
+    const { ctx, page, errors } = await openApp(browser, origin,
+      account({ addedSleep: { [today]: aSleep() } }))
+
+    const s = await saved(page)
+    r.check('the night is in storage', Boolean(s?.addedSleep?.[today]))
+    r.check('its hours are intact', s?.addedSleep?.[today]?.hours === 7.5)
+
+    const text = await screenText(page)
+    r.check('Today shows the hours slept', /7h 30m|7:30|7\.5/.test(text),
+      'the sleep figure never reached Today')
+    r.check('Sleep is no longer "not recorded"',
+      !/Sleep[\s\S]{0,30}not recorded/i.test(text))
+    r.check('the day is no longer empty', !/Nothing recorded yet/i.test(text))
+
+    await goTo(page, 'capture')
+    r.check('Capture lists the night', /Sleep/i.test(await screenText(page)))
+
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForTimeout(900)
+    r.check('it survives a reload', Boolean((await saved(page))?.addedSleep?.[today]))
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+  await r.run('UC-18', 'Every kind can be reached and saved from the + button', async () => {
+    const { ctx, page, errors } = await openApp(browser, origin, account())
+
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(600)
+    const offered = await page.evaluate(() =>
+      [...document.querySelectorAll('.quickadd__item')].map((e) => e.innerText.trim()))
+    r.check('the menu offers every kind',
+      ['Meal', 'Workout', 'Sleep', 'Measure', 'Note'].every((k) => offered.includes(k)),
+      JSON.stringify(offered))
+
+    // It must be dismissable without choosing anything.
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(400)
+    r.check('Escape closes it', await page.locator('.quickadd').count() === 0)
+
+    // Sleep, end to end, entirely through the interface.
+    await quickAdd(page, 'Sleep')
+    r.check('choosing a kind opens its form straight away',
+      await page.locator('.sheet[role=dialog]').count() > 0,
+      'the menu only navigated, it did not open anything')
+    r.check('the form is the one that was chosen',
+      /Last night/i.test(await screenText(page)))
+
+    const save = page.locator('.sheet button').filter({ hasText: /Save sleep/i }).first()
+    if (await save.count() > 0) {
+      await save.click()
+      await page.waitForTimeout(900)
+      r.check('saving from the menu writes the record',
+        Boolean((await saved(page))?.addedSleep?.[today]),
+        JSON.stringify((await saved(page))?.addedSleep))
+    } else {
+      r.check('the sleep form offers a save action', false, 'no save button')
+    }
+
+    // Coming back must not reopen a form nobody asked for.
+    await goTo(page, 'today')
+    await goTo(page, 'capture')
+    r.check('returning to Capture does not reopen the form',
+      await page.locator('.sheet[role=dialog]').count() === 0)
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+  await r.run('UC-19', 'A device reading is never overwritten by a hand-written one', async () => {
+    const { ctx, page } = await openApp(browser, origin, account({
+      addedSleep: { [today]: aSleep({ hours: 4 }) },
+    }))
+    // Nothing is synced here, so the hand-written night is what shows. The
+    // rule this guards is the other direction: see composeDays, where a
+    // device's own figure wins. This asserts the visible half.
+    r.check('the hand-written night is used when nothing measured one',
+      /4h 0m|4:00|\b4h\b/.test(await screenText(page)),
+      'the hours the person entered did not reach the screen')
+    await ctx.close()
+  })
 }

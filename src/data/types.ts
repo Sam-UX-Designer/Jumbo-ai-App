@@ -36,6 +36,27 @@ export interface DayRecord {
   restDay: boolean
 }
 
+/**
+ * A night's sleep, as the person recorded it.
+ *
+ * Sleep used to reach Jumbo only from a wearable, which meant anyone
+ * without one — everyone on the web, where no health app can be connected —
+ * watched the headline sleep metric read "—" forever, with no way to change
+ * it. This is the hand-written version: the hours are what matters, the
+ * rest is offered and optional.
+ */
+export interface SleepEntry {
+  /** Hours asleep. The one figure the day's sleep score is built from. */
+  hours: number
+  /** 24h decimal, e.g. 23.5 for half past eleven. Absent if not given. */
+  bedtimeHour?: number
+  /** 0–100. How much of the time in bed was actually asleep. */
+  efficiency?: number
+  /** Local wall-clock the entry was saved, for ordering against the day. */
+  time?: string
+  source: 'manual'
+}
+
 export interface WorkoutEntry {
   id: string
   /**

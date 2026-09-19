@@ -46,6 +46,9 @@ was once saved and listed on Capture while every number on Today ignored it.
 | UC-14 | Several records on one day all register, newest first, never sorted by category |
 | UC-15 | A record can be removed, is confirmed first, and stays removed |
 | UC-16 | Yesterday's records do not leak into today |
+| UC-17 | Sleep can be logged by hand and counts toward the day |
+| UC-18 | Every kind can be reached and saved from the + button, and the form does not reopen on return |
+| UC-19 | A hand-written night is used when nothing measured one |
 
 ## Profile, preferences and data controls — `tests/e2e/cases/settings.mjs`
 
@@ -109,9 +112,10 @@ await r.run('UC-50', 'What a person should be able to do', async () => {
 ```
 
 Helpers live in `tests/e2e/harness.mjs`: `account()` builds a saved state,
-`aMeal()` and `aWorkout()` build records in the shape the app really
+`aMeal()`, `aWorkout()` and `aSleep()` build records in the shape the app really
 stores, `saved(page)` reads storage back, `goTo` navigates by the tab bar,
-and `clickClear` clicks something the fixed composer may be sitting over.
+`clickClear` clicks something the fixed composer may be sitting over, and
+`quickAdd` opens the centre button's menu and picks a kind.
 
 Keep the fixtures matching the real contracts. Two bugs in this suite's
 first run were fixtures that had drifted from the API, and a fixture that

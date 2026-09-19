@@ -3,7 +3,7 @@ import '../styles/capture.css'
 import { AiOrb, Icon, type IconName } from '../components/Icon'
 import { AssetImage } from '../components/Asset'
 import { DateRail } from '../components/DateRail'
-import { Empty, SectionHead, Segmented, Sheet, Stepper, useConfirm, useToast } from '../components/UI'
+import { Empty, SectionHead, Segmented, Sheet, Stepper, Switch, useConfirm, useToast } from '../components/UI'
 import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
 import { MealDetail } from './MealDetail'
@@ -12,9 +12,9 @@ import type { MealEntry, Measurement, MeasurementKind, WorkoutEntry, WorkoutType
 import { mealTotals } from '../data/foods'
 import { dailyProgress } from '../lib/analytics'
 import { celebrate, haptic } from '../lib/feedback'
-import { clockTime, nowClock, prettyDate, uid } from '../lib/util'
+import { clockTime, hoursToHM, nowClock, prettyDate, round, uid } from '../lib/util'
 
-type Modal = null | 'meal' | 'workout' | 'measurement' | 'note'
+type Modal = null | 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
 
 /**
  * What you came here to add.
@@ -26,7 +26,7 @@ type Modal = null | 'meal' | 'workout' | 'measurement' | 'note'
  * Each takes the Jumbo colour that kind already has everywhere else, so the
  * row reads as four subjects rather than four buttons.
  */
-type CaptureKind = 'meal' | 'workout' | 'measurement' | 'note'
+type CaptureKind = 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
 
 const KINDS: Array<{
   id: CaptureKind
@@ -51,6 +51,12 @@ const KINDS: Array<{
     cta: 'Log a workout', ctaIcon: 'training',
   },
   {
+    id: 'sleep', label: 'Sleep', icon: 'sleep', tint: 'var(--sleep)',
+    heading: 'Log last night',
+    blurb: 'How long you slept, and when you turned in. Roughly is fine — it is the pattern that matters, not the minute.',
+    cta: 'Log sleep', ctaIcon: 'sleep',
+  },
+  {
     id: 'measurement', label: 'Measure', icon: 'measure', tint: 'var(--measure)',
     heading: 'Add a measurement',
     blurb: 'Waist, grip, VO₂ max, a lab result. The slow numbers, entered on the days you have them.',
@@ -72,7 +78,7 @@ const KINDS: Array<{
  * of thing, so a green Lunch pill here is the same green as movement
  * everywhere else rather than a sixth palette invented for one list.
  */
-type Category = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Exercise'
+type Category = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Exercise' | 'Sleep'
 
 const CATEGORIES: Array<{ id: Category; icon: IconName; tint: string }> = [
   { id: 'Breakfast', icon: 'cutlery',  tint: 'var(--nutrition)' },
@@ -80,6 +86,7 @@ const CATEGORIES: Array<{ id: Category; icon: IconName; tint: string }> = [
   { id: 'Dinner',    icon: 'cloche',   tint: 'var(--sleep)' },
   { id: 'Snack',     icon: 'apple',    tint: 'var(--training)' },
   { id: 'Exercise',  icon: 'training', tint: 'var(--recovery)' },
+  { id: 'Sleep',     icon: 'sleep',    tint: 'var(--sleep)' },
 ]
 
 interface LoggedRecord {
@@ -126,7 +133,12 @@ const MEASURE_KINDS: Array<{ kind: MeasurementKind; label: string; unit: string;
   { kind: 'vitaminD', label: 'Vitamin D', unit: 'ng/mL', step: 1, dp: 0, start: 38 },
 ]
 
-export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: string } | null }) {
+export function Capture({ reopenMeal, openKind, onOpened }: {
+  reopenMeal?: { date: string; mealId: string } | null
+  /** A kind chosen from the centre button, to open on arrival. */
+  openKind?: CaptureKind | null
+  onOpened?: () => void
+}) {
   const { state, dispatch } = useStore()
   const [modal, setModal] = useState<Modal>(null)
   // The meal whose detail is open, by id. Null when the list is showing.
@@ -162,6 +174,21 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
     setModal('meal')
   }
 
+  /**
+   * Arriving from the centre button: select that kind and open its form.
+   *
+   * Cleared through `onOpened` as soon as it has been used, so returning to
+   * Capture later lands on the screen rather than on a form the person did
+   * not ask for a second time.
+   */
+  useEffect(() => {
+    if (!openKind) return
+    setKind(openKind)
+    startCapture(openKind)
+    onOpened?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openKind])
+
   /** The action the picked kind offers. One place, so the row and the card
       can never disagree about what a tap does. */
   const startCapture = (which: CaptureKind) => {
@@ -182,6 +209,7 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
    * note — cannot claim a position among the rest, so it sits after them
    * rather than being given an invented time.
    */
+  const sleepLogged = state.addedSleep?.[today.date]
   const records: LoggedRecord[] = [
     ...today.meals.map((m) => ({
       id: m.id,
@@ -211,6 +239,18 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
       remove: today.workout.source === 'manual'
         ? () => dispatch({ type: 'removeWorkout', date: today.date })
         : undefined,
+    }] : []),
+    ...(sleepLogged ? [{
+      id: `sleep-${today.date}`,
+      category: 'Sleep' as Category,
+      time: sleepLogged.time ?? null,
+      photo: undefined,
+      value: hoursToHM(sleepLogged.hours),
+      sub: sleepLogged.bedtimeHour !== undefined
+        ? `Asleep · lights out ${String(Math.floor(sleepLogged.bedtimeHour) % 24).padStart(2, '0')}:${String(Math.round((sleepLogged.bedtimeHour % 1) * 60)).padStart(2, '0')}`
+        : 'Asleep',
+      open: undefined,
+      remove: () => dispatch({ type: 'removeSleep', date: today.date }),
     }] : []),
     ...(today.notes ? [{
       id: 'note',
@@ -421,6 +461,10 @@ export function Capture({ reopenMeal }: { reopenMeal?: { date: string; mealId: s
         date={today.date} startIn={mealMode}
       />
       <WorkoutSheet open={modal === 'workout'} onClose={() => setModal(null)} date={today.date} />
+      <SleepSheet
+        key={`sleep-${today.date}`}
+        open={modal === 'sleep'} onClose={() => setModal(null)} date={today.date}
+      />
       <MeasurementSheet open={modal === 'measurement'} onClose={() => setModal(null)} />
       {/* Keyed by day: the note belongs to a date, so moving along the rail
           must not carry the previous day's words across. */}
@@ -617,6 +661,120 @@ function MeasurementSheet({ open, onClose }: { open: boolean; onClose: () => voi
 }
 
 /* ------------------------------------------------------------------- note */
+/**
+ * Last night, written down.
+ *
+ * Sleep reached Jumbo only from a wearable until now, which left the metric
+ * blank forever for anyone without one — and on the web that is everyone,
+ * because no health app can be connected there. The hours are the only
+ * thing this insists on; bedtime is offered because it is what the late-night
+ * patterns are built from, and skipping it costs nothing.
+ */
+function SleepSheet({
+  open, onClose, date,
+}: { open: boolean; onClose: () => void; date: string }) {
+  const { state, dispatch } = useStore()
+  const toast = useToast()
+  const existing = state.addedSleep?.[date]
+  const [hours, setHours] = useState(existing?.hours ?? 7.5)
+  const [bedtime, setBedtime] = useState(existing?.bedtimeHour ?? 23)
+  const [withBedtime, setWithBedtime] = useState(existing?.bedtimeHour !== undefined)
+
+  useEffect(() => {
+    if (!open) return
+    setHours(existing?.hours ?? 7.5)
+    setBedtime(existing?.bedtimeHour ?? 23)
+    setWithBedtime(existing?.bedtimeHour !== undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const clock = (h: number) =>
+    `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`
+
+  return (
+    <Sheet
+      open={open} onClose={onClose} title="Last night"
+      subtitle="Roughly is fine. It is the pattern over weeks that Jumbo reads, not the minute."
+      footer={
+        <>
+          <button className="btn btn--secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn btn--primary grow"
+            onClick={() => {
+              dispatch({
+                type: 'logSleep',
+                date,
+                sleep: {
+                  hours: round(hours, 2),
+                  bedtimeHour: withBedtime ? round(bedtime, 2) : undefined,
+                  time: nowClock(),
+                  source: 'manual',
+                },
+              })
+              haptic('success')
+              toast({ text: 'Sleep saved', icon: 'sleep' })
+              onClose()
+            }}
+          >
+            Save sleep
+          </button>
+        </>
+      }
+    >
+      <div className="stack stack-5">
+        <div className="stack stack-2">
+          <span className="t-callout strong">How long did you sleep?</span>
+          <Stepper
+            value={hours} onChange={setHours} step={0.25} dp={2}
+            min={0.5} max={16} unit="h" label="hours asleep"
+          />
+          <span className="field__hint">{hoursToHM(hours)}</span>
+        </div>
+
+        <div className="stack stack-3">
+          <SettingRowLike
+            label="Add the time you went to bed"
+            hint="Late nights are the pattern Jumbo can actually read something from."
+            checked={withBedtime}
+            onChange={setWithBedtime}
+          />
+          {withBedtime && (
+            <div className="stack stack-2">
+              <Stepper
+                value={bedtime} onChange={setBedtime} step={0.25} dp={2}
+                min={18} max={30} unit="" label="bedtime"
+              />
+              <span className="field__hint">
+                Lights out at {clock(bedtime)}{bedtime >= 24 ? ' (after midnight)' : ''}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <p className="t-caption dim2">
+          Saved on this device, and marked as your own entry rather than a reading from a
+          device. Connect a health app later and its figure takes over.
+        </p>
+      </div>
+    </Sheet>
+  )
+}
+
+/** A switch row, matching the ones in Settings, without importing that screen. */
+function SettingRowLike({
+  label, hint, checked, onChange,
+}: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="row row--between" style={{ gap: 'var(--s-3)', cursor: 'pointer' }}>
+      <span className="stack stack-1" style={{ minWidth: 0 }}>
+        <span className="t-callout strong">{label}</span>
+        <span className="t-caption dim">{hint}</span>
+      </span>
+      <Switch checked={checked} onChange={onChange} label={label} />
+    </label>
+  )
+}
+
 function NoteSheet({
   open, onClose, date, initial, autoDictate,
 }: {

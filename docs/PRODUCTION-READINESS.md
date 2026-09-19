@@ -8,7 +8,7 @@ yet a service.** Everything a person does works and is kept. Nothing that
 would let a stranger sign in, keep their data when they change phone, or
 pay you, exists yet. The gap is in section 2, and it is not small.
 
-`npm test` — 35 use cases, 198 checks, all passing. That covers the
+`npm test` — 38 use cases, 214 checks, all passing. That covers the
 application. It cannot cover what has not been built.
 
 ---
@@ -19,9 +19,9 @@ Verified end to end, in a browser, in both themes:
 
 - **Onboarding** — name, phone, goals, the three data choices, and the app
   at the end of it with what you typed still in place.
-- **Recording** — meals, workouts, measurements and notes. Each one is
-  saved, survives a reload, reaches the figures on Today, and can be
-  removed with a confirmation.
+- **Recording** — meals, workouts, sleep, measurements and notes, all
+  reachable from the centre button. Each one is saved, survives a reload,
+  reaches the figures on Today, and can be removed with a confirmation.
 - **The day** — health score, rings, key metrics, focus, streak, date
   selection, history.
 - **AI** — Ask Jumbo, insights, and the Future narrative, over a real

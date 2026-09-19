@@ -156,7 +156,7 @@ export const QUICK_ACTIONS: Record<string, QuickAction[]> = {
   ],
 }
 
-/** AI Future's set, also used by the screen itself. */
+/** Lifestyle's set, also used by the screen itself. */
 export const FUTURE_PROMPTS = QUICK_ACTIONS.future
 
 /** The example questions the spec asks onboarding and Future to offer. */
