@@ -408,13 +408,13 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
   const sourceList = useRef<HTMLDivElement>(null)
 
   /**
-   * The primary action takes you to the sources rather than replacing them.
-   * Connecting is a per-source decision — which one you own is not something
-   * a single button can know — so this scrolls the list into view and puts
-   * the keyboard on the first source that can actually be connected.
+   * The primary action takes you to the apps rather than replacing them.
+   * Connecting is a per-app decision — which one you own is not something a
+   * single button can know — so this scrolls the list into view and puts the
+   * keyboard on the first app that can actually be connected.
    *
    * When none can be, the list is still the right destination: it is where
-   * each source says what it needs and why it is out of reach here. Focus
+   * each app says what it needs and why it is out of reach here. Focus
    * moves to the list itself so a screen reader reads those reasons rather
    * than being left where it was with nothing announced.
    */
@@ -551,7 +551,7 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
             <li className="row" style={{ gap: 'var(--s-3)', alignItems: 'flex-start' }}>
               <Icon name="link" size={17} style={{ color: 'var(--brand)', flex: 'none', marginTop: 2 }} />
               <p className="t-caption dim">
-                <span className="strong">Connect a source</span>
+                <span className="strong">Connect an app</span>
                 {state.providers.length > 0 ? ' above, and' : ' when one is available, and'} Jumbo
                 starts from the history you already have.
               </p>
@@ -591,14 +591,14 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
         ) : (
           <>
             {/* Three choices, in the order they deserve, and the order does
-                not change. Connecting a source is what makes Jumbo good, so
-                it leads on every device — including the web, where the native
-                health apps cannot be reached. It never becomes a dead end:
-                it takes you to the list, the list says which sources are
-                unavailable and why, and carrying on is the button underneath
-                it. Nothing here is ever disabled. */}
+                not change. Connecting an app is what makes Jumbo good, so it
+                leads on every device — including the web, where the native
+                health apps cannot be reached. It never becomes a dead end: it
+                takes you to the list, the list says which apps are unavailable
+                and why, and carrying on is the button underneath it. Nothing
+                here is ever disabled. */}
             <button className="btn btn--primary btn--lg btn--block" onClick={goToSources}>
-              Connect a source
+              Connect an app
             </button>
             <button className="btn btn--secondary btn--block" onClick={onLater}>
               I’ll do this later
