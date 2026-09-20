@@ -275,10 +275,27 @@ a { color: var(--accent-text); }
   background: color-mix(in srgb, var(--tint) 16%, transparent);
   color: var(--tint);
 }
-/* The way through to the day itself is not one of the five things you can
-   record, so it keeps a lighter label — but it is still the app's own
-   action, so it wears the brand rather than grey. */
-.quickadd__item--quiet .quickadd__label { font-weight: 560; }
+/*
+ * The way through to the day itself.
+ *
+ * It is not one of the five things you can record, so it does not carry a
+ * category's colour in a disc — it is filled with the brand outright, the
+ * one solid action in the group. The icon loses its own disc for the same
+ * reason: a tinted circle inside a solid button is a shape with nothing to
+ * say.
+ */
+.quickadd__item--quiet {
+  background: var(--brand);
+  border-color: transparent;
+  color: var(--brand-ink);
+  box-shadow: var(--shadow-brand);
+}
+.quickadd__item--quiet:hover { background: var(--brand-press); }
+.quickadd__item--quiet .quickadd__icon {
+  background: color-mix(in srgb, var(--brand-ink) 14%, transparent);
+  color: var(--brand-ink);
+}
+.quickadd__item--quiet .quickadd__label { color: var(--brand-ink); }
 
 .quickadd__label {
   font-size: var(--t-callout); font-weight: 600; letter-spacing: -0.01em;

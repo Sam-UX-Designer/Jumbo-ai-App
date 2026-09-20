@@ -228,7 +228,6 @@ export function TabBar({
             <li role="none" style={{ '--i': QUICK_ADD.length } as React.CSSProperties}>
               <button
                 className="quickadd__item quickadd__item--quiet" role="menuitem"
-                style={{ '--tint': 'var(--brand)' } as React.CSSProperties}
                 onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}
               >
                 <span className="quickadd__icon"><Icon name="capture" size={20} /></span>
