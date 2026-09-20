@@ -8,7 +8,7 @@ yet a service.** Everything a person does works and is kept. Nothing that
 would let a stranger sign in, keep their data when they change phone, or
 pay you, exists yet. The gap is in section 2, and it is not small.
 
-`npm test` — 41 use cases, 262 checks, all passing. That covers the
+`npm test` — 43 use cases, 277 checks, all passing. That covers the
 application. It cannot cover what has not been built.
 
 ---
@@ -123,6 +123,7 @@ markets a privacy policy is a legal requirement before launch.
 | `jumbo-mascot.png` is 1.5 MB | Wasteful wherever the mascot appears; re-export at display size |
 | Bundle is 410 KB (126 KB gzipped) | Acceptable, not excellent. Route-splitting would help first paint |
 | No CI | The suite exists but nothing runs it automatically on a push |
+| Refraction on floating controls is Chromium-only | The rim effect on the dock, the quick-add menu, sheets and toasts does not render in any browser on iOS or in Firefox; those get the frosted material instead. It is decoration by design and the suite proves the fallback, but do not demonstrate it on an iPhone and expect to see it |
 
 ## 4. Fixed while auditing
 

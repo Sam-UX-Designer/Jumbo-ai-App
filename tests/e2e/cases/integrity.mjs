@@ -269,4 +269,122 @@ export default async function integrity({ browser, origin, r }) {
       await ctx.close()
     }
   })
+
+  await r.run('UC-51', 'The glass on floating controls never costs legibility', async () => {
+    // The refraction is decoration and is allowed to be absent. What is not
+    // allowed is a control you cannot read, a control that stops taking
+    // taps, or a browser that cannot refract being left with a half-applied
+    // dressing and no material at all.
+    const { ctx, page, errors } = await openApp(browser, origin, account({
+      addedWorkouts: { [today]: aWorkout() }, addedMeals: { [today]: [aMeal()] },
+    }))
+    const survey = (selector) => page.evaluate((sel) => {
+      const out = []
+      for (const el of document.querySelectorAll(sel)) {
+        const cs = getComputedStyle(el)
+        const rect = el.getBoundingClientRect()
+        const x = rect.left + rect.width / 2
+        const y = rect.top + rect.height / 2
+        // The chip row scrolls sideways, so some of it is legitimately off
+        // screen. Only what a finger could actually reach is asked about.
+        const onScreen = x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight
+        const mid = onScreen ? document.elementFromPoint(x, y) : null
+        out.push({
+          name: el.className.split(' ')[0],
+          glassed: el.dataset.glass === 'on',
+          // Whatever happens, the control must have a background of its own.
+          filled: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none',
+          // And must still be the thing a finger lands on.
+          reachable: !onScreen || Boolean(mid && el.contains(mid)),
+          label: (el.innerText || '').trim().length > 0,
+        })
+      }
+      return out
+    }, selector)
+
+    // Each set is asked while it is the top layer. With the menu open its
+    // scrim covers the dock, and rightly so — that is not the glass.
+    const dock = await survey('.askdock__field, .qchip')
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(800)
+    const menu = await survey('.quickadd__item')
+    const panes = [...dock, ...menu]
+
+    r.check('the floating controls are all present', panes.length >= 8, `${panes.length} found`)
+    r.check('every one has a surface of its own', panes.every((p) => p.filled),
+      panes.filter((p) => !p.filled).map((p) => p.name).join(', '))
+    r.check('the dock still takes a tap', dock.every((p) => p.reachable),
+      dock.filter((p) => !p.reachable).map((p) => p.name).join(', '))
+    r.check('the menu still takes a tap', menu.every((p) => p.reachable),
+      menu.filter((p) => !p.reachable).map((p) => p.name).join(', '))
+    r.check('every one still carries its label', panes.every((p) => p.label))
+
+    // Where it did run, it must have left a real filter behind rather than
+    // an attribute and an empty promise.
+    const glassed = panes.filter((p) => p.glassed)
+    if (glassed.length) {
+      const wired = await page.evaluate(() => {
+        const ids = [...document.querySelectorAll('[data-glass="on"]')].map((el) => {
+          const m = /url\("?#([\w-]+)"?\)/.exec(getComputedStyle(el).backdropFilter)
+          return m?.[1] ?? null
+        })
+        return {
+          all: ids.every(Boolean),
+          resolve: ids.every((id) => id && document.getElementById(id)?.tagName === 'filter'),
+          // sRGB is not a preference: without it the whole backdrop ghosts.
+          srgb: [...document.querySelectorAll('svg filter')]
+            .every((f) => f.getAttribute('color-interpolation-filters') === 'sRGB'),
+        }
+      })
+      r.check('each glassed control names a filter', wired.all)
+      r.check('every named filter exists', wired.resolve)
+      r.check('every filter works in sRGB', wired.srgb,
+        'without this the backdrop slides up and to the left')
+    }
+
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+  await r.run('UC-52', 'A browser that cannot refract loses nothing it needs', async () => {
+    // Every browser on iOS is this case, so it is the one most people will
+    // actually see. The app must look finished without the effect.
+    const ctx = await browser.newContext({
+      viewport: { width: 393, height: 852 },
+      // A WebKit browser, which is what the detection must decline for.
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) '
+        + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    })
+    const page = await ctx.newPage()
+    const errors = []
+    page.on('pageerror', (e) => errors.push(String(e)))
+    await page.addInitScript(([k, v]) => {
+      if (localStorage.getItem(k) === null) localStorage.setItem(k, v)
+    }, ['jumbo.state.v2', JSON.stringify(account({ addedWorkouts: { [today]: aWorkout() } }))])
+    await page.goto(origin + '/', { waitUntil: 'networkidle' })
+    await page.waitForTimeout(900)
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(800)
+
+    const state = await page.evaluate(() => {
+      const controls = [...document.querySelectorAll('.askdock__field, .qchip, .quickadd__item')]
+      return {
+        glassed: document.querySelectorAll('[data-glass="on"]').length,
+        filters: document.querySelectorAll('svg filter').length,
+        opaque: controls.every((el) => {
+          const cs = getComputedStyle(el)
+          return cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none'
+        }),
+        count: controls.length,
+      }
+    })
+    r.check('nothing claims to be glassed', state.glassed === 0, `${state.glassed} did`)
+    r.check('no filters are built for nothing', state.filters === 0, `${state.filters} built`)
+    r.check('the floating controls are all still there', state.count >= 8, `${state.count}`)
+    r.check('and every one still has its material', state.opaque)
+    r.check('the screen reads normally',
+      /Health|Score|Meal|Workout/i.test(await screenText(page)))
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
 }

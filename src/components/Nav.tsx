@@ -3,6 +3,7 @@ import { Icon, type IconName } from './Icon'
 import { Avatar, BrandMark } from './Asset'
 import { useStore } from '../state/store'
 import { haptic } from '../lib/feedback'
+import { useGlassGroup } from '../lib/useGlass'
 
 export type Route =
   | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
@@ -158,6 +159,14 @@ export function TabBar({
     }
   }, [])
 
+  /* The menu sits over whatever screen you opened it from, so it is the
+     one place in the app where a lot of glass is stacked over live
+     content. A firmer rim than the dock's: these are the panes you are
+     meant to notice arriving. */
+  const menu = useRef<HTMLUListElement>(null)
+  useGlassGroup(menu, '.quickadd__item',
+    { scale: -96, chroma: 5, border: 13, blur: 14 }, [adding])
+
   const tab = (item: NavItem) => {
     // Measurements, settings and the conversation are reached from inside a
     // section, so the tab they belong to stays lit rather than nothing being
@@ -203,7 +212,7 @@ export function TabBar({
             aria-label="Close"
             onClick={() => { haptic('selection'); setAdding(false) }}
           />
-          <ul className="quickadd" role="menu" aria-label="What would you like to add?">
+          <ul className="quickadd" role="menu" aria-label="What would you like to add?" ref={menu}>
             {QUICK_ADD.map((q, i) => (
               <li key={q.kind} role="none" style={{ '--i': i } as React.CSSProperties}>
                 <button

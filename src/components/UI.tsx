@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { Icon, type IconName } from './Icon'
 import { haptic } from '../lib/feedback'
 import { uid } from '../lib/util'
+import { useGlassGroup, useGlassOn } from '../lib/useGlass'
 
 /* ============================================================
    Sheet — the app's single modal surface.
@@ -25,6 +26,13 @@ export function Sheet({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const restoreTo = useRef<HTMLElement | null>(null)
+  /* The sheet is the largest piece of glass in the app and the one with
+     the most words on it, so its rim is the softest and its frost the
+     heaviest: what should come through a sheet is the shape of the screen
+     it covers, never a sentence from it. It is also the one pane that
+     lives behind the top two corners only — the rest of its edges are off
+     screen — so the effect reads at exactly the place it is meant to. */
+  useGlassOn(ref, { scale: -58, chroma: 3, border: 18, blur: 24 }, [open])
   const autoId = useId()
   const titleId = labelledById ?? `sheet-${autoId}`
 
@@ -68,7 +76,7 @@ export function Sheet({
     <>
       <div className="scrim" onClick={onClose} aria-hidden="true" />
       <div
-        className="sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}
+        className="sheet sheet--glass" role="dialog" aria-modal="true" aria-labelledby={titleId}
         ref={ref} tabIndex={-1}
       >
         <div className="sheet__grabber" />
@@ -98,6 +106,11 @@ export const useToast = () => useContext(ToastCtx)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Toast[]>([])
+  const toasts = useRef<HTMLDivElement>(null)
+  /* A toast is small, brief, and always over moving content — the one
+     place where a strong rim is legible and gone before it can tire. */
+  useGlassGroup(toasts, '.toast', { scale: -120, chroma: 6, border: 12, blur: 16 },
+    [items.map((t) => t.id).join()])
 
   const push = useCallback((t: Omit<Toast, 'id'>) => {
     const id = uid()
@@ -108,7 +121,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div className="toast-wrap" role="status" aria-live="polite">
+      <div className="toast-wrap" role="status" aria-live="polite" ref={toasts}>
         {items.map((t) => (
           <div key={t.id} className="toast">
             <Icon

@@ -97,6 +97,8 @@ These sweep every screen, in both themes, in both data modes.
 | UC-47 | The app works from a 320px phone to a desktop window, with no sideways scroll |
 | UC-48 | The app icon is installed for tab, iOS and Android, at the right size and weight |
 | UC-49 | The typing field clears the tab bar on every phone, home indicator or not |
+| UC-51 | The glass on floating controls never costs legibility or a tap |
+| UC-52 | A browser that cannot refract loses nothing it needs |
 
 ---
 
