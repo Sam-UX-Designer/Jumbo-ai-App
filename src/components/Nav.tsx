@@ -230,7 +230,6 @@ export function TabBar({
                 className="quickadd__item quickadd__item--quiet" role="menuitem"
                 onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}
               >
-                <span className="quickadd__icon"><Icon name="capture" size={20} /></span>
                 <span className="quickadd__label">See today’s records</span>
               </button>
             </li>

@@ -278,23 +278,22 @@ a { color: var(--accent-text); }
 /*
  * The way through to the day itself.
  *
- * It is not one of the five things you can record, so it does not carry a
- * category's colour in a disc — it is filled with the brand outright, the
- * one solid action in the group. The icon loses its own disc for the same
- * reason: a tinted circle inside a solid button is a shape with nothing to
- * say.
+ * It is not one of the five things you can record, so it carries no
+ * category colour and no icon: the five above it are each a thing you make,
+ * and an icon here would put this one in that list. It is filled with the
+ * brand instead — the single solid action in the group — and its label
+ * centres, because with nothing beside it there is no left edge to line up
+ * against.
  */
 .quickadd__item--quiet {
+  justify-content: center;
+  padding-inline: var(--s-4);
   background: var(--brand);
   border-color: transparent;
   color: var(--brand-ink);
   box-shadow: var(--shadow-brand);
 }
 .quickadd__item--quiet:hover { background: var(--brand-press); }
-.quickadd__item--quiet .quickadd__icon {
-  background: color-mix(in srgb, var(--brand-ink) 14%, transparent);
-  color: var(--brand-ink);
-}
 .quickadd__item--quiet .quickadd__label { color: var(--brand-ink); }
 
 .quickadd__label {
