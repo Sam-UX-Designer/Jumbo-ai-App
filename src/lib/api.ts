@@ -17,21 +17,55 @@ export type ApiResult<T> =
 
 const BASE = '/api'
 
+/**
+ * How long a call is given before it is treated as lost.
+ *
+ * A request that never settles is worse than one that fails: the screen it
+ * belongs to waits on it forever. Someone watched "Thinking" sit under four
+ * questions in a row with no answer and no way to retry, because `fetch`
+ * has no timeout of its own and a connection that is dropped in the middle
+ * — a phone changing network, a cold serverless function killed mid-flight
+ * — never rejects. Every call now ends, one way or the other.
+ *
+ * The AI is given far longer than the rest, because a real answer over a
+ * slow model can legitimately take half a minute. It is still well inside
+ * the point where a person has decided the app is broken.
+ */
+const TIMEOUT_MS = 20_000
+const AI_TIMEOUT_MS = 45_000
+
 async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+  const budget = path.startsWith('/ai/') ? AI_TIMEOUT_MS : TIMEOUT_MS
+  const abort = new AbortController()
+  const bell = setTimeout(() => abort.abort(), budget)
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, {
       credentials: 'include',
       headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
       ...init,
+      signal: abort.signal,
     })
   } catch {
+    clearTimeout(bell)
+    // A timeout and an unreachable server look the same to the person, and
+    // both are recoverable by trying again — so both say the same thing.
     // User-facing wording only: nothing here names a service, a port or a key.
     return { ok: false, kind: 'offline', message: 'Jumbo can’t reach its service right now. Please try again in a moment.' }
   }
 
+  // The clock keeps running until the body is in hand. Headers can arrive
+  // promptly and the body then stall forever, which waits just as long.
   let body: unknown = null
   try { body = await res.json() } catch { /* some errors have no body */ }
+  clearTimeout(bell)
+
+  // A body cut off part-way is not an answer. Without this an abort would
+  // read as a successful reply with nothing in it, which is the same silent
+  // wait in a different costume.
+  if (abort.signal.aborted) {
+    return { ok: false, kind: 'offline', message: 'Jumbo can’t reach its service right now. Please try again in a moment.' }
+  }
   const b = (body ?? {}) as Record<string, unknown>
 
   if (res.ok) return { ok: true, data: body as T }

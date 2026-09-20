@@ -79,6 +79,7 @@ the interface and reads it back from storage.
 | UC-37 | Explore search and filters respond |
 | UC-38 | With no content service, Explore explains itself |
 | UC-39 | A malformed API response cannot blank the app | One bad field must not cost the person the whole product |
+| UC-50 | A question that never comes back still ends | Silence is worse than an error: it leaves the person waiting on nothing, with no retry |
 
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`
 
@@ -95,6 +96,7 @@ These sweep every screen, in both themes, in both data modes.
 | UC-46 | Every control has an accessible name and meets the 28px minimum |
 | UC-47 | The app works from a 320px phone to a desktop window, with no sideways scroll |
 | UC-48 | The app icon is installed for tab, iOS and Android, at the right size and weight |
+| UC-49 | The typing field clears the tab bar on every phone, home indicator or not |
 
 ---
 
@@ -104,7 +106,7 @@ Cases are plain functions. `r.run` isolates each one, so a case that throws
 records itself as a failure and the suite carries on.
 
 ```js
-await r.run('UC-50', 'What a person should be able to do', async () => {
+await r.run('UC-60', 'What a person should be able to do', async () => {
   const { ctx, page } = await openApp(browser, origin, account())
   await goTo(page, 'capture')
   r.check('the thing they need is there', await page.locator('.thing').count() > 0)

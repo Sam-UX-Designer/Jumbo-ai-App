@@ -8,7 +8,7 @@ yet a service.** Everything a person does works and is kept. Nothing that
 would let a stranger sign in, keep their data when they change phone, or
 pay you, exists yet. The gap is in section 2, and it is not small.
 
-`npm test` — 39 use cases, 234 checks, all passing. That covers the
+`npm test` — 41 use cases, 262 checks, all passing. That covers the
 application. It cannot cover what has not been built.
 
 ---
@@ -126,7 +126,7 @@ markets a privacy policy is a legal requirement before launch.
 
 ## 4. Fixed while auditing
 
-Four real defects, all found by the suite and now fixed:
+Six real defects, all found by the suite and now fixed:
 
 1. **A logged workout did not count as movement.** Saved, listed on Capture,
    then ignored by every figure on Today — so someone without a wearable
@@ -139,6 +139,16 @@ Four real defects, all found by the suite and now fixed:
 4. **The client trusted the API's shape completely.** An insight or
    narrative missing one array blanked the screen. Both are now normalised
    at the API layer.
+5. **The Ask Jumbo typing field sat behind the tab bar** on any phone with a
+   home indicator. The bar publishes its own height for the screens above it
+   to size against, but the observer watched the content box, and a safe-area
+   inset is padding — so the published height stayed at its flat-screen value
+   while the bar grew by 34px. It now watches the border box.
+6. **A request that never came back never ended.** `fetch` has no timeout of
+   its own, so a connection dropped mid-flight — a phone changing network, a
+   cold function killed part-way — left "Thinking" under the question
+   forever, with no answer and no retry. Every call now has a deadline and
+   fails honestly when it passes.
 
 ## 5. If you want the shortest path to sellable
 

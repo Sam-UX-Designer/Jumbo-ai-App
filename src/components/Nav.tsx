@@ -136,9 +136,23 @@ export function TabBar({
       document.documentElement.style.setProperty('--nav-h', `${Math.ceil(el.offsetHeight)}px`)
     }
     publish()
+    // The safe area arrives as padding, and a ResizeObserver watching the
+    // default content box never fires for padding alone — the bar grew by
+    // the home indicator's inset while `--nav-h` stayed at its flat-screen
+    // value, and the chat composer ended up behind the bar. Watch the
+    // border box, which is what `offsetHeight` actually measures.
     const ro = new ResizeObserver(publish)
-    ro.observe(el)
+    ro.observe(el, { box: 'border-box' })
+    // Padding written from `env()` can also settle after the first paint
+    // without the box ever changing size, so take one more reading once the
+    // browser has laid the bar out for real.
+    const settle = requestAnimationFrame(publish)
+    window.addEventListener('resize', publish)
+    window.visualViewport?.addEventListener('resize', publish)
     return () => {
+      cancelAnimationFrame(settle)
+      window.removeEventListener('resize', publish)
+      window.visualViewport?.removeEventListener('resize', publish)
       ro.disconnect()
       document.documentElement.style.removeProperty('--nav-h')
     }

@@ -7,7 +7,7 @@
  * an absent reading, sample data in a live account, or an implementation
  * detail on screen.
  */
-import { openApp, screenText, goTo, account, aWorkout, aMeal, todayISO, saved } from '../harness.mjs'
+import { openApp, screenText, goTo, account, aWorkout, aMeal, todayISO, saved, openAsk } from '../harness.mjs'
 
 const SCREENS = ['today', 'future', 'capture', 'explore', 'profile']
 const LEAKS = /API[_ ]?KEY|OPENROUTER|process\.env|Bearer |sk-[a-zA-Z0-9]{8}|TODO|FIXME|lorem ipsum/i
@@ -214,5 +214,59 @@ export default async function integrity({ browser, origin, r }) {
         .filter((u) => /favicon\.png|jumbo-mark\.png/.test(u)))
     r.check('no slot still loads the megabyte master', heavy.length === 0, heavy.join(', '))
     await ctx.close()
+  })
+
+  await r.run('UC-49', 'The typing field clears the tab bar on every phone', async () => {
+    // A phone with a home indicator makes the bar taller by the size of the
+    // inset. The conversation is sized against the bar's real height, so if
+    // that height is measured wrong the composer ends up behind the bar and
+    // the person cannot type at all. Both shapes of phone are checked.
+    const phones = [
+      ['flat screen', 390, 844, 0],
+      ['home indicator', 393, 852, 34],
+      ['small flat screen', 320, 568, 0],
+      ['large, home indicator', 430, 932, 34],
+    ]
+    for (const [name, w, h, inset] of phones) {
+      const { ctx, page } = await openApp(browser, origin, account(), {
+        viewport: { width: w, height: h },
+      })
+      // The test browser reports no safe area, so the inset is applied the
+      // same way the device would: through the token the bar pads itself by.
+      if (inset) {
+        await page.addStyleTag({ content: `:root { --safe-b: ${inset}px !important; }` })
+        await page.waitForTimeout(400)
+      }
+      await openAsk(page)
+      await page.waitForTimeout(600)
+      const m = await page.evaluate(() => {
+        const composer = document.querySelector('.chat__composer')
+        const bar = document.querySelector('.tabbar')
+        const input = document.querySelector('.chat__input')
+        if (!composer || !bar || !input) return null
+        const c = composer.getBoundingClientRect()
+        const b = bar.getBoundingClientRect()
+        const i = input.getBoundingClientRect()
+        const over = document.elementFromPoint(i.left + i.width / 2, i.top + i.height / 2)
+        return {
+          overlap: Math.round(c.bottom - b.top),
+          onScreen: i.top >= 0 && i.bottom <= window.innerHeight,
+          topmost: over ? String(over.className || over.tagName) : 'nothing',
+          published: getComputedStyle(document.documentElement).getPropertyValue('--nav-h').trim(),
+          real: `${Math.round(b.height)}px`,
+        }
+      })
+      r.check(`[${name}] the conversation is open`, Boolean(m))
+      if (m) {
+        r.check(`[${name}] the bar's published height matches its real one`,
+          m.published === m.real, `published ${m.published}, really ${m.real}`)
+        r.check(`[${name}] the field does not sit behind the bar`, m.overlap <= 0,
+          `${m.overlap}px behind it`)
+        r.check(`[${name}] the field is on screen`, m.onScreen)
+        r.check(`[${name}] the field is what a tap would reach`,
+          /chat__input/.test(m.topmost), `tapping there reaches "${m.topmost}"`)
+      }
+      await ctx.close()
+    }
   })
 }

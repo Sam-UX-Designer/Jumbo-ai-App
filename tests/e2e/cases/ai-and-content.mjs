@@ -213,4 +213,44 @@ export default async function aiAndContent({ browser, origin, r }) {
     r.check('no unhandled render error', errors.length === 0, errors.slice(0, 2).join(' | '))
     await ctx.close()
   })
+
+  /* ── UC-50 ─────────────────────────────────────────────────────────── */
+  await r.run('UC-50', 'A question that never comes back still ends', async () => {
+    // The failure this covers is not an error — it is silence. A request
+    // that never settles leaves "Thinking" under the question forever, with
+    // no answer, no message and no retry, and the person asks again, and
+    // again. Here the call is answered by nothing at all.
+    const { ctx, page, errors } = await openApp(browser, origin, account({
+      addedWorkouts: { [today]: aWorkout() },
+    }))
+    let held = 0
+    await page.route('**/api/ai/chat', () => { held++ /* never fulfilled */ })
+
+    const input = await openAsk(page)
+    r.check('the conversation opened', Boolean(input))
+    if (input) {
+      await input.fill('How am I doing?')
+      await page.keyboard.press('Enter')
+      await page.waitForTimeout(1500)
+      r.check('the question was sent', held > 0)
+      r.check('Jumbo shows it is working', await page.locator('.think').count() > 0)
+
+      // Give the client its own deadline, plus room for the notice to
+      // render. Waiting on the thinking state to go, rather than on a
+      // notice to appear, is the whole point: it is the silence that fails.
+      await page.waitForFunction(() => document.querySelectorAll('.think').length === 0,
+        undefined, { timeout: 60_000, polling: 500 }).catch(() => {})
+      await page.waitForTimeout(400)
+      const text = await screenText(page)
+      r.check('the wait ends rather than hanging forever',
+        await page.locator('.think').count() === 0,
+        'the thinking state was still on screen a minute later')
+      r.check('the person is told, in the product\'s own words',
+        /again|unavailable|could ?n.t|reach/i.test(text))
+      r.check('no key names, env vars or stack traces on screen', !SECRETY.test(text))
+      r.check('the question they asked is still there', /How am I doing/i.test(text))
+    }
+    r.check('no unhandled error', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
 }

@@ -11,13 +11,28 @@
    sides so the composer can sit directly above the tab bar rather than
    floating in the middle of it. */
 .chat {
+  /*
+   * The bar's real height, not the tab's.
+   *
+   * `--tab-h` is how tall a tab is; the bar is taller, because the centre
+   * action stands proud of it. `--nav-h` is what the bar actually measures
+   * itself to be, safe area included. Sizing the conversation against the
+   * smaller of the two put the composer six pixels under the bar on a flat
+   * screen — and on a phone with a home indicator, where the bar grows by
+   * the inset, it put the whole field behind it. The fallback is only for
+   * the first paint, before the bar has measured itself.
+   */
+  --chat-bar: var(--nav-h, calc(var(--tab-h) + env(safe-area-inset-bottom)));
+
   display: flex;
   flex-direction: column;
   /* A fixed height, not a minimum: the thread inside needs something to
      scroll within, and the composer stays put while it does. */
-  height: calc(100dvh - var(--tab-h) - env(safe-area-inset-bottom));
+  height: calc(100dvh - var(--chat-bar));
+  /* The bottom margin cancels `.main`'s own padding exactly, so the two
+     cannot drift apart when one of them changes. */
   margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1)
-          calc(-1 * (var(--tab-h) + var(--s-10) + env(safe-area-inset-bottom)));
+          calc(-1 * (var(--bottom-inset) + var(--s-10)));
 }
 @media (min-width: 768px) { .chat { margin-inline: calc(var(--s-8) * -1); } }
 @media (min-width: 1024px) {
