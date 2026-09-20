@@ -94,6 +94,7 @@ These sweep every screen, in both themes, in both data modes.
 | UC-45 | Every screen is reachable and none is a dead end |
 | UC-46 | Every control has an accessible name and meets the 28px minimum |
 | UC-47 | The app works from a 320px phone to a desktop window, with no sideways scroll |
+| UC-48 | The app icon is installed for tab, iOS and Android, at the right size and weight |
 
 ---
 

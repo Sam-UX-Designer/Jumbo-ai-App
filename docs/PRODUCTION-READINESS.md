@@ -8,7 +8,7 @@ yet a service.** Everything a person does works and is kept. Nothing that
 would let a stranger sign in, keep their data when they change phone, or
 pay you, exists yet. The gap is in section 2, and it is not small.
 
-`npm test` — 38 use cases, 214 checks, all passing. That covers the
+`npm test` — 39 use cases, 234 checks, all passing. That covers the
 application. It cannot cover what has not been built.
 
 ---
@@ -119,8 +119,8 @@ markets a privacy policy is a legal requirement before launch.
 |---|---|
 | No crash reporting | A user hitting an error tells you nothing; you find out when they complain |
 | No product analytics | No retention, funnel or feature-use data |
-| Not installable, no offline | No manifest, no service worker. A health app people open daily should be installable |
-| `favicon.png` is 917 KB, `jumbo-mascot.png` is 1.5 MB | Wasteful on every page load; re-export at display size |
+| No offline | There is a manifest and an app icon, so it installs to a home screen, but no service worker — it needs a connection to open |
+| `jumbo-mascot.png` is 1.5 MB | Wasteful wherever the mascot appears; re-export at display size |
 | Bundle is 410 KB (126 KB gzipped) | Acceptable, not excellent. Route-splitting would help first paint |
 | No CI | The suite exists but nothing runs it automatically on a push |
 

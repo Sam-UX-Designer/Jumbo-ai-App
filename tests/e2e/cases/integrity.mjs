@@ -157,4 +157,62 @@ export default async function integrity({ browser, origin, r }) {
       await ctx.close()
     }
   })
+
+  await r.run('UC-48', 'The app icon is installed everywhere, at the right size', async () => {
+    const { ctx, page } = await openApp(browser, origin, account())
+
+    const links = await page.evaluate(() =>
+      [...document.querySelectorAll('link[rel*=icon], link[rel=manifest]')]
+        .map((l) => ({ rel: l.rel, href: new URL(l.href).pathname })))
+
+    const icon = links.find((l) => l.rel === 'icon')
+    const apple = links.find((l) => l.rel === 'apple-touch-icon')
+    const manifestLink = links.find((l) => l.rel === 'manifest')
+    r.check('a browser-tab icon is declared', Boolean(icon))
+    r.check('an iOS home-screen icon is declared', Boolean(apple))
+    r.check('a web manifest is declared, so Android can install it', Boolean(manifestLink))
+
+    // Each one has to be a real PNG of the size it claims, and small enough
+    // that a browser tab does not cost a megabyte.
+    const png = async (path, expect, maxKb) => {
+      const res = await page.request.get(origin + path)
+      r.check(`${path} is served`, res.status() === 200, `status ${res.status()}`)
+      if (res.status() !== 200) return
+      const buf = Buffer.from(await res.body())
+      r.check(`${path} is a PNG`, buf.slice(0, 8).toString('hex') === '89504e470d0a1a0a')
+      const dim = `${buf.readUInt32BE(16)}x${buf.readUInt32BE(20)}`
+      r.check(`${path} is ${expect}`, dim === expect, `actual ${dim}`)
+      r.check(`${path} is under ${maxKb} KB`, buf.length < maxKb * 1024,
+        `${(buf.length / 1024).toFixed(0)} KB — an icon should not weigh this much`)
+    }
+    if (icon) await png(icon.href, '32x32', 20)
+    if (apple) await png(apple.href, '180x180', 60)
+
+    if (manifestLink) {
+      const res = await page.request.get(origin + manifestLink.href)
+      r.check('the manifest is served', res.status() === 200, `status ${res.status()}`)
+      if (res.status() === 200) {
+        const m = JSON.parse(Buffer.from(await res.body()).toString())
+        r.check('the manifest names the app', Boolean(m.name && m.short_name))
+        r.check('it installs as an app, not a tab', m.display === 'standalone')
+        r.check('it carries a 192 and a 512 icon',
+          m.icons?.some((i) => i.sizes === '192x192') && m.icons?.some((i) => i.sizes === '512x512'),
+          JSON.stringify(m.icons?.map((i) => i.sizes)))
+        r.check('one icon is maskable, so Android does not letterbox it',
+          m.icons?.some((i) => (i.purpose || '').includes('maskable')))
+        for (const i of m.icons || []) {
+          const ir = await page.request.get(origin + i.src)
+          r.check(`${i.src} is served`, ir.status() === 200, `status ${ir.status()}`)
+        }
+      }
+    }
+
+    // And nothing on the page may still reach for the full-size master.
+    const heavy = await page.evaluate(() =>
+      [...document.querySelectorAll('img, link')]
+        .map((e) => e.getAttribute('href') || e.getAttribute('src') || '')
+        .filter((u) => /favicon\.png|jumbo-mark\.png/.test(u)))
+    r.check('no slot still loads the megabyte master', heavy.length === 0, heavy.join(', '))
+    await ctx.close()
+  })
 }

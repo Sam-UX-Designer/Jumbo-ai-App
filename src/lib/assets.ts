@@ -42,7 +42,11 @@ export interface AssetDef {
 export const ASSETS = {
   /* ── Brand ─────────────────────────────────────────────────────── */
   brandMark: {
-    file: 'brand/jumbo-mark.png',
+    // The 192px derivative, not the master. The mark is drawn at 34px in
+    // the app — 102 on a 3x screen — and the master is 1254px and nearly a
+    // megabyte. brand/jumbo-mark.png stays as the source the icons are cut
+    // from; this is the one the app actually downloads.
+    file: 'brand/icon-192.png',
     alt: 'Jumbo',
     ratio: 1,
   },

@@ -4,10 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#08090A" />
-    <link rel="icon" type="image/png" href="./assets/favicon.png" />
-    <!-- Home-screen icon. Replace public/assets/brand/jumbo-mark.png with the
-         finished mark — see docs/ASSETS.md. -->
-    <link rel="apple-touch-icon" href="./assets/brand/jumbo-mark.png" />
+    <!-- One mark, at the size each place actually draws it. The full
+         artwork is 1254px and nearly a megabyte; a browser tab renders it at
+         16. Pointing every slot at the original made every visitor download
+         that megabyte to fill a favicon. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/icon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/brand/icon-180.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- Added to the home screen on iOS, this is what the app is called and
+         how it opens: full screen, no browser chrome. -->
+    <meta name="apple-mobile-web-app-title" content="JUMBO" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="description" content="Jumbo — an AI wellness and longevity companion. Connect your health data, photograph a meal, and see where your patterns lead." />
     <title>Jumbo</title>
   </head>
