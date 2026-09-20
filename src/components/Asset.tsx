@@ -64,11 +64,26 @@ export function AssetImage({
 /* ------------------------------------------------------------------ brand */
 
 /** The app mark, at whatever size the surface needs. */
+/**
+ * The app's own icon, wherever the app refers to itself.
+ *
+ * The corner radius is a proportion, not a constant. `--r-tile` is 18px,
+ * which on a 34px mark is more than half the width — the icon came out a
+ * circle, reading as a badge or an avatar rather than as the app. Apple's
+ * icon shape is a superellipse at roughly 22% of the side, and rounding to
+ * that proportion at any size is what makes a square of colour read as an
+ * app icon.
+ *
+ * The PNGs themselves stay square on purpose: iOS and Android apply their
+ * own mask to a home-screen icon, and rounding the file first would have
+ * the corners cut twice.
+ */
 export function BrandMark({ size = 34, className }: { size?: number; className?: string }) {
   return (
     <AssetImage
-      asset="brandMark" alt="Jumbo" width={size} height={size} rounded="tile" loading="eager"
-      className={className} style={{ width: size, height: size }}
+      asset="brandMark" alt="Jumbo" width={size} height={size} rounded="none" loading="eager"
+      className={className}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.2237) }}
     />
   )
 }
