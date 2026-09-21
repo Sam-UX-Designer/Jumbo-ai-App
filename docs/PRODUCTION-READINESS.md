@@ -8,7 +8,7 @@ yet a service.** Everything a person does works and is kept. Nothing that
 would let a stranger sign in, keep their data when they change phone, or
 pay you, exists yet. The gap is in section 2, and it is not small.
 
-`npm test` — 43 use cases, 277 checks, all passing. That covers the
+`npm test` — 51 use cases, 328 checks, all passing. That covers the
 application. It cannot cover what has not been built.
 
 ---
