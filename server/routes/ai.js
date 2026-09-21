@@ -487,6 +487,118 @@ ai.post('/chat', async (req, res) => {
   }
 })
 
+/* ====================================================== training plan */
+
+const PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'A short, plain name for the session, e.g. "Full body, no kit" or "Upper body push".' },
+    focus: { type: 'string', description: 'What the session trains, in two or three words, e.g. "Legs and core".' },
+    rationale: {
+      type: 'string',
+      description:
+        'One sentence for the person on why this session, referring only to what they said they wanted and what they have. '
+        + 'Never refer to a measurement unless one was supplied.',
+    },
+    blocks: {
+      type: 'array',
+      description: 'The movements, in the order they should be done. Between four and eight.',
+      items: {
+        type: 'object',
+        properties: {
+          exerciseId: {
+            type: 'string',
+            description:
+              'The id of a movement from the supplied library. Use an id from the library wherever one fits. '
+              + 'Use an empty string only when the library genuinely has nothing suitable.',
+          },
+          name: { type: 'string', description: 'The name of the movement as the person will read it.' },
+          sets: { type: 'number', description: 'Working sets, 1 to 6.' },
+          reps: { type: 'number', description: 'Reps per set for a movement counted in reps. Omit for a timed one.' },
+          seconds: { type: 'number', description: 'Seconds per set for a timed movement. Omit for a rep-counted one.' },
+          restSeconds: { type: 'number', description: 'Rest between sets, 0 to 240.' },
+          note: { type: 'string', description: 'An optional short cue. One clause, not a paragraph.' },
+        },
+        required: ['name', 'sets', 'restSeconds'],
+      },
+    },
+  },
+  required: ['name', 'focus', 'rationale', 'blocks'],
+}
+
+const PLAN_SYSTEM = `You write a single training session for Jumbo, a wellness companion. You are a sensible, conservative coach, not a competitive programmer of athletes.
+
+You are given: what the person says they want, how experienced they say they are, what equipment they have, how long they want to train, anything they have asked you to work around, and a library of movements Jumbo knows.
+
+Rules:
+- Use movements from the supplied library wherever one fits, and give its exerciseId. The library is what Jumbo can show cues for.
+- Respect the equipment absolutely. If the person has no equipment, every movement must need none. Never include a barbell movement for someone who said they have none.
+- Respect the duration. The session, including rest, must fit roughly within the minutes given.
+- Respect anything they asked you to avoid, including around an injury. Work around it without commenting on the injury itself, and never suggest it is fine or will heal.
+- Match the experience level. Someone new gets fewer movements, more rest and simpler patterns. Someone training regularly can have more.
+- Order the session sensibly: the most demanding movements while they are fresh, mobility at the end.
+- A session is four to eight movements. More than that is a list, not a session.
+- The rationale is one sentence, plain, about this person's stated goal. Never invent a measurement, a trend, or a fact about their body. If you were given no data, do not imply that you were.
+- Never diagnose, never name a condition, never claim a health outcome. Do not promise results.
+- Write plainly. No motivational filler, no exclamation marks.`
+
+ai.post('/plan', async (req, res) => {
+  if (!aiConfigured()) return aiUnavailable(res, 'training plans')
+
+  const { brief, library } = req.body ?? {}
+  if (!brief || typeof brief !== 'object') return res.status(400).json({ error: 'bad_brief' })
+  if (!Array.isArray(library) || library.length === 0) {
+    return res.status(400).json({ error: 'bad_library' })
+  }
+
+  try {
+    const { data, model } = await generateJson({
+      system: PLAN_SYSTEM,
+      contents: [{
+        role: 'user',
+        parts: [text(
+          `What they asked for:\n${JSON.stringify(brief, null, 2)}\n\n`
+          + `The movements Jumbo knows:\n${JSON.stringify(library)}`,
+        )],
+      }],
+      schema: PLAN_SCHEMA,
+      maxOutputTokens: 3072,
+      temperature: 0.7,
+    })
+
+    // The client builds a plan from this, so every number is clamped here
+    // rather than trusted. A model that returns 40 sets should not be able
+    // to write 40 sets into somebody's saved plan.
+    const blocks = (data.blocks ?? []).slice(0, 8).map((b) => {
+      const timed = Number(b.seconds) > 0
+      return {
+        exerciseId: typeof b.exerciseId === 'string' ? b.exerciseId : '',
+        name: String(b.name ?? '').slice(0, 60),
+        sets: Math.min(6, Math.max(1, Math.round(Number(b.sets) || 3))),
+        reps: timed ? undefined : Math.min(50, Math.max(1, Math.round(Number(b.reps) || 10))),
+        seconds: timed ? Math.min(300, Math.max(5, Math.round(Number(b.seconds)))) : undefined,
+        restSeconds: Math.min(240, Math.max(0, Math.round(Number(b.restSeconds) || 60))),
+        note: b.note ? String(b.note).slice(0, 140) : undefined,
+      }
+    }).filter((b) => b.name)
+
+    if (!blocks.length) return res.status(502).json({ error: 'empty_plan', message: 'Jumbo could not put a session together. Please try again.' })
+
+    res.json({
+      source: 'openrouter',
+      model,
+      plan: {
+        name: String(data.name ?? 'Session').slice(0, 50),
+        focus: String(data.focus ?? '').slice(0, 40),
+        rationale: String(data.rationale ?? '').slice(0, 300),
+        blocks,
+      },
+    })
+  } catch (err) {
+    sendAiError(res, err, 'training plans')
+  }
+})
+
 /* ========================================================= selftest */
 
 /**

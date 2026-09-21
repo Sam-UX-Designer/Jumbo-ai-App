@@ -7,7 +7,7 @@ import { useGlassGroup } from '../lib/useGlass'
 
 export type Route =
   | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
-  | 'settings' | 'subscribe' | 'notifications'
+  | 'settings' | 'subscribe' | 'notifications' | 'training'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -69,6 +69,7 @@ const SIDEBAR: NavItem[] = [
   ...LEFT,
   { route: 'chat',    label: 'Ask Jumbo',    icon: 'ai' },
   { route: 'capture', label: 'Capture',      icon: 'capture' },
+  { route: 'training', label: 'Training',      icon: 'training' },
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
   ...RIGHT,
 ]
@@ -176,6 +177,8 @@ export function TabBar({
       // Notifications is reached from the bell on Today and Back returns
       // there, so Today stays lit rather than no tab at all.
       || (item.route === 'today' && route === 'notifications')
+      // Training is opened from Capture and Back returns there.
+      || (item.route === 'capture' && route === 'training')
       || (route === 'chat' && item.route === origin)
 
     /**

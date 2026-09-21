@@ -81,6 +81,24 @@ the interface and reads it back from storage.
 | UC-39 | A malformed API response cannot blank the app | One bad field must not cost the person the whole product |
 | UC-50 | A question that never comes back still ends | Silence is worse than an error: it leaves the person waiting on nothing, with no retry |
 
+## Training — `tests/e2e/cases/training.mjs`
+
+Workout suggestions, plans, and the session that becomes a logged workout.
+The last of those is the one that matters most: a session which showed on
+its own plan and nowhere else would be the same defect as the ride that
+saved to Capture and counted for nothing on Today.
+
+| ID | Use case | Why it matters |
+|---|---|---|
+| UC-60 | An empty account is told there is nothing to suggest from | A training recommendation made from no data is a recommendation invented |
+| UC-61 | A suggestion is made from the person's own record, and says why | A suggestion with no stated reason cannot be argued with |
+| UC-62 | A plan can be built by hand, and is kept | The whole feature works with no AI at all |
+| UC-63 | Jumbo can draft a plan, and nothing is saved until it is accepted | They see the session first, and the card says who wrote it — forever |
+| UC-64 | With the AI unavailable, plans can still be built by hand | An AI outage must not take the feature with it |
+| UC-65 | A session worked through is logged and counts towards the day | Including a duration they can correct if the phone locked mid-session |
+| UC-66 | Leaving a session part-way logs nothing | An unfinished session is not a workout, and one stray tap must not lose it |
+| UC-67 | A plan can be edited and deleted, and deleting asks first | Editing must not quietly leave a second copy |
+
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`
 
 These sweep every screen, in both themes, in both data modes.

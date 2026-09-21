@@ -13,6 +13,7 @@ import { mealTotals } from '../data/foods'
 import { dailyProgress } from '../lib/analytics'
 import { celebrate, haptic } from '../lib/feedback'
 import { clockTime, hoursToHM, nowClock, prettyDate, round, uid } from '../lib/util'
+import { useNavigate } from '../components/Nav'
 
 type Modal = null | 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
 
@@ -428,6 +429,13 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
         )}
       </section>
 
+      {/* ────────────────────────────── training
+          Logging a workout records what you did. This is the other half:
+          deciding what to do, and having something to follow while you do
+          it. It sits here rather than on its own tab because it is the
+          same part of the day. */}
+      <TrainingWay />
+
       {/* ────────────────────────────── the other ways in */}
       <section className="stack stack-3">
         <SectionHead title="More ways to add" />
@@ -591,6 +599,45 @@ function WorkoutSheet({ open, onClose, date }: { open: boolean; onClose: () => v
         </div>
       </div>
     </Sheet>
+  )
+}
+
+/* -------------------------------------------------------------- training */
+
+/**
+ * The way through to Training.
+ *
+ * It says what is there rather than naming a feature, and how many plans
+ * the person has — which is honest either way: none is a real answer and
+ * the screen behind it is built for it.
+ */
+function TrainingWay() {
+  const { state } = useStore()
+  const navigate = useNavigate()
+  const count = state.plans.length
+
+  return (
+    <section className="stack stack-3">
+      <SectionHead title="Training" />
+      <button
+        className="capact"
+        style={{ '--tint': 'var(--movement)' } as React.CSSProperties}
+        onClick={() => { haptic('selection'); navigate('training') }}
+      >
+        <span className="capact__shot capact__shot--icon" aria-hidden="true">
+          <Icon name="training" size={26} />
+        </span>
+        <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
+          <span className="t-callout strong">Workout suggestions and plans</span>
+          <span className="t-caption dim2">
+            {count === 0
+              ? 'What to train today, and a session to follow. Build one, or let Jumbo draft it.'
+              : `${count} plan${count > 1 ? 's' : ''} saved · what to train today`}
+          </span>
+        </span>
+        <Icon name="chevron" size={18} style={{ color: 'var(--ink-3)', flex: 'none' }} />
+      </button>
+    </section>
   )
 }
 

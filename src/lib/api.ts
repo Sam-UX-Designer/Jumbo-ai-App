@@ -100,6 +100,26 @@ async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> 
 
 /* ------------------------------------------------------------------ types */
 
+/** What the server returns for a generated session. */
+export interface AiPlan {
+  source: string
+  model: string
+  plan: {
+    name: string
+    focus: string
+    rationale: string
+    blocks: Array<{
+      exerciseId: string
+      name: string
+      sets: number
+      reps?: number
+      seconds?: number
+      restSeconds: number
+      note?: string
+    }>
+  }
+}
+
 export interface ProviderInfo {
   id: string
   name: string
@@ -290,6 +310,26 @@ export const api = {
     const r = await call<FutureNarrative>('/ai/future', { method: 'POST', body: JSON.stringify(payload) })
     return r.ok ? { ...r, data: soundNarrative(r.data) } : r
   },
+
+  /**
+   * Ask Jumbo to write a session.
+   *
+   * The library travels with the request so the model picks from movements
+   * Jumbo can actually show cues for, rather than naming something the app
+   * has never heard of. Nothing about the person's body goes in the brief
+   * beyond what they typed into the form themselves.
+   */
+  plan: (payload: {
+    brief: {
+      goal: string
+      level: string
+      equipment: string[]
+      minutes: number
+      focus?: string
+      avoid?: string
+    }
+    library: Array<{ id: string; name: string; kind: string; muscles: string[]; equipment: string[]; measure: string }>
+  }) => call<AiPlan>('/ai/plan', { method: 'POST', body: JSON.stringify(payload) }),
 
   chat: (payload: {
     question: string

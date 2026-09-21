@@ -8,6 +8,7 @@ import { Onboarding } from './onboarding/Onboarding'
 import { Today } from './screens/Today'
 import { Future } from './screens/Future'
 import { Capture } from './screens/Capture'
+import { Training } from './screens/Training'
 import { Explore } from './screens/Explore'
 import { Measurements } from './screens/Measurements'
 import { You } from './screens/You'
@@ -24,8 +25,17 @@ const TITLES: Record<Route, string> = {
   today: 'Today', future: 'Lifestyle', capture: 'Capture',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
   chat: 'Ask Jumbo', settings: 'Settings', subscribe: 'Plans',
-  notifications: 'Notifications',
+  notifications: 'Notifications', training: 'Training',
 }
+
+/**
+ * Screens with no Ask Jumbo dock.
+ *
+ * Either they are the conversation itself, a settings-shaped list where a
+ * floating composer is noise, or — for Training — a screen whose session
+ * mode fills the viewport and owns its own footer.
+ */
+const DOCKLESS = new Set<Route>(['chat', 'settings', 'subscribe', 'notifications', 'training'])
 
 function Shell() {
   const { state } = useStore()
@@ -95,7 +105,7 @@ function Shell() {
         <div className="shell">
           <Sidebar route={route} onNavigate={setRoute} name={state.profile.name} streak={streak} />
           <main
-            className={`main${route === 'chat' || route === 'settings' || route === 'subscribe' || route === 'notifications' ? '' : ' main--dock'}`}
+            className={`main${DOCKLESS.has(route) ? '' : ' main--dock'}`}
             id="main" key={route} tabIndex={-1}
           >
             {/* One screen failing must not take the app with it. The tab bar
@@ -112,6 +122,7 @@ function Shell() {
               />
             )}
             {route === 'explore' && <Explore />}
+            {route === 'training' && <Training onBack={() => setRoute('capture')} />}
             {route === 'measurements' && <Measurements onBack={() => setRoute('today')} />}
             {route === 'chat' && (
               <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
@@ -127,8 +138,7 @@ function Shell() {
             </ErrorBoundary>
           </main>
         </div>
-        {route !== 'chat' && route !== 'settings' && route !== 'subscribe' && route !== 'notifications'
-          && <AskDock screen={route} />}
+        {!DOCKLESS.has(route) && <AskDock screen={route} />}
         <TabBar
           route={route} origin={origin} onNavigate={setRoute}
           onQuickAdd={(kind) => { setQuickKind(kind); setRoute('capture') }}

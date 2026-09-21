@@ -21,9 +21,10 @@ import logging from './cases/logging.mjs'
 import settingsCases from './cases/settings.mjs'
 import aiAndContent from './cases/ai-and-content.mjs'
 import integrity from './cases/integrity.mjs'
+import training from './cases/training.mjs'
 
 const SUITES = {
-  onboarding, logging, settings: settingsCases, ai: aiAndContent, integrity,
+  onboarding, logging, settings: settingsCases, ai: aiAndContent, training, integrity,
 }
 
 const ROOT = resolve(new URL('../..', import.meta.url).pathname)

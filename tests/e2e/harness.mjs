@@ -57,7 +57,7 @@ const TYPES = {
 
 export async function startApi(opts = {}) {
   const {
-    aiConfigured = true, youtubeConfigured = true, providers = [],
+    aiConfigured = true, youtubeConfigured = true, providers = [], failPlan = false,
     failChat = false, failInsights = false, chatDelayMs = 0,
   } = opts
 
@@ -125,6 +125,27 @@ export async function startApi(opts = {}) {
         whatDrivesIt: ['Consistency', 'Sleep'],
         honestly: 'This is a model estimate, not a measurement.',
         confidence: 0.6,
+      })
+    }
+    if (p === '/api/ai/plan') {
+      if (failPlan) return json(res, 502, { error: 'upstream' })
+      const sent = await body(req)
+      calls[calls.length - 1].payload = sent
+      // The shape the real route returns, clamped the same way. A fixture
+      // that drifts from the contract is worse than no fixture.
+      return json(res, 200, {
+        source: 'openrouter', model: 'test',
+        plan: {
+          name: 'Full body, no kit',
+          focus: 'Full body',
+          rationale: 'Four movements you can do anywhere, in the time you said you had.',
+          blocks: [
+            { exerciseId: 'squat-bw', name: 'Bodyweight squat', sets: 3, reps: 12, restSeconds: 60 },
+            { exerciseId: 'pushup', name: 'Push-up', sets: 3, reps: 8, restSeconds: 60 },
+            { exerciseId: 'row-inverted', name: 'Inverted row', sets: 3, reps: 8, restSeconds: 75 },
+            { exerciseId: 'plank', name: 'Plank', sets: 3, seconds: 40, restSeconds: 45 },
+          ],
+        },
       })
     }
     if (p === '/api/ai/food') {

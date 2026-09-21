@@ -24,8 +24,13 @@ Verified end to end, in a browser, in both themes:
   reaches the figures on Today, and can be removed with a confirmation.
 - **The day** — health score, rings, key metrics, focus, streak, date
   selection, history.
-- **AI** — Ask Jumbo, insights, and the Future narrative, over a real
-  OpenRouter key, with product-level messages when the service fails.
+- **AI** — Ask Jumbo, insights, the Future narrative and drafted training
+  plans, over a real OpenRouter key, with product-level messages when the
+  service fails.
+- **Training** — a suggestion for today read from the person's own recent
+  load and recovery, plans built by hand from a library of 45 movements or
+  drafted by Jumbo, and a session runner that logs a real workout at the
+  end. Who wrote a plan is on its card permanently.
 - **Explore** — real YouTube content, search, filters, saving.
 - **Profile and settings** — photo, name, goals, theme, reminders, privacy
   switches, export, clear. Everything persists.
@@ -76,8 +81,8 @@ unbuilt benefits or take them off the page before money changes hands.
 
 ### 2.4 The AI endpoints are open to the world
 
-`/api/ai/chat`, `/insights`, `/future`, `/food` and `/selftest` have no
-authentication and no rate limit. The OpenRouter key is correctly kept on
+`/api/ai/chat`, `/insights`, `/future`, `/food`, `/plan` and `/selftest`
+have no authentication and no rate limit. The OpenRouter key is correctly kept on
 the server and never reaches the browser — but anyone who knows the URL can
 call these endpoints in a loop and spend your credits. `/selftest` is a
 plain GET that costs a model call each time it is hit.

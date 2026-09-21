@@ -13,6 +13,7 @@ import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
 import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type YoutubeVideo } from '../lib/api'
 import type { PlanId } from '../data/plans'
+import { planWorkoutType, type TrainingPlan } from '../data/training'
 import { hoursToHM, uid } from '../lib/util'
 
 const STORAGE_KEY = 'jumbo.state.v2'
@@ -105,6 +106,12 @@ export interface Persisted {
   addedSleep: Record<string, SleepEntry>
   addedNotes: Record<string, string>
   addedMeasurements: Measurement[]
+  /**
+   * Training plans this person owns — written by them, or generated for
+   * them and kept. Nothing ships in here: an account with no plans has no
+   * plans, the same way an account with no meals has no meals.
+   */
+  plans: TrainingPlan[]
 }
 
 export interface State extends Persisted {
@@ -176,6 +183,7 @@ const defaultPersisted: Persisted = {
   readNotifications: [],
   addedMeals: {},
   addedWorkouts: {},
+  plans: [],
   addedSleep: {},
   addedNotes: {},
   addedMeasurements: [],
@@ -200,6 +208,9 @@ export type Action =
   | { type: 'resetAll' }
   | { type: 'addMeal'; date: string; meal: MealEntry }
   | { type: 'removeMeal'; date: string; mealId: string }
+  | { type: 'savePlan'; plan: TrainingPlan }
+  | { type: 'removePlan'; planId: string }
+  | { type: 'finishSession'; date: string; plan: TrainingPlan; minutes: number; intensity: 1 | 2 | 3; effort?: number; note?: string; workoutId: string; time: string }
   | { type: 'logWorkout'; date: string; workout: WorkoutEntry }
   | { type: 'removeWorkout'; date: string }
   | { type: 'logSleep'; date: string; sleep: SleepEntry }
@@ -480,6 +491,56 @@ function reducer(state: State, action: Action): State {
       })
     case 'removeMeal':
       return next({ addedMeals: { ...p.addedMeals, [action.date]: (p.addedMeals[action.date] ?? []).filter((m) => m.id !== action.mealId) } })
+    case 'savePlan': {
+      // Saving an edited plan replaces it in place, so a plan keeps its
+      // identity, its history and its position rather than becoming a
+      // second copy of itself.
+      const existing = p.plans.findIndex((x) => x.id === action.plan.id)
+      const plans = existing >= 0
+        ? p.plans.map((x, i) => (i === existing ? action.plan : x))
+        : [action.plan, ...p.plans]
+      return next({ plans })
+    }
+
+    case 'removePlan':
+      return next({ plans: p.plans.filter((x) => x.id !== action.planId) })
+
+    /**
+     * A finished session.
+     *
+     * Two things happen at once and they have to stay together: the plan
+     * records that it was done, and the day gets a real workout. Without
+     * the second the session would show on the plan and nowhere else —
+     * exactly the bug that made a logged ride count for nothing on Today.
+     */
+    case 'finishSession':
+      return next({
+        plans: p.plans.map((x) => (x.id === action.plan.id
+          ? { ...x, lastDoneAt: Date.now(), timesDone: x.timesDone + 1 }
+          : x)),
+        addedWorkouts: {
+          ...p.addedWorkouts,
+          [action.date]: {
+            id: action.workoutId,
+            time: action.time,
+            type: planWorkoutType(action.plan.blocks),
+            minutes: action.minutes,
+            intensity: action.intensity,
+            perceivedEffort: action.effort,
+            note: action.note ? `${action.plan.name} — ${action.note}` : action.plan.name,
+            source: 'manual',
+          },
+        },
+        events: record(p.events, {
+          id: `ev-session-${action.workoutId}`,
+          kind: 'workout',
+          route: 'capture',
+          at: new Date().toISOString(),
+          title: 'Session finished',
+          body: `${action.plan.name}, ${action.minutes} minutes, added to the day.`,
+        }),
+      })
+
     case 'logWorkout':
       return next({
         addedWorkouts: { ...p.addedWorkouts, [action.date]: action.workout },

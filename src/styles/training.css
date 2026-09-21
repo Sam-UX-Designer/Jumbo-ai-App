@@ -1,0 +1,278 @@
+/*
+ * Training.
+ *
+ * Everything here is built from the app's own tokens — no new colours, no
+ * new radii. The one idea the screen adds is that a session in progress is
+ * a different mode: a fixed head, a fixed foot, and a list between them
+ * that is the only thing that scrolls.
+ */
+
+/* ---------------------------------------------------- today's suggestion */
+
+.suggest {
+  display: flex; flex-direction: column; gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-card);
+  border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--tint) 9%, transparent) 0,
+      transparent 140px
+    ),
+    var(--surface);
+}
+.suggest__mark {
+  flex: none;
+  display: grid; place-items: center;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint) 14%, transparent);
+}
+.suggest__why {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  margin: 0; padding: 0; list-style: none;
+}
+.suggest__why li { display: flex; align-items: flex-start; gap: var(--s-2); }
+
+/* ------------------------------------------------------------ plan cards */
+
+.plans {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  margin: 0; padding: 0; list-style: none;
+}
+.plan-card {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+}
+
+/* Who wrote the plan. Never decoration — the difference between a session
+   a person designed and one a model drafted is the kind of thing that
+   should be readable at a glance, forever. */
+.plan-card__by {
+  flex: none;
+  padding: 3px var(--s-3);
+  border-radius: var(--r-pill);
+  font-size: var(--t-micro); font-weight: 650; letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.plan-card__by--you {
+  background: var(--surface-3); color: var(--ink-2);
+}
+.plan-card__by--jumbo {
+  background: var(--brand-dim); color: var(--accent-text);
+  border: 1px solid var(--brand-line);
+}
+
+/* --------------------------------------------------------- plan editor */
+
+.blocks, .library, .draft {
+  display: flex; flex-direction: column; gap: var(--s-2);
+  margin: 0; padding: 0; list-style: none;
+}
+
+.block {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface-2);
+}
+.block__nums { display: flex; gap: var(--s-2); }
+
+.num { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.num__label {
+  font-size: var(--t-micro); font-weight: 600; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.num__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-firm);
+  background: var(--surface);
+}
+.num__step {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-2);
+  cursor: pointer;
+}
+.num__step:hover { background: var(--surface-3); color: var(--ink); }
+.num__step:active { transform: scale(0.92); }
+.num__value {
+  flex: 1; text-align: center;
+  font-size: var(--t-callout); font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The library list. A tick rather than a checkbox, because the whole row
+   is the target and a 16px box inside a 56px row is a smaller target
+   pretending to be the same one. */
+.library { max-height: 420px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.lib-item {
+  width: 100%;
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--ink); text-align: left;
+  cursor: pointer;
+  transition: border-color var(--d-fast) var(--ease), background var(--d-fast) var(--ease);
+}
+.lib-item:hover { background: var(--surface-2); }
+.lib-item[aria-pressed="true"] {
+  border-color: var(--brand-line);
+  background: var(--brand-dim);
+}
+.lib-item__tick {
+  flex: none;
+  width: 22px; height: 22px; margin-top: 1px;
+  display: grid; place-items: center;
+  border-radius: 7px;
+  border: 1.5px solid var(--hairline-firm);
+  color: var(--brand-ink);
+}
+.lib-item[aria-pressed="true"] .lib-item__tick {
+  background: var(--brand); border-color: var(--brand);
+}
+
+/* A full-width choice with a description under it. */
+.choice {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--ink); text-align: left;
+  cursor: pointer;
+}
+.choice[aria-pressed="true"] { border-color: var(--brand-line); background: var(--brand-dim); }
+
+/* ------------------------------------------------------------ the draft */
+
+.draft__row {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-tile);
+  background: var(--surface-2);
+}
+.draft__n {
+  flex: none;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--surface-3);
+  font-size: var(--t-micro); font-weight: 700; color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------- the session */
+
+/*
+ * A session takes the whole screen.
+ *
+ * The head and the foot are pinned and the list scrolls between them, so
+ * "finish" is always reachable and the clock never scrolls away. The
+ * height is measured against the bar's real height, the same as the
+ * conversation — see chat.css for why the tab's height is the wrong one.
+ */
+.session {
+  display: flex; flex-direction: column;
+  height: calc(100dvh - var(--nav-h, calc(var(--tab-h) + env(safe-area-inset-bottom))));
+  margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1)
+          calc(-1 * (var(--bottom-inset) + var(--s-10)));
+}
+@media (min-width: 768px) { .session { margin-inline: calc(var(--s-8) * -1); } }
+
+.session__head {
+  flex: none;
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--hairline);
+}
+.session__clock {
+  flex: none;
+  font-size: var(--t-title3); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.session__bar {
+  flex: none;
+  height: 3px;
+  background: var(--surface-3);
+}
+.session__bar span {
+  display: block; height: 100%;
+  background: var(--brand);
+  transition: width var(--d-base) var(--ease);
+}
+
+.session__list {
+  flex: 1; min-height: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  margin: 0; padding: var(--s-4) var(--s-5);
+  list-style: none;
+}
+
+.session__item {
+  width: 100%;
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--ink); text-align: left;
+  cursor: pointer;
+  transition: opacity var(--d-fast) var(--ease), background var(--d-fast) var(--ease);
+}
+.session__item[aria-pressed="true"] {
+  background: var(--surface-2);
+  opacity: 0.62;
+}
+.session__item[aria-pressed="true"] .t-callout.strong { text-decoration: line-through; }
+.session__tick {
+  flex: none;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--hairline-firm);
+  color: var(--brand-ink);
+}
+.session__item[aria-pressed="true"] .session__tick {
+  background: var(--brand); border-color: var(--brand);
+}
+
+/* The rest clock sits above the foot, not over the list, so it never
+   covers the movement you are about to do. */
+.session__rest {
+  flex: none;
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--hairline);
+  background: var(--surface-2);
+}
+.session__rest-num {
+  flex: 1;
+  font-size: var(--t-title3); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+
+.session__foot {
+  flex: none;
+  display: flex; gap: var(--s-3);
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  border-top: 1px solid var(--hairline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session__bar span { transition: none; }
+}
