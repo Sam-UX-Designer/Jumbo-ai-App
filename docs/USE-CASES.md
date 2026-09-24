@@ -118,6 +118,7 @@ These sweep every screen, in both themes, in both data modes.
 | UC-51 | The glass on floating controls never costs legibility or a tap |
 | UC-52 | A browser that cannot refract loses nothing it needs |
 | UC-53 | The landing page stands up on its own, script or no script |
+| UC-54 | The landing page offers a way in, and its + demo actually works |
 
 ---
 

@@ -108,7 +108,17 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.75rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
 }
 .nav__brand img { width: 20px; height: 20px; border-radius: 5px; }
-.nav__end { flex: 1; display: flex; justify-content: flex-end; }
+.nav__end { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+
+.ghost {
+  display: inline-flex; align-items: center;
+  min-height: 42px; padding: 0 6px;
+  font-size: 0.8125rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.88);
+}
+.ghost:hover { color: var(--acid); }
+.ghost:focus-visible { outline: 2px solid var(--acid); outline-offset: 4px; }
 @media (min-width: 1000px) { .nav__links { display: flex; } }
 
 /* ────────────────────────────────────────────────────────── buttons */
@@ -390,6 +400,130 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
 .foot .spacer { flex: 1; }
 .foot__legal { width: 100%; margin: 0; font-size: 0.75rem; color: var(--ink-3); max-width: 62ch; }
 
+
+/* ───────────────────────────────────────────── the plus, playable here */
+
+/*
+ * The app's centre button, working on the landing page.
+ *
+ * Logging is the thing a person does every day, and describing it in a
+ * sentence undersells how little of it there is. So the real control is
+ * reproduced here: press the plus and the same six choices rise the same
+ * way, with the same colours and the same order as the build. It is a
+ * demonstration of a feature that exists, not a mock of one that does not.
+ */
+.demo { padding-block: clamp(72px, 11vw, 132px); background: var(--bg-2); }
+.demo__grid { display: grid; gap: clamp(40px, 6vw, 80px); align-items: center; }
+@media (min-width: 900px) { .demo__grid { grid-template-columns: 1fr 1fr; } }
+
+.demo__say h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2rem, 5.4vw, 3.75rem);
+  font-weight: 800; letter-spacing: -0.04em; line-height: 1; text-transform: uppercase;
+  max-width: 14ch;
+}
+.demo__say p { margin: 0 0 14px; color: var(--ink-2); max-width: 44ch; }
+.demo__nudge {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-size: 0.8125rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--acid);
+}
+.demo__nudge i {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--acid); color: var(--acid-ink);
+  font-style: normal; font-weight: 900; line-height: 1;
+}
+
+.stage {
+  position: relative;
+  width: min(320px, 78vw);
+  margin-inline: auto;
+  border-radius: 34px;
+  overflow: hidden;
+  background: #0A0C0E;
+  box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--line);
+}
+.stage > img { width: 100%; display: block; }
+
+/* Everything below sits over the screenshot, inside the frame. */
+.stage__scrim {
+  position: absolute; inset: 0;
+  background: rgba(6, 8, 10, 0.55);
+  opacity: 0; pointer-events: none;
+  transition: opacity 260ms ease;
+}
+.stage[data-open="true"] .stage__scrim { opacity: 1; }
+
+.qa {
+  position: absolute; left: 14px; right: 14px; bottom: 96px;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.qa li { list-style: none; }
+.qa__item {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 50px; padding: 0 16px 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(20, 23, 27, 0.94);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  color: #fff; font: inherit; font-size: 0.9375rem; font-weight: 600;
+  text-align: left;
+}
+.qa__dot {
+  width: 36px; height: 36px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--tint) 18%, transparent);
+  color: var(--tint);
+}
+.qa__dot svg { display: block; }
+.qa__item--go {
+  justify-content: center; padding-inline: 20px;
+  background: var(--acid); border-color: transparent; color: var(--acid-ink);
+  font-weight: 800;
+}
+
+/* Closed: tucked behind the button. Open: risen, in order, from the
+   bottom up, which is the order the app reveals them in. */
+.qa li {
+  opacity: 0; transform: translateY(14px) scale(0.96);
+  transition: opacity 220ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0ms;
+}
+.stage[data-open="true"] .qa { pointer-events: auto; }
+.stage[data-open="true"] .qa li {
+  opacity: 1; transform: none;
+  transition-delay: calc(var(--i, 0) * 38ms);
+}
+
+.stage__bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 76px;
+  display: grid; place-items: center;
+  background: linear-gradient(180deg, rgba(8, 10, 12, 0) 0%, #0A0C0E 42%);
+}
+.fab {
+  width: 58px; height: 58px;
+  border: 0; border-radius: 50%;
+  background: var(--acid); color: var(--acid-ink);
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.8);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease;
+}
+.fab:hover { background: #D8FF52; }
+.stage[data-open="true"] .fab { transform: rotate(45deg); }
+.fab:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qa li, .stage__scrim, .fab { transition: none; }
+}
+
 /* ──────────────────────────────────────────────────────────── motion */
 
 /*
@@ -445,7 +579,10 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
       <a href="/">Open</a>
     </div>
     <div class="nav__brand"><img src="/assets/brand/icon-192.png" alt="" width="20" height="20"> Jumbo</div>
-    <div class="nav__end"><a class="fill fill--sm" href="/">Open Jumbo</a></div>
+    <div class="nav__end">
+      <a class="ghost" href="/" data-enter>Sign in</a>
+      <a class="fill fill--sm" href="/" data-join>Create account</a>
+    </div>
   </div>
 </nav>
 
@@ -482,12 +619,10 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
 
       <div class="hero__foot">
         <span class="dots" aria-hidden="true"></span>
-        <p>Free to try, in any browser. No ring, no strap, nothing to buy.</p>
+        <p id="where">Free to try, in any browser. No ring, no strap, nothing to buy.</p>
         <span class="spacer"></span>
-        <a class="go" href="/">
-          Open Jumbo
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
-        </a>
+        <a class="ghost" href="/" data-enter>Sign in</a>
+        <a class="fill" href="/" data-join>Create account</a>
       </div>
     </div>
   </header>
@@ -569,6 +704,61 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
     </div>
   </section>
 
+
+  <!-- ══════════════════════════════════════════════════ the plus button -->
+  <section class="demo rise">
+    <div class="wrap demo__grid">
+      <div class="demo__say">
+        <h2>One button. Everything you log.</h2>
+        <p>
+          A meal, a workout, last night, a measurement, a note. They all live
+          behind the same control, wherever you are in the app, and each one
+          is a few taps.
+        </p>
+        <p>
+          Nothing here needs a wearable. Write the day down yourself and it
+          counts exactly as a device reading would.
+        </p>
+        <span class="demo__nudge"><i>+</i> Press it</span>
+      </div>
+
+      <div class="stage" data-open="false" id="stage">
+        <img src="/assets/marketing/today.jpg" width="780" height="1688" loading="lazy"
+             alt="Jumbo's Today screen, used here to show where the add button sits.">
+        <span class="stage__scrim" aria-hidden="true"></span>
+
+        <ul class="qa" id="qa" aria-hidden="true">
+          <li style="--i:0;--tint:var(--nutrition)">
+            <span class="qa__item"><span class="qa__dot"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1l1.2-1.6h6.6L16.5 6h1A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8ZM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/></svg></span>Meal</span>
+          </li>
+          <li style="--i:1;--tint:var(--movement)">
+            <span class="qa__item"><span class="qa__dot"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 10.4v3.2M6.6 7.8v8.4M17.4 7.8v8.4M20.6 10.4v3.2M6.6 12h10.8"/></svg></span>Workout</span>
+          </li>
+          <li style="--i:2;--tint:var(--sleep)">
+            <span class="qa__item"><span class="qa__dot"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.4A8.3 8.3 0 0 1 9.6 4 8.6 8.6 0 1 0 20 14.4Z"/></svg></span>Sleep</span>
+          </li>
+          <li style="--i:3;--tint:var(--recovery)">
+            <span class="qa__item"><span class="qa__dot"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5h18v5H3zM7 9.5v2.6M11 9.5v3.4M15 9.5v2.6M19 9.5v3.4"/></svg></span>Measure</span>
+          </li>
+          <li style="--i:4;--tint:#FFC72E">
+            <span class="qa__item"><span class="qa__dot"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.8h8.5L19 8.3v11.9H6zM14 3.8V9h5"/></svg></span>Note</span>
+          </li>
+          <li style="--i:5">
+            <span class="qa__item qa__item--go">See today’s records</span>
+          </li>
+        </ul>
+
+        <div class="stage__bar">
+          <button class="fab" id="fab" type="button"
+                  aria-expanded="false" aria-controls="qa"
+                  aria-label="Show what you can add">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ══════════════════════════════════════════════════════ refusals -->
   <section class="refuse rise" id="refuse">
     <div class="wrap">
@@ -637,6 +827,66 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear()
+
+  /*
+   * The two doors.
+   *
+   * Jumbo keeps a person's records in this browser, under the same origin
+   * this page is served from, so the page can tell whether there is already
+   * an account here and say so rather than guessing. Nothing is read beyond
+   * whether setup was finished, and nothing is sent anywhere.
+   *
+   * Worth being straight about what these buttons are: there is no server
+   * holding accounts yet, so "sign in" means "pick up where you left off on
+   * this device". On a new phone it starts you fresh, and the line under the
+   * buttons says so rather than letting someone find out the hard way.
+   */
+  const returning = (() => {
+    try {
+      const raw = localStorage.getItem('jumbo.state.v2')
+      if (!raw) return false
+      const saved = JSON.parse(raw)
+      return Boolean(saved && typeof saved === 'object' && saved.onboarded)
+    } catch {
+      // Private window, blocked storage, half-written JSON. Treat all of it
+      // as "no account here", which is the safe way to be wrong.
+      return false
+    }
+  })()
+
+  const where = document.getElementById('where')
+  if (returning) {
+    for (const el of document.querySelectorAll('[data-join]')) el.textContent = 'Open Jumbo'
+    for (const el of document.querySelectorAll('[data-enter]')) el.textContent = 'Continue'
+    if (where) where.textContent = 'Your Jumbo is on this browser. Continue picks it up where you left it.'
+  } else if (where) {
+    where.textContent = 'Free to try, in any browser. Your records stay on this device.'
+  }
+
+  /*
+   * The plus, working.
+   *
+   * Pointer, keyboard and Escape, because a control that only answers a
+   * mouse is a picture of a control.
+   */
+  const stage = document.getElementById('stage')
+  const fab = document.getElementById('fab')
+  if (stage && fab) {
+    const set = (open) => {
+      stage.dataset.open = String(open)
+      fab.setAttribute('aria-expanded', String(open))
+      fab.setAttribute('aria-label', open ? 'Hide what you can add' : 'Show what you can add')
+      document.getElementById('qa')?.setAttribute('aria-hidden', String(!open))
+    }
+    fab.addEventListener('click', () => set(stage.dataset.open !== 'true'))
+    stage.addEventListener('click', (e) => {
+      if (e.target === fab || fab.contains(e.target)) return
+      if (stage.dataset.open === 'true') set(false)
+    })
+    addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && stage.dataset.open === 'true') { set(false); fab.focus() }
+    })
+  }
 
   const still = matchMedia('(prefers-reduced-motion: reduce)')
 

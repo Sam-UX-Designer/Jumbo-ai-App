@@ -454,4 +454,106 @@ export default async function integrity({ browser, origin, r }) {
     await noJs.close()
     await ctx.close()
   })
+
+
+  await r.run('UC-54', 'The landing page offers a way in, and shows the app working', async () => {
+    // Two complaints made this case. The first: the page had one button and
+    // it went straight into the app, with no sign in and no sign up. The
+    // second, and the reason the labels are checked against real storage:
+    // there is no server holding accounts, so the page must not imply that
+    // signing in reaches one.
+    const look = async (seed) => {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+      const page = await ctx.newPage()
+      const errors = []
+      page.on('pageerror', (e) => errors.push(String(e)))
+      if (seed) {
+        await page.addInitScript((v) => localStorage.setItem('jumbo.state.v2', v), JSON.stringify(seed))
+      }
+      await page.goto(origin + '/start/', { waitUntil: 'networkidle' })
+      await page.waitForTimeout(600)
+      return { ctx, page, errors }
+    }
+
+    // A stranger. Both doors, both reaching the app.
+    {
+      const { ctx, page, errors } = await look(null)
+      const doors = await page.evaluate(() => ({
+        enter: [...document.querySelectorAll('[data-enter]')].map((e) => e.textContent.trim()),
+        join: [...document.querySelectorAll('[data-join]')].map((e) => e.textContent.trim()),
+        targets: [...new Set([...document.querySelectorAll('[data-enter],[data-join]')]
+          .map((a) => new URL(a.href).pathname))],
+        note: document.getElementById('where')?.textContent ?? '',
+      }))
+      r.check('a stranger is offered a way to sign in', doors.enter.length > 0 && doors.enter.every((t) => /sign in/i.test(t)),
+        doors.enter.join(', '))
+      r.check('and a way to create an account', doors.join.length > 0 && doors.join.every((t) => /create account/i.test(t)),
+        doors.join.join(', '))
+      r.check('both reach the app', doors.targets.length === 1 && doors.targets[0] === '/',
+        doors.targets.join(', '))
+      r.check('and the page says where the records will live',
+        /on this device/i.test(doors.note), doors.note)
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
+    }
+
+    // Somebody who already has Jumbo in this browser. The labels have to
+    // stop saying "create account" at a person who already did.
+    {
+      const { ctx, page } = await look(account())
+      const doors = await page.evaluate(() => ({
+        enter: [...document.querySelectorAll('[data-enter]')].map((e) => e.textContent.trim()),
+        join: [...document.querySelectorAll('[data-join]')].map((e) => e.textContent.trim()),
+        note: document.getElementById('where')?.textContent ?? '',
+      }))
+      r.check('a returning person is not asked to sign up again',
+        doors.join.every((t) => !/create account/i.test(t)), doors.join.join(', '))
+      r.check('they are offered their own data back',
+        doors.enter.every((t) => /continue/i.test(t)), doors.enter.join(', '))
+      r.check('and told it is this browser holding it',
+        /this browser/i.test(doors.note), doors.note)
+      await ctx.close()
+    }
+
+    // The centre button, reproduced on the page, has to actually work.
+    {
+      const { ctx, page, errors } = await look(null)
+      const stage = page.locator('#stage')
+      const fab = page.locator('#fab')
+      r.check('the add button is on the page', await fab.count() === 1)
+
+      const before = await page.evaluate(() =>
+        getComputedStyle(document.querySelector('.qa li')).opacity)
+      r.check('the choices start hidden', Number(before) === 0, before)
+
+      await fab.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(300)
+      await fab.click()
+      await page.waitForTimeout(700)
+
+      const open = await page.evaluate(() => ({
+        state: document.getElementById('stage').dataset.open,
+        expanded: document.getElementById('fab').getAttribute('aria-expanded'),
+        shown: getComputedStyle(document.querySelector('.qa li')).opacity,
+        items: [...document.querySelectorAll('.qa li')].map((l) => l.innerText.trim()),
+      }))
+      r.check('pressing it opens the menu', open.state === 'true' && Number(open.shown) > 0.9,
+        `state ${open.state}, opacity ${open.shown}`)
+      r.check('a screen reader is told it opened', open.expanded === 'true')
+
+      // The demo must show what the app actually offers, or it is a lie
+      // about the product rather than a picture of it.
+      for (const kind of ['Meal', 'Workout', 'Sleep', 'Measure', 'Note']) {
+        r.check(`the menu offers ${kind}, as the app does`,
+          open.items.some((t) => t === kind), open.items.join(', '))
+      }
+
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(400)
+      r.check('escape closes it',
+        await page.evaluate(() => document.getElementById('stage').dataset.open) === 'false')
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
+    }
+  })
 }
