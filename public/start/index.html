@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JUMBO — your health, explained</title>
+<meta name="description" content="JUMBO reads what you record and tells you what it means. It never reports a number nobody measured.">
+<meta name="theme-color" content="#08090B">
+<link rel="icon" href="/assets/brand/icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
+
+<meta property="og:title" content="JUMBO — your health, explained">
+<meta property="og:description" content="You are measured more than ever, and understood less. JUMBO reads your own record and tells you what it means — and says so plainly when it does not know.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/assets/brand/icon-512.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<script>document.documentElement.className = 'js'</script>
+
+<style>
+/*
+ * JUMBO — the page you land on.
+ *
+ * Structure from Apple: one idea per screen, large type, a great deal of
+ * air, and a single thing to do. Texture from Pinterest: soft rounded
+ * cards, warmth, no hard chrome, the imagery doing the talking.
+ *
+ * The tokens are the app's own, copied rather than imported so this page
+ * stands alone as one file and cannot break when the app's bundle changes.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg:       #08090B;
+  --raise:    #101216;
+  --surface:  #141619;
+  --ink:      #FFFFFF;
+  --ink-2:    #9A9CA3;
+  --ink-3:    #74777F;
+  --line:     rgba(255, 255, 255, 0.08);
+  --line-firm: rgba(255, 255, 255, 0.14);
+
+  --brand:      #92E82A;
+  --brand-press:#84D625;
+  --brand-ink:  #0A1400;
+  --brand-dim:  rgba(146, 232, 42, 0.13);
+  --brand-line: rgba(146, 232, 42, 0.30);
+
+  --sleep:    #A45CFF;
+  --movement: #00E58A;
+  --nutrition:#FF8A16;
+  --recovery: #14AEFF;
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --gutter: 20px;
+  --max: 1080px;
+  --r-card: 26px;
+  --r-pill: 999px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* height:auto is not optional here. Every screenshot carries its real
+   width and height attributes so the browser reserves the right space
+   before it loads; without this the attribute height wins and each one
+   renders stretched to 1688px tall. */
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; }
+
+.wrap {
+  width: 100%;
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* A section is a screen's worth of one idea. */
+section { padding-block: clamp(72px, 13vw, 140px); }
+
+.eyebrow {
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--brand);
+}
+
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+h1 { font-size: clamp(2.5rem, 9vw, 5rem); }
+h2 { font-size: clamp(2rem, 6.4vw, 3.5rem); line-height: 1.08; }
+h3 { font-size: 1.25rem; letter-spacing: -0.02em; line-height: 1.25; }
+p  { margin: 0; }
+
+.lede {
+  font-size: clamp(1.0625rem, 2.6vw, 1.375rem);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 34ch;
+}
+.lede--wide { max-width: 46ch; }
+
+.stack   { display: flex; flex-direction: column; }
+.gap-3   { gap: 12px; } .gap-4 { gap: 16px; } .gap-5 { gap: 20px; }
+.gap-6   { gap: 26px; } .gap-8 { gap: 40px; }
+
+/* ------------------------------------------------------------- top bar */
+
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  padding-block: 14px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease;
+}
+.bar[data-scrolled="true"] { border-bottom-color: var(--line); }
+.bar__in { display: flex; align-items: center; gap: 12px; }
+.bar__mark { width: 30px; height: 30px; border-radius: 7px; flex: none; }
+.bar__name { font-weight: 700; letter-spacing: 0.01em; font-size: 1.0625rem; }
+.bar__spacer { flex: 1; }
+
+/* -------------------------------------------------------------- button */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 0 26px;
+  border: 1px solid transparent; border-radius: var(--r-pill);
+  font: inherit; font-size: 1rem; font-weight: 650;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: transform 140ms ease, background 140ms ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn--primary { background: var(--brand); color: var(--brand-ink); }
+.btn--primary:hover { background: var(--brand-press); }
+.btn--quiet {
+  background: transparent; color: var(--ink);
+  border-color: var(--line-firm);
+}
+.btn--quiet:hover { background: var(--raise); }
+.btn--sm { min-height: 42px; padding: 0 18px; font-size: 0.9375rem; }
+.btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- hero */
+
+.hero { padding-top: clamp(48px, 9vw, 90px); padding-bottom: 0; }
+.hero__grid {
+  display: grid; gap: clamp(40px, 7vw, 72px);
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .hero__grid { grid-template-columns: 1.05fr 0.95fr; }
+  .phone { width: 340px; }
+}
+.hero h1 { margin-bottom: 20px; }
+.hero .lede { margin-bottom: 30px; }
+.hero__do { display: flex; flex-wrap: wrap; gap: 12px; }
+.hero__note {
+  margin-top: 22px; font-size: 0.875rem; color: var(--ink-3); max-width: 38ch;
+}
+
+/*
+ * The phone.
+ *
+ * A soft shell rather than a photographed device: the screenshot is real,
+ * and dressing it in a fake titanium body would be the only untrue thing
+ * on the page.
+ */
+.phone {
+  position: relative;
+  width: min(300px, 78vw);
+  /* Room to be larger once the layout goes to two columns. */
+  margin-inline: auto;
+  border-radius: 40px;
+  padding: 9px;
+  background: linear-gradient(170deg, #26292F, #101216 58%);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.07) inset,
+    0 40px 90px -30px rgba(0, 0, 0, 0.9);
+}
+.phone img { border-radius: 32px; }
+.phone::after {
+  /* The brand's own light, thrown on whatever is behind the device. */
+  content: '';
+  position: absolute; inset: 14% -10% -12%;
+  z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(146, 232, 42, 0.17), transparent 68%);
+  filter: blur(26px);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- the ask */
+
+.turn { border-top: 1px solid var(--line); }
+.turn__head { max-width: 22ch; }
+
+/* A statement that carries a section on its own. */
+.claim {
+  font-size: clamp(1.75rem, 5.4vw, 3rem);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1.12;
+  max-width: 19ch;
+}
+.claim em {
+  font-style: normal;
+  color: var(--brand);
+}
+
+.pair {
+  display: grid; gap: clamp(28px, 5vw, 56px);
+}
+@media (min-width: 820px) { .pair { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+/* --------------------------------------------------------------- cards */
+
+.cards {
+  display: grid; gap: 16px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) { .cards { grid-template-columns: 1fr 1fr; } }
+
+.card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--tint, var(--brand)) 9%, transparent), transparent 58%),
+    var(--surface);
+}
+.card__dot {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--tint, var(--brand)) 16%, transparent);
+  color: var(--tint, var(--brand));
+  font-size: 1rem; font-weight: 800;
+}
+.card p { color: var(--ink-2); font-size: 0.9375rem; line-height: 1.55; }
+
+/* A row of a screenshot beside its explanation. */
+.show { display: grid; gap: clamp(28px, 5vw, 64px); align-items: center; }
+@media (min-width: 860px) {
+  .show { grid-template-columns: 0.9fr 1.1fr; }
+  .show--flip .show__shot { order: 2; }
+}
+.show + .show { margin-top: clamp(56px, 9vw, 110px); }
+.show__shot {
+  width: min(258px, 66vw);
+  margin-inline: auto;
+  border-radius: 34px; padding: 8px;
+  background: linear-gradient(170deg, #26292F, #101216 58%);
+  box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.85);
+}
+.show__shot img { border-radius: 27px; }
+.show__say { max-width: 40ch; }
+.show__say h3 { margin-bottom: 10px; }
+.show__say p { color: var(--ink-2); }
+
+/* --------------------------------------------------------- the promise */
+
+.promise {
+  border: 1px solid var(--brand-line);
+  border-radius: var(--r-card);
+  background:
+    linear-gradient(165deg, var(--brand-dim), transparent 62%),
+    var(--surface);
+  padding: clamp(28px, 5vw, 52px);
+}
+.promise__list {
+  margin: 26px 0 0; padding: 0; list-style: none;
+  display: grid; gap: 14px;
+}
+@media (min-width: 720px) { .promise__list { grid-template-columns: 1fr 1fr; } }
+.promise__list li {
+  display: flex; gap: 12px; align-items: flex-start;
+  font-size: 0.9375rem; color: var(--ink-2); line-height: 1.5;
+}
+.promise__list svg { flex: none; margin-top: 3px; color: var(--brand); }
+.promise__list b { color: var(--ink); font-weight: 650; }
+
+/* A real moment from the product, quoted as the interface shows it. */
+.proof {
+  margin-top: 30px;
+  display: inline-flex; align-items: center; gap: 14px;
+  padding: 16px 22px;
+  border: 1px solid var(--line-firm); border-radius: 18px;
+  background: var(--bg);
+}
+.proof__big {
+  font-size: 1.75rem; font-weight: 700; color: var(--ink-3); line-height: 1;
+}
+.proof__say { font-size: 0.875rem; color: var(--ink-2); max-width: 30ch; }
+
+/* ----------------------------------------------------------- the close */
+
+.close { text-align: center; }
+.close h2 { margin-bottom: 18px; }
+.close .lede { margin-inline: auto; margin-bottom: 32px; }
+.close .hero__do { justify-content: center; }
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-block: 34px;
+  color: var(--ink-3); font-size: 0.8125rem;
+}
+.foot__in { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.foot__in a { color: var(--ink-2); text-decoration: none; }
+.foot__in a:hover { color: var(--ink); }
+
+/*
+ * Sections fade up as they arrive.
+ *
+ * Scoped to .js, which the inline script at the top of the document adds
+ * before anything paints. Written as a bare `.rise { opacity: 0 }` it hid
+ * every section below the hero from anyone with scripting off or blocked —
+ * a blank page, from a rule whose only job was decoration. The animation
+ * has to be opt-in by the thing that can undo it.
+ */
+.js .rise { opacity: 0; transform: translateY(18px); }
+.js .rise.seen { opacity: 1; transform: none; transition: opacity 620ms ease, transform 620ms cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .js .rise, .js .rise.seen { opacity: 1; transform: none; transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<header class="bar" id="bar">
+  <div class="wrap bar__in">
+    <img class="bar__mark" src="/assets/brand/icon-192.png" alt="" width="30" height="30">
+    <span class="bar__name">JUMBO</span>
+    <span class="bar__spacer"></span>
+    <a class="btn btn--primary btn--sm" href="/">Open JUMBO</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ─────────────────────────────────────────────────────────── hero -->
+  <section class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <p class="eyebrow" style="margin-bottom:18px">Wellness &amp; longevity</p>
+        <h1>Your health,<br>explained.</h1>
+        <p class="lede">
+          JUMBO reads what you record and tells you what it means — in plain
+          words. And when it does not know, it says so.
+        </p>
+        <div class="hero__do">
+          <a class="btn btn--primary" href="/">Open JUMBO</a>
+          <a class="btn btn--quiet" href="#why">Why we built it</a>
+        </div>
+        <p class="hero__note">
+          Works in any browser. No wearable needed — you can write your day
+          down yourself.
+        </p>
+      </div>
+
+      <div class="phone">
+        <img src="/assets/marketing/today.jpg" width="780" height="1688"
+             alt="The JUMBO Today screen: a health score of 67, activity rings, and cards for sleep, movement, nutrition and recovery.">
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────── the problem -->
+  <section class="turn rise" id="why">
+    <div class="wrap pair">
+      <div>
+        <p class="eyebrow" style="margin-bottom:20px">The problem</p>
+        <p class="claim">You are measured more than ever, and <em>understood</em> less.</p>
+      </div>
+      <div class="stack gap-5" style="padding-top:6px">
+        <p class="lede lede--wide">
+          A watch counts your steps. A ring scores your sleep. A scale logs your
+          weight. Between them they produce hundreds of numbers a week, and not
+          one of them tells you what any of it means for you.
+        </p>
+        <p class="lede lede--wide">
+          So the numbers pile up, the app gets opened less, and eventually it
+          gets deleted. Not because the data was wrong — because nobody ever
+          read it back to you.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────────────── why now -->
+  <section class="turn rise">
+    <div class="wrap pair">
+      <div>
+        <p class="eyebrow" style="margin-bottom:20px">Why now</p>
+        <p class="claim">The thing that makes this possible is the thing that makes it <em>dangerous</em>.</p>
+      </div>
+      <div class="stack gap-5" style="padding-top:6px">
+        <p class="lede lede--wide">
+          AI can finally read one person's own record and say something specific
+          and useful about it. That is new, and it is why JUMBO exists now
+          rather than five years ago.
+        </p>
+        <p class="lede lede--wide">
+          But the same ability makes it trivial to say something specific,
+          confident and completely invented about someone's body. A wrong health
+          number is not a wrong number. It is a decision you make about
+          yourself.
+        </p>
+        <p class="lede lede--wide">
+          Which is why the hard part of JUMBO was never the answers. It was
+          teaching it to stop.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────── promise -->
+  <section class="rise">
+    <div class="wrap">
+      <div class="promise">
+        <p class="eyebrow" style="margin-bottom:18px">What makes it different</p>
+        <h2 style="max-width:16ch;margin-bottom:18px">JUMBO will not make a number up.</h2>
+        <p class="lede lede--wide">
+          Most health apps fill a gap with a zero. A heart rate nobody measured
+          becomes “0 bpm”, and then the app tells you your recovery is poor.
+          JUMBO does not do this, and it is enforced in the code rather than
+          promised in the copy.
+        </p>
+
+        <div class="proof">
+          <span class="proof__big">–</span>
+          <span class="proof__say">
+            What JUMBO shows for a reading you have not taken. Not a zero. Not a guess.
+          </span>
+        </div>
+
+        <ul class="promise__list">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>Nothing unmeasured is reported.</b> A gap stays a gap, on every screen.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>Your name never leaves the device.</b> Only a statistical summary is sent to the model.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>Every insight shows its evidence</b> and how confident it is, so you can disagree with it.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>Sample data is always labelled</b> and never given to you unless you ask for it.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────────────────────── what it does -->
+  <section class="turn rise">
+    <div class="wrap">
+      <p class="eyebrow" style="margin-bottom:20px">What it does</p>
+      <h2 style="max-width:18ch;margin-bottom:22px">Five things, and it is honest about all five.</h2>
+      <p class="lede lede--wide" style="margin-bottom:44px">
+        Each one reads your own record and answers a question you actually
+        have. None of them run off on their own — you ask, JUMBO answers.
+      </p>
+
+      <div class="cards">
+        <article class="card" style="--tint:var(--nutrition)">
+          <span class="card__dot">1</span>
+          <h3>Photograph a meal</h3>
+          <p>Point the camera at your plate. JUMBO estimates the foods and the nutrition, shows how sure it is about each one, and you correct it before anything is saved.</p>
+        </article>
+        <article class="card" style="--tint:var(--recovery)">
+          <span class="card__dot">2</span>
+          <h3>Find the pattern</h3>
+          <p>It looks across your weeks for something real — a link between how you sleep and how you train. It shows the evidence, and it will tell you when it found nothing.</p>
+        </article>
+        <article class="card" style="--tint:var(--sleep)">
+          <span class="card__dot">3</span>
+          <h3>See where it leads</h3>
+          <p>A plain reading of your trajectory if the last few months carry on, and exactly which habits are driving it. Labelled as an estimate, because that is what it is.</p>
+        </article>
+        <article class="card" style="--tint:var(--movement)">
+          <span class="card__dot">4</span>
+          <h3>Ask it anything</h3>
+          <p>A straight conversation about your own numbers. It only talks about what your data actually shows, and where the data is silent it says so rather than guessing.</p>
+        </article>
+        <article class="card" style="--tint:var(--brand)">
+          <span class="card__dot">5</span>
+          <h3>Get a session to follow</h3>
+          <p>What to train today, read from your own recent load and recovery. Build the plan yourself, or have JUMBO draft one around your goal, your kit and your time.</p>
+        </article>
+        <article class="card" style="--tint:var(--ink-3)">
+          <span class="card__dot">—</span>
+          <h3>And nothing it cannot do</h3>
+          <p>No autonomous agents. No claims about conditions. No diagnosis. JUMBO is a wellness companion, not a clinician, and it says that on the screen rather than in the small print.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────── the app -->
+  <section class="turn rise">
+    <div class="wrap">
+
+      <div class="show">
+        <div class="show__shot">
+          <img loading="lazy" src="/assets/marketing/ask.jpg" width="780" height="1688"
+               alt="Ask JUMBO: a conversation screen with suggested questions about sleep, recovery and protein.">
+        </div>
+        <div class="show__say">
+          <p class="eyebrow" style="margin-bottom:14px">Ask JUMBO</p>
+          <h3>Grounded in your own data</h3>
+          <p>
+            Every answer is built from your record, not from a general article
+            about health. Ask it how your week went and it reads your week. Ask
+            it something your data cannot answer and it tells you that instead
+            of filling the silence.
+          </p>
+        </div>
+      </div>
+
+      <div class="show show--flip">
+        <div class="show__shot">
+          <img loading="lazy" src="/assets/marketing/training.jpg" width="780" height="1688"
+               alt="The Training screen: a suggestion to train today with the reasons behind it, and a saved plan drafted by JUMBO.">
+        </div>
+        <div class="show__say">
+          <p class="eyebrow" style="margin-bottom:14px">Training</p>
+          <h3>What to do today, and why</h3>
+          <p>
+            The suggestion comes from your own days — how many in a row you have
+            trained, how long since the last one, where your recovery sits
+            against your usual. It always shows the reasons, so you can look at
+            them and decide it is wrong.
+          </p>
+        </div>
+      </div>
+
+      <div class="show">
+        <div class="show__shot">
+          <img loading="lazy" src="/assets/marketing/capture.jpg" width="780" height="1688"
+               alt="The Capture screen: ways to record a meal, a workout, sleep, a measurement or a note.">
+        </div>
+        <div class="show__say">
+          <p class="eyebrow" style="margin-bottom:14px">Capture</p>
+          <h3>No wearable required</h3>
+          <p>
+            Meals, workouts, sleep, measurements, notes — all of it can be
+            written down by hand in a few taps, and all of it counts towards
+            your day exactly as a device reading would. JUMBO works on the web,
+            on a phone, with nothing strapped to your wrist.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ───────────────────────────────────────────────────────── close -->
+  <section class="turn rise close">
+    <div class="wrap">
+      <h2 style="max-width:16ch;margin-inline:auto">Start with one day.</h2>
+      <p class="lede lede--wide">
+        Write down what you ate, how you moved, how you slept. JUMBO takes it
+        from there — and tells you honestly how much it can see.
+      </p>
+      <div class="hero__do">
+        <a class="btn btn--primary" href="/">Open JUMBO</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot__in">
+    <span>© <span id="year">2026</span> JUMBO</span>
+    <span class="bar__spacer"></span>
+    <a href="/">Open the app</a>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear()
+
+  // The bar grows a hairline once the page has moved, so it separates from
+  // the hero without drawing a line across an untouched page.
+  const bar = document.getElementById('bar')
+  const onScroll = () => bar.dataset.scrolled = String(window.scrollY > 8)
+  onScroll()
+  addEventListener('scroll', onScroll, { passive: true })
+
+  // Sections arrive as they are reached. If IntersectionObserver is missing
+  // or the script fails, the .rise class is simply never added and
+  // everything is visible — the page must never depend on this to be read.
+  const rise = document.querySelectorAll('.rise')
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        e.target.classList.add('seen')
+        io.unobserve(e.target)
+      }
+    }, { rootMargin: '0px 0px -12% 0px' })
+    rise.forEach((el) => io.observe(el))
+  } else {
+    rise.forEach((el) => el.classList.add('seen'))
+  }
+</script>
+
+</body>
+</html>

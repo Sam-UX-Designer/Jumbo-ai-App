@@ -387,4 +387,71 @@ export default async function integrity({ browser, origin, r }) {
     r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
     await ctx.close()
   })
+
+  await r.run('UC-53', 'The landing page stands up on its own', async () => {
+    // It is the page an outside visitor lands on from the marketing site, so
+    // a broken image or a dead button there is worse than one inside the
+    // app: nobody who sees it has any reason to try again.
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    const page = await ctx.newPage()
+    const errors = []
+    const failed = []
+    page.on('pageerror', (e) => errors.push(String(e)))
+    page.on('response', (res) => {
+      if (res.status() >= 400) failed.push(`${res.status()} ${new URL(res.url()).pathname}`)
+    })
+    await page.goto(origin + '/start/', { waitUntil: 'networkidle' })
+    await page.waitForTimeout(600)
+
+    const text = await screenText(page)
+    r.check('the page has its content', text.length > 800, `${text.length} characters`)
+    r.check('it says what JUMBO is', /your health,\s*explained/i.test(text))
+    r.check('it does not claim to have agents', !/\bagents?\b/i.test(text)
+      || /no autonomous agents/i.test(text),
+      'JUMBO has no agents, and a landing page is the worst place to say it does')
+
+    // Every image has to resolve and be the shape it reserved space for.
+    for (const img of await page.locator('img').all()) {
+      await img.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(250)
+    }
+    const imgs = await page.evaluate(() => [...document.querySelectorAll('img')].map((i) => ({
+      src: new URL(i.src).pathname,
+      loaded: i.complete && i.naturalWidth > 0,
+      alt: i.alt !== null,
+      // A screenshot squashed to its attribute height is the bug this catches.
+      ratio: i.naturalWidth ? Math.abs(
+        (i.getBoundingClientRect().width / i.getBoundingClientRect().height)
+        - (i.naturalWidth / i.naturalHeight)) : 0,
+    })))
+    r.check('every image loads', imgs.every((i) => i.loaded),
+      imgs.filter((i) => !i.loaded).map((i) => i.src).join(', '))
+    r.check('every image has alt text', imgs.every((i) => i.alt))
+    r.check('no image is stretched out of shape', imgs.every((i) => i.ratio < 0.02),
+      imgs.filter((i) => i.ratio >= 0.02).map((i) => i.src).join(', '))
+    r.check('nothing 404s', failed.length === 0, failed.slice(0, 3).join(', '))
+
+    // The whole point of the page is the button.
+    const cta = await page.evaluate(() =>
+      [...document.querySelectorAll('a')].map((a) => new URL(a.href).pathname))
+    r.check('it links to the app', cta.includes('/'), cta.join(', '))
+
+    r.check('no sideways scrolling on a phone', await page.evaluate(() =>
+      document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1))
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+
+    // And it must be readable with the script dead, since the reveal
+    // animation hides every section until it runs.
+    const noJs = await browser.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: false })
+    const plain = await noJs.newPage()
+    await plain.goto(origin + '/start/', { waitUntil: 'load' })
+    await plain.waitForTimeout(400)
+    const visible = await plain.evaluate(() =>
+      [...document.querySelectorAll('.rise')].filter((e) => getComputedStyle(e).opacity !== '0').length)
+    const total = await plain.locator('.rise').count()
+    r.check('every section is readable without JavaScript', visible === total,
+      `${visible} of ${total} sections visible`)
+    await noJs.close()
+    await ctx.close()
+  })
 }
