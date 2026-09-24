@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>JUMBO — your health, explained</title>
-<meta name="description" content="JUMBO reads what you record and tells you what it means. It never reports a number nobody measured.">
+<title>JUMBO — the health app that admits what it doesn’t know</title>
+<meta name="description" content="Most health apps fill the gaps in your data with a guess. JUMBO leaves them empty, tells you why, and gets on with what it can actually see.">
 <meta name="theme-color" content="#08090B">
 <link rel="icon" href="/assets/brand/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/icon-180.png">
 
-<meta property="og:title" content="JUMBO — your health, explained">
-<meta property="og:description" content="You are measured more than ever, and understood less. JUMBO reads your own record and tells you what it means — and says so plainly when it does not know.">
+<meta property="og:title" content="JUMBO — the health app that admits what it doesn’t know">
+<meta property="og:description" content="Most health apps fill the gaps in your data with a guess. JUMBO leaves them empty, and gets on with what it can actually see.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="/assets/brand/icon-512.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -157,7 +157,7 @@ p  { margin: 0; }
 
 /* ---------------------------------------------------------------- hero */
 
-.hero { padding-top: clamp(48px, 9vw, 90px); padding-bottom: 0; }
+.hero { position: relative; overflow: hidden; padding-top: clamp(48px, 9vw, 90px); padding-bottom: clamp(16px, 3vw, 32px); }
 .hero__grid {
   display: grid; gap: clamp(40px, 7vw, 72px);
   align-items: center;
@@ -167,6 +167,8 @@ p  { margin: 0; }
   .phone { width: 340px; }
 }
 .hero h1 { margin-bottom: 20px; }
+/* The half of the headline that is the whole argument. */
+.hero h1 .hl { color: var(--brand); }
 .hero .lede { margin-bottom: 30px; }
 .hero__do { display: flex; flex-wrap: wrap; gap: 12px; }
 .hero__note {
@@ -321,18 +323,56 @@ footer {
 .foot__in a:hover { color: var(--ink); }
 
 /*
- * Sections fade up as they arrive.
+ * Motion.
  *
- * Scoped to .js, which the inline script at the top of the document adds
- * before anything paints. Written as a bare `.rise { opacity: 0 }` it hid
- * every section below the hero from anyone with scripting off or blocked —
- * a blank page, from a rule whose only job was decoration. The animation
- * has to be opt-in by the thing that can undo it.
+ * Three things move, and each has a reason.
+ *
+ * Sections rise as they arrive, so the page gives up its argument one beat
+ * at a time instead of landing as a wall. Inside a section the children
+ * stagger, because a card that arrives a fraction after its heading reads
+ * as a consequence of it rather than as decoration.
+ *
+ * The devices drift against the scroll. Parallax earns its place here
+ * because the screenshots are the evidence: letting them hang back keeps
+ * the eye on them while the words travel past.
+ *
+ * All of it is scoped to .js, so a blocked script leaves a complete page
+ * rather than a blank one, and all of it stops dead under
+ * prefers-reduced-motion. Only transform and opacity ever animate, so no
+ * amount of scrolling costs a layout.
  */
-.js .rise { opacity: 0; transform: translateY(18px); }
-.js .rise.seen { opacity: 1; transform: none; transition: opacity 620ms ease, transform 620ms cubic-bezier(0.22, 1, 0.36, 1); }
+.js .rise { opacity: 0; transform: translateY(24px); }
+.js .rise.seen {
+  opacity: 1; transform: none;
+  transition: opacity 700ms ease, transform 780ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.js .stagger > * { opacity: 0; transform: translateY(18px); }
+.js .seen .stagger > * {
+  opacity: 1; transform: none;
+  transition: opacity 620ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* The parallax layer. The script writes --shift; nothing reads back, so a
+   scroll never touches layout. */
+.js [data-parallax] { transform: translate3d(0, var(--shift, 0px), 0); will-change: transform; }
+.js .phone[data-parallax] { transform: translate3d(0, var(--shift, 0px), 0) rotate(-1.2deg); }
+
+/* The light behind the hero, drifting the other way to the device. */
+.hero__aura {
+  position: absolute; z-index: 0; pointer-events: none;
+  width: min(940px, 120vw); aspect-ratio: 1;
+  top: -38%; left: 50%; translate: -50% 0;
+  background: radial-gradient(circle at 50% 50%, rgba(146, 232, 42, 0.15), transparent 62%);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .js .rise, .js .rise.seen { opacity: 1; transform: none; transition: none; }
+  .js .rise, .js .rise.seen,
+  .js .stagger > *, .js .seen .stagger > * {
+    opacity: 1; transform: none; transition: none;
+  }
+  .js [data-parallax], .js .phone[data-parallax] { transform: none !important; }
 }
 </style>
 </head>
@@ -352,25 +392,25 @@ footer {
 
   <!-- ─────────────────────────────────────────────────────────── hero -->
   <section class="hero">
+    <span class="hero__aura" data-parallax data-speed="0.10" aria-hidden="true"></span>
     <div class="wrap hero__grid">
       <div>
         <p class="eyebrow" style="margin-bottom:18px">Wellness &amp; longevity</p>
-        <h1>Your health,<br>explained.</h1>
+        <h1>The health app that admits what it <span class="hl">doesn’t know</span>.</h1>
         <p class="lede">
-          JUMBO reads what you record and tells you what it means — in plain
-          words. And when it does not know, it says so.
+          Most apps fill the gaps in your data with a guess. JUMBO leaves them
+          empty, tells you why, and gets on with what it can actually see.
         </p>
         <div class="hero__do">
           <a class="btn btn--primary" href="/">Open JUMBO</a>
           <a class="btn btn--quiet" href="#why">Why we built it</a>
         </div>
         <p class="hero__note">
-          Works in any browser. No wearable needed — you can write your day
-          down yourself.
+          Free to try, in any browser. No ring, no strap, nothing to buy.
         </p>
       </div>
 
-      <div class="phone">
+      <div class="phone" data-parallax data-speed="-0.06">
         <img src="/assets/marketing/today.jpg" width="780" height="1688"
              alt="The JUMBO Today screen: a health score of 67, activity rings, and cards for sleep, movement, nutrition and recovery.">
       </div>
@@ -382,18 +422,18 @@ footer {
     <div class="wrap pair">
       <div>
         <p class="eyebrow" style="margin-bottom:20px">The problem</p>
-        <p class="claim">You are measured more than ever, and <em>understood</em> less.</p>
+        <p class="claim">A number nobody measured is not a zero. It is a <em>guess</em>.</p>
       </div>
       <div class="stack gap-5" style="padding-top:6px">
         <p class="lede lede--wide">
-          A watch counts your steps. A ring scores your sleep. A scale logs your
-          weight. Between them they produce hundreds of numbers a week, and not
-          one of them tells you what any of it means for you.
+          Skip a day of wearing the ring and most health apps do not go quiet.
+          They write a zero into the gap, average it in, and tell you your
+          recovery is down. The chart never admits the reading is missing.
         </p>
         <p class="lede lede--wide">
-          So the numbers pile up, the app gets opened less, and eventually it
-          gets deleted. Not because the data was wrong — because nobody ever
-          read it back to you.
+          You then make a real decision — train or rest, eat or don’t — on a
+          number that was never taken. That is not a rounding error. That is
+          the app being confidently wrong about your body.
         </p>
       </div>
     </div>
@@ -404,23 +444,22 @@ footer {
     <div class="wrap pair">
       <div>
         <p class="eyebrow" style="margin-bottom:20px">Why now</p>
-        <p class="claim">The thing that makes this possible is the thing that makes it <em>dangerous</em>.</p>
+        <p class="claim">AI can finally read your own data. It can also finally <em>invent</em> it.</p>
       </div>
       <div class="stack gap-5" style="padding-top:6px">
         <p class="lede lede--wide">
-          AI can finally read one person's own record and say something specific
-          and useful about it. That is new, and it is why JUMBO exists now
-          rather than five years ago.
+          A model can now read one person’s own record and say something
+          specific and genuinely useful about it. That is new, and it is why
+          JUMBO exists now rather than five years ago.
         </p>
         <p class="lede lede--wide">
-          But the same ability makes it trivial to say something specific,
-          confident and completely invented about someone's body. A wrong health
-          number is not a wrong number. It is a decision you make about
-          yourself.
+          The same ability makes it effortless to say something specific,
+          fluent and entirely made up. Every health app shipping this year has
+          that loaded and pointed at its users.
         </p>
         <p class="lede lede--wide">
-          Which is why the hard part of JUMBO was never the answers. It was
-          teaching it to stop.
+          So the hard part of building JUMBO was never getting answers out of
+          it. It was teaching it to stop.
         </p>
       </div>
     </div>
@@ -431,37 +470,37 @@ footer {
     <div class="wrap">
       <div class="promise">
         <p class="eyebrow" style="margin-bottom:18px">What makes it different</p>
-        <h2 style="max-width:16ch;margin-bottom:18px">JUMBO will not make a number up.</h2>
+        <h2 style="max-width:16ch;margin-bottom:18px">Three things JUMBO won’t do.</h2>
         <p class="lede lede--wide">
-          Most health apps fill a gap with a zero. A heart rate nobody measured
-          becomes “0 bpm”, and then the app tells you your recovery is poor.
-          JUMBO does not do this, and it is enforced in the code rather than
+          Everything else about this app is ordinary. These three are not, and
+          each one is enforced in the code and covered by a test rather than
           promised in the copy.
         </p>
 
         <div class="proof">
           <span class="proof__big">–</span>
           <span class="proof__say">
-            What JUMBO shows for a reading you have not taken. Not a zero. Not a guess.
+            What JUMBO puts where a reading should be when you never took one.
+            Not a zero. Not an estimate. Nothing.
           </span>
         </div>
 
         <ul class="promise__list">
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-            <span><b>Nothing unmeasured is reported.</b> A gap stays a gap, on every screen.</span>
+            <span><b>It won’t invent a number.</b> A gap stays a gap, on every screen, for ever.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-            <span><b>Your name never leaves the device.</b> Only a statistical summary is sent to the model.</span>
+            <span><b>It won’t pass on your name.</b> Only a statistical summary of your data is ever sent.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-            <span><b>Every insight shows its evidence</b> and how confident it is, so you can disagree with it.</span>
+            <span><b>It won’t hide its reasoning.</b> Every insight shows its evidence and how sure it is, so you can disagree.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-            <span><b>Sample data is always labelled</b> and never given to you unless you ask for it.</span>
+            <span><b>And it won’t fake a full app.</b> Sample data is labelled everywhere, and you only ever see it if you ask.</span>
           </li>
         </ul>
       </div>
@@ -472,39 +511,39 @@ footer {
   <section class="turn rise">
     <div class="wrap">
       <p class="eyebrow" style="margin-bottom:20px">What it does</p>
-      <h2 style="max-width:18ch;margin-bottom:22px">Five things, and it is honest about all five.</h2>
+      <h2 style="max-width:18ch;margin-bottom:22px">Then five things it will.</h2>
       <p class="lede lede--wide" style="margin-bottom:44px">
         Each one reads your own record and answers a question you actually
-        have. None of them run off on their own — you ask, JUMBO answers.
+        have. None of them run off on their own: you ask, JUMBO answers.
       </p>
 
-      <div class="cards">
-        <article class="card" style="--tint:var(--nutrition)">
+      <div class="cards stagger">
+        <article class="card" style="--i:0;--tint:var(--nutrition)">
           <span class="card__dot">1</span>
           <h3>Photograph a meal</h3>
           <p>Point the camera at your plate. JUMBO estimates the foods and the nutrition, shows how sure it is about each one, and you correct it before anything is saved.</p>
         </article>
-        <article class="card" style="--tint:var(--recovery)">
+        <article class="card" style="--i:1;--tint:var(--recovery)">
           <span class="card__dot">2</span>
           <h3>Find the pattern</h3>
           <p>It looks across your weeks for something real — a link between how you sleep and how you train. It shows the evidence, and it will tell you when it found nothing.</p>
         </article>
-        <article class="card" style="--tint:var(--sleep)">
+        <article class="card" style="--i:2;--tint:var(--sleep)">
           <span class="card__dot">3</span>
           <h3>See where it leads</h3>
           <p>A plain reading of your trajectory if the last few months carry on, and exactly which habits are driving it. Labelled as an estimate, because that is what it is.</p>
         </article>
-        <article class="card" style="--tint:var(--movement)">
+        <article class="card" style="--i:3;--tint:var(--movement)">
           <span class="card__dot">4</span>
           <h3>Ask it anything</h3>
           <p>A straight conversation about your own numbers. It only talks about what your data actually shows, and where the data is silent it says so rather than guessing.</p>
         </article>
-        <article class="card" style="--tint:var(--brand)">
+        <article class="card" style="--i:4;--tint:var(--brand)">
           <span class="card__dot">5</span>
           <h3>Get a session to follow</h3>
           <p>What to train today, read from your own recent load and recovery. Build the plan yourself, or have JUMBO draft one around your goal, your kit and your time.</p>
         </article>
-        <article class="card" style="--tint:var(--ink-3)">
+        <article class="card" style="--i:5;--tint:var(--ink-3)">
           <span class="card__dot">—</span>
           <h3>And nothing it cannot do</h3>
           <p>No autonomous agents. No claims about conditions. No diagnosis. JUMBO is a wellness companion, not a clinician, and it says that on the screen rather than in the small print.</p>
@@ -518,7 +557,7 @@ footer {
     <div class="wrap">
 
       <div class="show">
-        <div class="show__shot">
+        <div class="show__shot" data-parallax data-speed="-0.05">
           <img loading="lazy" src="/assets/marketing/ask.jpg" width="780" height="1688"
                alt="Ask JUMBO: a conversation screen with suggested questions about sleep, recovery and protein.">
         </div>
@@ -535,7 +574,7 @@ footer {
       </div>
 
       <div class="show show--flip">
-        <div class="show__shot">
+        <div class="show__shot" data-parallax data-speed="-0.05">
           <img loading="lazy" src="/assets/marketing/training.jpg" width="780" height="1688"
                alt="The Training screen: a suggestion to train today with the reasons behind it, and a saved plan drafted by JUMBO.">
         </div>
@@ -552,7 +591,7 @@ footer {
       </div>
 
       <div class="show">
-        <div class="show__shot">
+        <div class="show__shot" data-parallax data-speed="-0.05">
           <img loading="lazy" src="/assets/marketing/capture.jpg" width="780" height="1688"
                alt="The Capture screen: ways to record a meal, a workout, sleep, a measurement or a note.">
         </div>
@@ -577,7 +616,7 @@ footer {
       <h2 style="max-width:16ch;margin-inline:auto">Start with one day.</h2>
       <p class="lede lede--wide">
         Write down what you ate, how you moved, how you slept. JUMBO takes it
-        from there — and tells you honestly how much it can see.
+        from there — and tells you honestly how much of you it can actually see.
       </p>
       <div class="hero__do">
         <a class="btn btn--primary" href="/">Open JUMBO</a>
@@ -605,6 +644,8 @@ footer {
   onScroll()
   addEventListener('scroll', onScroll, { passive: true })
 
+  const still = matchMedia('(prefers-reduced-motion: reduce)')
+
   // Sections arrive as they are reached. If IntersectionObserver is missing
   // or the script fails, the .rise class is simply never added and
   // everything is visible — the page must never depend on this to be read.
@@ -620,6 +661,61 @@ footer {
     rise.forEach((el) => io.observe(el))
   } else {
     rise.forEach((el) => el.classList.add('seen'))
+  }
+
+  /*
+   * Parallax.
+   *
+   * Each marked element drifts by its own fraction of how far it sits from
+   * the middle of the window. Negative speeds hang back against the scroll,
+   * which is what makes a device feel like it is further away than the text
+   * beside it.
+   *
+   * Everything is read in one pass and written in the next, so no element's
+   * position is measured after another has been moved — that read-write-read
+   * pattern is what turns a parallax into a stutter. The work happens in a
+   * single animation frame per scroll and only ever sets a custom property
+   * that feeds a transform, so the browser never relayouts.
+   */
+  const layers = [...document.querySelectorAll('[data-parallax]')].map((el) => ({
+    el, speed: parseFloat(el.dataset.speed || '-0.05'),
+  }))
+
+  if (layers.length && !still.matches) {
+    let queued = false
+
+    const draw = () => {
+      queued = false
+      const mid = window.innerHeight / 2
+      // Read every position first.
+      const reads = layers.map(({ el, speed }) => {
+        const r = el.getBoundingClientRect()
+        // Off screen by more than a viewport: leave it where it is.
+        if (r.bottom < -window.innerHeight || r.top > window.innerHeight * 2) return null
+        return { el, shift: (r.top + r.height / 2 - mid) * speed }
+      })
+      // Then write every one.
+      for (const item of reads) {
+        if (item) item.el.style.setProperty('--shift', item.shift.toFixed(2) + 'px')
+      }
+    }
+
+    const onScroll = () => {
+      if (queued) return
+      queued = true
+      requestAnimationFrame(draw)
+    }
+
+    draw()
+    addEventListener('scroll', onScroll, { passive: true })
+    addEventListener('resize', onScroll, { passive: true })
+
+    // Someone turning motion off mid-session gets everything put back.
+    still.addEventListener?.('change', (e) => {
+      if (!e.matches) return
+      removeEventListener('scroll', onScroll)
+      for (const { el } of layers) el.style.removeProperty('--shift')
+    })
   }
 </script>
 
