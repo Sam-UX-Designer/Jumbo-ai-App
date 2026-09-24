@@ -405,7 +405,7 @@ export default async function integrity({ browser, origin, r }) {
 
     const text = await screenText(page)
     r.check('the page has its content', text.length > 800, `${text.length} characters`)
-    r.check('it says what JUMBO is', /admits what it\s*doesn.t know/i.test(text))
+    r.check('it says what JUMBO is', /never print a number nobody measured/i.test(text))
     r.check('it does not claim to have agents', !/\bagents?\b/i.test(text)
       || /no autonomous agents/i.test(text),
       'JUMBO has no agents, and a landing page is the worst place to say it does')
