@@ -959,3 +959,14 @@ a { color: var(--accent-text); }
     -webkit-backdrop-filter: none; backdrop-filter: none;
   }
 }
+
+/*
+ * The chip that offers to add a food Jumbo does not have. Tinted, because
+ * it is the one option in that row that makes something new rather than
+ * picking something that already exists.
+ */
+.chip--add {
+  border-color: color-mix(in srgb, var(--brand) 45%, transparent);
+  color: var(--accent-text);
+  background: var(--brand-dim);
+}

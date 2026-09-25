@@ -50,6 +50,7 @@ was once saved and listed on Capture while every number on Today ignored it.
 | UC-17 | Sleep can be logged by hand and counts toward the day |
 | UC-18 | Every kind can be reached and saved from the + button, and the form does not reopen on return |
 | UC-19 | A hand-written night is used when nothing measured one |
+| UC-78 | Any food can be added, and is remembered | The built-in list is thirty Western staples, which is no use to somebody eating chapati — and typing it once should be enough |
 
 ## Profile, preferences and data controls — `tests/e2e/cases/settings.mjs`
 

@@ -1,4 +1,4 @@
-import type { FoodItem } from './types'
+import type { CustomFood, FoodItem } from './types'
 import { round, uid } from '../lib/util'
 
 interface FoodBase {
@@ -60,6 +60,26 @@ export function makeFoodItem(key: string, scale = 1, confidence = 1): FoodItem {
     carbs: round(b.carbs * scale, 1),
     fat: round(b.fat * scale, 1),
     confidence,
+  }
+}
+
+/**
+ * The same, for a food the person added themselves.
+ *
+ * Confidence is 1: nobody estimated this, they told us. The interface hides
+ * the confidence badge at 1, which is right — there is nothing to qualify.
+ */
+export function makeCustomItem(food: CustomFood, scale = 1): FoodItem {
+  return {
+    id: uid(),
+    name: food.name,
+    portion: food.portion,
+    grams: Math.round(food.grams * scale),
+    kcal: Math.round(food.kcal * scale),
+    protein: round(food.protein * scale, 1),
+    carbs: round(food.carbs * scale, 1),
+    fat: round(food.fat * scale, 1),
+    confidence: 1,
   }
 }
 

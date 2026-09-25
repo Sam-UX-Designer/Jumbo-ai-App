@@ -5,7 +5,7 @@ import {
 import type { Viz } from '../components/DataViz'
 import type {
   Baseline, DayRecord, GoalKey, InsightDecision, MealEntry, Measurement, Profile,
-  Reminders, SleepEntry, WorkoutEntry,
+  Reminders, SleepEntry, WorkoutEntry, CustomFood,
 } from '../data/types'
 import { generateEmptyHistory, generateHistory, generateMeasurements, TODAY } from '../data/generate'
 import type { AppNotification } from '../data/notifications'
@@ -106,6 +106,8 @@ export interface Persisted {
   /** Ids of notifications that have been read. Survives a reload. */
   readNotifications: string[]
   addedMeals: Record<string, MealEntry[]>
+  /** Foods the person typed in themselves, kept so they need typing once. */
+  customFoods: CustomFood[]
   addedWorkouts: Record<string, WorkoutEntry>
   /** Nights the person wrote down themselves, by date. */
   addedSleep: Record<string, SleepEntry>
@@ -197,6 +199,7 @@ const defaultPersisted: Persisted = {
   events: [],
   readNotifications: [],
   addedMeals: {},
+  customFoods: [],
   addedWorkouts: {},
   plans: [],
   sessions: [],
@@ -221,6 +224,7 @@ export type Action =
   | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
   | { type: 'signOut' }
+  | { type: 'addCustomFood'; food: CustomFood }
   | { type: 'cloudUser'; user: CloudUser | null }
   | { type: 'cloudStatus'; status: CloudStatus; message?: string | null }
   | { type: 'resetAll' }
@@ -522,6 +526,13 @@ function reducer(state: State, action: Action): State {
             : `${action.meal.slot} was added to the day.`,
         }),
       })
+    case 'addCustomFood': {
+      // Typed twice, kept once. Matching on the name is what makes the
+      // second chapati find the first rather than stacking up beside it.
+      const name = action.food.name.trim().toLowerCase()
+      const without = p.customFoods.filter((f) => f.name.trim().toLowerCase() !== name)
+      return next({ customFoods: [action.food, ...without].slice(0, 300) })
+    }
     case 'removeMeal':
       return next({ addedMeals: { ...p.addedMeals, [action.date]: (p.addedMeals[action.date] ?? []).filter((m) => m.id !== action.mealId) } })
     case 'savePlan': {

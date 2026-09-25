@@ -42,7 +42,7 @@ const KINDS: Array<{
   {
     id: 'meal', label: 'Meal', icon: 'camera', tint: 'var(--nutrition)',
     heading: 'Snap your meal',
-    blurb: 'Take a photo and Jumbo’s AI estimates the foods and nutrition. You correct it before anything is saved.',
+    blurb: 'Take a photo and Jumbo’s AI estimates the foods and nutrition, or type it yourself. Either way you correct it before anything is saved.',
     cta: 'Take photo', ctaIcon: 'camera',
   },
   {
@@ -307,6 +307,16 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
         </div>
 
         <CaptureAction kind={kind} onStart={() => startCapture(kind)} />
+
+        {/* The other half of logging a meal, next to the first half rather
+            than at the bottom of the screen under "more ways to add". Food
+            eaten out of a packet, at a desk, or already finished does not
+            get photographed, and that is most of it. */}
+        {kind === 'meal' && (
+          <button className="btn btn--secondary btn--block" onClick={() => openMeal('manual')}>
+            <Icon name="note" size={16} /> Type or search a food instead
+          </button>
+        )}
       </section>
 
       {/* ────────────────────────────── training
@@ -362,10 +372,17 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
           <Empty
             icon="plate"
             title="Nothing added yet"
-            body="Food is the one thing a wearable cannot see. A photo takes about five seconds."
-            action={<button className="btn btn--primary" onClick={() => openMeal('camera')}>
-              <Icon name="camera" size={16} /> Photograph a meal
-            </button>}
+            body="Food is the one thing a wearable cannot see. Photograph it, or type it — whichever is quicker where you are."
+            action={
+              <div className="row row--wrap" style={{ gap: 'var(--s-2)', justifyContent: 'center' }}>
+                <button className="btn btn--primary" onClick={() => openMeal('camera')}>
+                  <Icon name="camera" size={16} /> Photograph a meal
+                </button>
+                <button className="btn btn--secondary" onClick={() => openMeal('manual')}>
+                  <Icon name="note" size={16} /> Type it
+                </button>
+              </div>
+            }
           />
         ) : shown.length === 0 ? (
           <p className="t-callout dim2 rec__none">Nothing in {filter} on this day.</p>

@@ -49,6 +49,66 @@ export default async function logging({ browser, origin, r }) {
   })
 
 
+  /* ── UC-78 ─────────────────────────────────────────────────────────── */
+  await r.run('UC-78', 'Any food can be added, and is remembered', async () => {
+    // Reported from real use: "if I click add item it is showing only
+    // listed item, I can add whatever I need". The built-in list is thirty
+    // Western staples, which is no use to somebody eating chapati.
+    const { ctx, page, errors } = await openApp(browser, origin, account())
+    await goTo(page, 'capture')
+    await page.waitForTimeout(400)
+
+    r.check('typing a meal is offered beside photographing one',
+      await page.getByRole('button', { name: /type or search a food/i }).count() > 0,
+      'the manual door is still buried at the bottom of the screen')
+
+    await clickClear(page, page.getByRole('button', { name: /type or search a food/i }).first())
+    await page.waitForTimeout(700)
+
+    const search = page.getByLabel(/search or type any food/i)
+    r.check('the search opens straight away', await search.count() > 0)
+
+    await search.fill('Chapati')
+    await page.waitForTimeout(350)
+    const addChip = page.getByRole('button', { name: /Add .Chapati./i })
+    r.check('a food Jumbo does not ship with can still be added',
+      await addChip.count() > 0, 'no way past the built-in list')
+
+    await addChip.first().click()
+    await page.waitForTimeout(350)
+    await page.fill('#nf-kcal', '120')
+    r.check('Jumbo does not fill the calories in for them',
+      (await page.inputValue('#nf-kcal')) === '120')
+
+    await page.getByRole('button', { name: /^Add to meal$/ }).click()
+    await page.waitForTimeout(500)
+    const sheet = await screenText(page)
+    r.check('it lands in the meal', /Chapati/.test(sheet), sheet.slice(0, 200))
+    r.check('with the calories that were typed, not invented', /120 kcal/.test(sheet), sheet.slice(0, 200))
+
+    await page.getByRole('button', { name: /^Save meal$/ }).click()
+    await page.waitForTimeout(900)
+
+    const s1 = await saved(page)
+    const meals = s1?.addedMeals?.[today] ?? []
+    r.check('the meal is stored', meals.length > 0)
+    r.check('the typed food is in it',
+      JSON.stringify(meals).includes('Chapati'), JSON.stringify(meals).slice(0, 200))
+    r.check('and the food itself is kept for next time',
+      (s1?.customFoods ?? []).some((f) => f.name === 'Chapati'),
+      JSON.stringify(s1?.customFoods ?? []).slice(0, 200))
+
+    // Second time around it should be one tap, with nothing to type.
+    await clickClear(page, page.getByRole('button', { name: /type or search a food/i }).first())
+    await page.waitForTimeout(700)
+    r.check('the second time it is already on the list',
+      await page.getByRole('button', { name: /^Chapati$/ }).count() > 0,
+      'the food was saved but is not offered back')
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+
   /* ── UC-11 ─────────────────────────────────────────────────────────── */
   await r.run('UC-11', 'A logged meal is saved and reaches the nutrition figures', async () => {
     const { ctx, page } = await openApp(browser, origin,

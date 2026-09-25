@@ -85,6 +85,9 @@ export function mergeStates(
 
     // Plans and the sessions done against them.
     plans: byId(mine.plans, theirs.plans),
+    // A food typed on the phone should be there on the laptop. Keyed by id
+    // like the rest; the reducer already keeps one entry per name.
+    customFoods: byId(mine.customFoods, theirs.customFoods),
     sessions: byId(mine.sessions, theirs.sessions)
       .sort((a, b) => b.at - a.at)
       .slice(0, 200),

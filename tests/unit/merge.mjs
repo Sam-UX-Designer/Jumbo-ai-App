@@ -27,7 +27,9 @@ await build({
 const { mergeStates } = await import(out)
 
 let fails = 0
+let ran = 0
 const ok = (name, cond, detail = '') => {
+  ran++
   if (!cond) fails++
   console.log(`${cond ? 'ok  ' : 'FAIL'} ${name}${detail ? ' — ' + detail : ''}`)
 }
@@ -38,6 +40,7 @@ const phone = {
   addedMeals: { '2026-09-25': [{ id: 'm1', name: 'Lunch' }] },
   addedWorkouts: {},
   plans: [{ id: 'p1', name: 'Phone plan' }],
+  customFoods: [{ id: 'f1', name: 'Chapati', kcal: 120 }],
   sessions: [{ id: 's1', at: 100 }],
   addedMeasurements: [{ id: 'x1' }],
   theme: 'dark', profile: { name: 'Sam' }, milestones: ['a'],
@@ -47,6 +50,7 @@ const laptop = {
   addedMeals: { '2026-09-25': [{ id: 'm2', name: 'Dinner' }] },
   addedWorkouts: { '2026-09-25': { id: 'w1', type: 'Run' } },
   plans: [{ id: 'p2', name: 'Laptop plan' }],
+  customFoods: [{ id: 'f2', name: 'Sambar', kcal: 90 }],
   sessions: [{ id: 's2', at: 200 }],
   addedMeasurements: [{ id: 'x2' }],
   theme: 'light', profile: { name: 'Samuel' }, milestones: ['b'],
@@ -58,6 +62,8 @@ ok('both meals survive the same day', (m.addedMeals['2026-09-25'] ?? []).length 
    JSON.stringify(m.addedMeals['2026-09-25']?.map((x) => x.id)))
 ok('the workout only one side had survives', Boolean(m.addedWorkouts['2026-09-25']))
 ok('both plans survive', m.plans.length === 2, m.plans.map((p) => p.id).join(','))
+ok('a food typed on one device reaches the other',
+   m.customFoods.length === 2, (m.customFoods ?? []).map((f) => f.name).join(','))
 ok('both sessions survive', m.sessions.length === 2)
 ok('sessions come back newest first', m.sessions[0].id === 's2')
 ok('both measurements survive', m.addedMeasurements.length === 2)
@@ -90,5 +96,5 @@ ok('an empty device adopts the account', m4.plans.length === 1 && m4.addedMeals[
 const m5 = mergeStates(phone, {}, false)
 ok('an empty account adopts the device', m5.plans.length === 1)
 
-console.log(fails ? `\n${fails} check(s) FAILED` : `\nall ${18} merge checks passed`)
+console.log(fails ? `\n${fails} of ${ran} check(s) FAILED` : `\nall ${ran} merge checks passed`)
 process.exit(fails ? 1 : 0)

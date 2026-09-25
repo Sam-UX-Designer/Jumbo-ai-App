@@ -78,6 +78,31 @@ export interface WorkoutEntry {
 export type WorkoutType =
   | 'Run' | 'Walk' | 'Cycle' | 'Strength' | 'Swim' | 'Yoga' | 'Mobility' | 'Hike' | 'Row' | 'Other'
 
+/**
+ * A food Jumbo did not ship with, typed in by the person.
+ *
+ * The built-in list is thirty-odd Western staples, which is no use to
+ * somebody eating chapati and sambar. Rather than leaving them stuck at "no
+ * match", anything can be added — and it is kept, so the second time they
+ * eat it the name is already there.
+ *
+ * The numbers are theirs. Jumbo does not estimate them, and does not
+ * pretend to: an empty field stays zero rather than being filled in with a
+ * guess, and the totals say what was actually entered.
+ */
+export interface CustomFood {
+  id: string
+  name: string
+  portion: string
+  grams: number
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+  /** When it was first added, so the newest sits nearest the search box. */
+  at: number
+}
+
 export interface FoodItem {
   id: string
   name: string
