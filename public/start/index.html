@@ -581,7 +581,7 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
     <div class="nav__brand"><img src="/assets/brand/icon-192.png" alt="" width="20" height="20"> Jumbo</div>
     <div class="nav__end">
       <a class="ghost" href="/" data-enter>Sign in</a>
-      <a class="fill fill--sm" href="/" data-join>Create account</a>
+      <a class="fill fill--sm" href="/?new=1" data-join>Create account</a>
     </div>
   </div>
 </nav>
@@ -622,7 +622,7 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
         <p id="where">Free to try, in any browser. No ring, no strap, nothing to buy.</p>
         <span class="spacer"></span>
         <a class="ghost" href="/" data-enter>Sign in</a>
-        <a class="fill" href="/" data-join>Create account</a>
+        <a class="fill" href="/?new=1" data-join>Create account</a>
       </div>
     </div>
   </header>
@@ -837,19 +837,21 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
    * whether setup was finished, and nothing is sent anywhere.
    *
    * Worth being straight about what these buttons are: there is no server
-   * holding accounts yet, so "sign in" means "pick up where you left off on
-   * this device". On a new phone it starts you fresh, and the line under the
-   * buttons says so rather than letting someone find out the hard way.
+   * holding accounts, and the question these buttons answer is whether this
+   * browser is already signed in to one. That is a Supabase session, which
+   * it keeps under a key of its own, so that is what gets looked for rather
+   * than the app's records.
    */
   const returning = (() => {
     try {
-      const raw = localStorage.getItem('jumbo.state.v2')
-      if (!raw) return false
-      const saved = JSON.parse(raw)
-      return Boolean(saved && typeof saved === 'object' && saved.onboarded)
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && /^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)) return true
+      }
+      return false
     } catch {
-      // Private window, blocked storage, half-written JSON. Treat all of it
-      // as "no account here", which is the safe way to be wrong.
+      // Private window, blocked storage. Treat it as "not signed in here",
+      // which is the safe way to be wrong.
       return false
     }
   })()
@@ -858,9 +860,9 @@ footer { padding-block: 44px 54px; border-top: 1px solid var(--line); }
   if (returning) {
     for (const el of document.querySelectorAll('[data-join]')) el.textContent = 'Open Jumbo'
     for (const el of document.querySelectorAll('[data-enter]')) el.textContent = 'Continue'
-    if (where) where.textContent = 'Your Jumbo is on this browser. Continue picks it up where you left it.'
+    if (where) where.textContent = 'You are signed in on this browser. Continue picks it up where you left it.'
   } else if (where) {
-    where.textContent = 'Free to try, in any browser. Your records stay on this device.'
+    where.textContent = 'Free to try. Your records are kept with your account, on every device you sign in on.'
   }
 
   /*

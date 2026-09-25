@@ -9,3 +9,6 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 .data
+
+# The account suite builds a second copy pointed at its stand-in Supabase.
+dist-cloud

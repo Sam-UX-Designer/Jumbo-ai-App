@@ -102,6 +102,28 @@ saved to Capture and counted for nothing on Today.
 | UC-68 | A finished session can be found again afterwards | It was always saved; nothing showed it back, which reads as losing it |
 | UC-69 | Training is reachable without hunting for it | It sat 1126px down an 844px screen, which is indistinguishable from absent |
 
+## Accounts — `tests/e2e/cloud.mjs`
+
+These run against a **second build** of the app, compiled against a stand-in
+Supabase on a known port, because the rest of the suite runs a build with no
+account service configured and so cannot reach the door in front of the app.
+Get that wrong and nobody gets in at all.
+
+The stand-in answers the shapes the real client parses — a session is
+`access_token` plus `refresh_token` plus `expires_in`, a PostgREST select is
+a bare array — so what these exercise is the app's own logic. Run them with
+`node tests/e2e/cloud.mjs`; `npm test` runs them last.
+
+| # | The promise | Why it is here |
+|---|---|---|
+| UC-70 | A shared link opens a door, not somebody else's app | Sending the link to a friend used to drop them inside an app with no account of their own |
+| UC-71 | The form is one a keychain will offer to save | A real form, a real submit, and the autocomplete names browsers look for. Without them the password is typed in full every time, which is the whole reason for choosing one |
+| UC-72 | Creating an account gets you in, and keeps you in | Including across a reload, with no flash of the welcome screen on the way |
+| UC-73 | A wrong password is refused in the product's own words | `invalid_credentials` is not a sentence |
+| UC-74 | Signing in on a second device brings the records | Caught a real bug: the new device had written its own empty state a second earlier, so by the clock the blank copy won and the person watched their name disappear |
+| UC-75 | One person's records never follow another into their account | Two people, one laptop. Signing out deletes nothing, so the next person to sign in must not absorb what is left behind |
+| UC-76 | With confirmation switched on, Jumbo says so instead of lying | Whether sign-up returns a session depends on a project setting, so the app reports which happened rather than assuming |
+
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`
 
 These sweep every screen, in both themes, in both data modes.

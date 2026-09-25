@@ -460,15 +460,19 @@ export default async function integrity({ browser, origin, r }) {
     // Two complaints made this case. The first: the page had one button and
     // it went straight into the app, with no sign in and no sign up. The
     // second, and the reason the labels are checked against real storage:
-    // there is no server holding accounts, so the page must not imply that
-    // signing in reaches one.
-    const look = async (seed) => {
+    // the labels must describe what this browser will actually do, and now
+    // that accounts are real that means a live session, not a pile of
+    // records. `session` seeds one the way Supabase stores it.
+    const look = async (seed, session = false) => {
       const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
       const page = await ctx.newPage()
       const errors = []
       page.on('pageerror', (e) => errors.push(String(e)))
       if (seed) {
         await page.addInitScript((v) => localStorage.setItem('jumbo.state.v2', v), JSON.stringify(seed))
+      }
+      if (session) {
+        await page.addInitScript(() => localStorage.setItem('sb-testproject-auth-token', '{"access_token":"x"}'))
       }
       await page.goto(origin + '/start/', { waitUntil: 'networkidle' })
       await page.waitForTimeout(600)
@@ -492,15 +496,15 @@ export default async function integrity({ browser, origin, r }) {
       r.check('both reach the app', doors.targets.length === 1 && doors.targets[0] === '/',
         doors.targets.join(', '))
       r.check('and the page says where the records will live',
-        /on this device/i.test(doors.note), doors.note)
+        /your account/i.test(doors.note), doors.note)
       r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
       await ctx.close()
     }
 
-    // Somebody who already has Jumbo in this browser. The labels have to
-    // stop saying "create account" at a person who already did.
+    // Somebody already signed in on this browser. The labels have to stop
+    // saying "create account" at a person who already did.
     {
-      const { ctx, page } = await look(account())
+      const { ctx, page } = await look(account(), true)
       const doors = await page.evaluate(() => ({
         enter: [...document.querySelectorAll('[data-enter]')].map((e) => e.textContent.trim()),
         join: [...document.querySelectorAll('[data-join]')].map((e) => e.textContent.trim()),
@@ -510,8 +514,8 @@ export default async function integrity({ browser, origin, r }) {
         doors.join.every((t) => !/create account/i.test(t)), doors.join.join(', '))
       r.check('they are offered their own data back',
         doors.enter.every((t) => /continue/i.test(t)), doors.enter.join(', '))
-      r.check('and told it is this browser holding it',
-        /this browser/i.test(doors.note), doors.note)
+      r.check('and told this browser is already signed in',
+        /signed in on this browser/i.test(doors.note), doors.note)
       await ctx.close()
     }
 

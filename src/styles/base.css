@@ -494,6 +494,22 @@ a { color: var(--accent-text); }
 .input[aria-invalid="true"] { border-color: var(--critical); }
 .input--lg { min-height: 60px; font-size: var(--t-title3); font-weight: 560; }
 
+/*
+ * A field with a button sitting inside it, used for show/hide on a
+ * password. The padding on the input is what keeps the text from running
+ * underneath the button, so it tracks the button's own width.
+ */
+.input-wrap { position: relative; display: flex; }
+.input-wrap .input { flex: 1; padding-right: 46px; }
+.input-wrap__btn {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: 38px; height: 38px; border: 0; border-radius: var(--r-sm);
+  background: none; color: var(--ink-3); cursor: pointer;
+}
+.input-wrap__btn:hover { color: var(--ink); }
+.input-wrap__btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+
 .slider { width: 100%; accent-color: var(--brand); height: 44px; cursor: pointer; }
 
 .switch {

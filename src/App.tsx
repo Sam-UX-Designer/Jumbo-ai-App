@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './styles/base.css'
 import { NavProvider, Sidebar, TabBar, type ChatFocus, type QuickKind, type Route } from './components/Nav'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { AuthGate } from './components/AuthGate'
 import { AskDock } from './components/AskDock'
 import { ToastProvider, useToast } from './components/UI'
 import { Onboarding } from './onboarding/Onboarding'
@@ -152,7 +153,12 @@ export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
-        <Shell />
+        {/* Nothing behind the gate renders until there is an account to
+            render it for. With no Supabase configured it is transparent and
+            Jumbo stays the local-only app it was. */}
+        <AuthGate>
+          <Shell />
+        </AuthGate>
       </ToastProvider>
     </StoreProvider>
   )

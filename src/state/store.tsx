@@ -683,10 +683,13 @@ function reducer(state: State, action: Action): State {
     case 'setProviders': return next({}, { providers: action.providers })
     case 'syncStart': return next({}, { syncing: true })
     case 'syncDone': {
-      const hasLive = action.days.length > 0
+      // Defensive: a server answering 200 with the wrong shape is a bad
+      // sync, not a reason for the whole app to fail to render.
+      const days = Array.isArray(action.days) ? action.days : []
+      const hasLive = days.length > 0
       return derive(
         { ...p, dataMode: hasLive ? 'live' : p.dataMode },
-        { ...rt, liveDays: action.days, syncErrors: action.errors, lastSyncAt: action.at, syncing: false },
+        { ...rt, liveDays: days, syncErrors: Array.isArray(action.errors) ? action.errors : [], lastSyncAt: action.at, syncing: false },
       )
     }
     default: return state

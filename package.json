@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "vercel-build": "npm run build",
-    "test": "node tests/unit/merge.mjs && node tests/e2e/run.mjs",
+    "test": "node tests/unit/merge.mjs && node tests/e2e/run.mjs && node tests/e2e/cloud.mjs",
     "test:e2e": "npm run build && node tests/e2e/run.mjs",
     "test:unit": "node tests/unit/merge.mjs"
   },

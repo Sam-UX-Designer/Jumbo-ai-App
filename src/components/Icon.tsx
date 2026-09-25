@@ -14,6 +14,7 @@ export type IconName =
   | 'search' | 'filter' | 'bookmark' | 'more' | 'mic' | 'arrow-up' | 'chevron-down'
   | 'target' | 'sprout' | 'shield' | 'sparkles' | 'settings' | 'signout'
   | 'list' | 'cutlery' | 'bowl' | 'cloche' | 'apple' | 'trophy' | 'edit' | 'call'
+  | 'eye' | 'eye-off'
 
 type Motion = 'none' | 'idle' | 'active' | 'celebrate'
 
@@ -38,6 +39,8 @@ const PATHS: Record<IconName, string> = {
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   check: 'M4.6 12.6 9.5 17.5 19.4 6.5',
+  eye: 'M2.4 12S6 5.2 12 5.2 21.6 12 21.6 12 18 18.8 12 18.8 2.4 12 2.4 12Z M12 14.9a2.9 2.9 0 1 0 0-5.8 2.9 2.9 0 0 0 0 5.8Z',
+  'eye-off': 'M9.9 5.5A8.5 8.5 0 0 1 12 5.2c6 0 9.6 6.8 9.6 6.8a16.6 16.6 0 0 1-2.4 3.4M6.2 7.3A16.5 16.5 0 0 0 2.4 12S6 18.8 12 18.8c1.7 0 3.2-.5 4.4-1.2M10 10a2.9 2.9 0 0 0 4 4M3.5 3.5l17 17',
   close: 'M6 6l12 12M18 6 6 18',
   chevron: 'M9.4 5.4 16 12l-6.6 6.6',
   back: 'M14.6 5.4 8 12l6.6 6.6',
