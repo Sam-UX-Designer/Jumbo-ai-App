@@ -116,6 +116,12 @@ async function start(sb) {
     if (p === '/auth/v1/signup') {
       const { email, password } = await read(req)
       if (sb.users.has(email)) {
+        // With confirmation on, real Supabase will not admit the address is
+        // taken — it answers success with a hollow user and sends nothing.
+        if (sb.requireConfirm) {
+          const u = sb.users.get(email)
+          return json(res, 200, { ...sb.userObj(u, email), identities: [] })
+        }
         return json(res, 400, { error_code: 'user_already_exists', msg: 'User already registered' })
       }
       if (!password || password.length < 8) {
@@ -439,8 +445,24 @@ async function main() {
         !/back to sign in/i.test(t), t.slice(0, 220))
       r.check('it does not pretend to have let them in',
         await page.locator('.tab-bar, nav .tab').count() === 0)
-      sb.setRequireConfirm(false)
       await ctx.close()
+
+      // The same address a second time. Supabase will not admit it is taken,
+      // so Jumbo must not repeat "your account is made" at somebody who
+      // already has one and send them to wait for a link that is not coming.
+      const again = await open(browser)
+      await again.page.click('button:has-text("Create an account")')
+      await again.page.waitForTimeout(250)
+      await fillAuth(again.page, 'carol@example.com', 'carols-password')
+      await submitAuth(again.page)
+      const t2 = await text(again.page)
+      r.check('a second sign-up on the same address is sent to sign in, not to an inbox',
+        /already an account with that email/i.test(t2), t2.slice(0, 220))
+      r.check('and is not told a new account was made',
+        !/open the link sent to/i.test(t2), t2.slice(0, 220))
+      await again.ctx.close()
+
+      sb.setRequireConfirm(false)
     })
 
     /* ── UC-77 ───────────────────────────────────────────────────────── */

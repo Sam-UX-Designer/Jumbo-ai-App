@@ -122,7 +122,7 @@ a bare array — so what these exercise is the app's own logic. Run them with
 | UC-73 | A wrong password is refused in the product's own words | `invalid_credentials` is not a sentence |
 | UC-74 | Signing in on a second device brings the records | Caught a real bug: the new device had written its own empty state a second earlier, so by the clock the blank copy won and the person watched their name disappear |
 | UC-75 | One person's records never follow another into their account | Two people, one laptop. Signing out deletes nothing, so the next person to sign in must not absorb what is left behind |
-| UC-76 | With confirmation switched on, Jumbo says so instead of lying | Whether sign-up returns a session depends on a project setting, so the app reports which happened rather than assuming — and points at the link rather than bouncing them to a sign-in form they cannot use yet |
+| UC-76 | With confirmation switched on, Jumbo says so instead of lying | Whether sign-up returns a session depends on a project setting, so the app reports which happened rather than assuming — and points at the link rather than bouncing them to a sign-in form they cannot use yet. Also covers signing up twice on one address: Supabase will not admit an address is taken while confirmation is on, so it answers success with a hollow user, and Jumbo used to repeat "your account is made" at somebody who already had one |
 | UC-77 | Signing up starts at setup; signing in never does | A device that used Jumbo before accounts existed already says `onboarded: true`, so a new account sailed straight past setup and landed on "Welcome back" addressed to whoever used the browser last |
 
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`

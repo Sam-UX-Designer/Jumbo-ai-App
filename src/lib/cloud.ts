@@ -150,6 +150,26 @@ export async function signUp(
     console.error('[jumbo] sign up', error)
     return { ok: false, message: plain(error, 'That account could not be created. Please try again.') }
   }
+
+  /*
+   * Signing up with an address that already has an account.
+   *
+   * With email confirmation off, Supabase says so plainly and the error
+   * above catches it. With confirmation on it deliberately does not: telling
+   * a stranger "that address is registered" would turn the sign-up form into
+   * a way to find out who has an account. So it returns success, with a
+   * hollow user — no identities on it — and sends nothing.
+   *
+   * Passing that through as success is the worst of both worlds. The person
+   * is told their account was made and to go and open a link that is not
+   * coming, when what they actually need is to sign in. The empty
+   * identities array is the documented tell, so it is read here and the
+   * person is sent to the right door.
+   */
+  if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
+    return { ok: false, message: 'There is already an account with that email. Sign in instead.' }
+  }
+
   markNewAccount(email)
   return { ok: true, data: { signedIn: Boolean(data.session) } }
 }
