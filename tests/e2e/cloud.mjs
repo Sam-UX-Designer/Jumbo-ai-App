@@ -431,11 +431,61 @@ async function main() {
       await fillAuth(page, 'carol@example.com', 'carols-password')
       await submitAuth(page)
       const t = await text(page)
-      r.check('it asks for the inbox rather than claiming success', /confirm your email/i.test(t), t.slice(0, 200))
+      r.check('it sends them to the link rather than claiming success',
+        /open the link sent to/i.test(t), t.slice(0, 220))
+      r.check('and says where that link lands, so it is not a dead end',
+        /takes you straight to setting jumbo up/i.test(t), t.slice(0, 220))
+      r.check('it does not bounce them back to a sign-in form they cannot use',
+        !/back to sign in/i.test(t), t.slice(0, 220))
       r.check('it does not pretend to have let them in',
         await page.locator('.tab-bar, nav .tab').count() === 0)
       sb.setRequireConfirm(false)
       await ctx.close()
+    })
+
+    /* ── UC-77 ───────────────────────────────────────────────────────── */
+    await r.run('UC-77', 'Signing up starts at setup; signing in never does', async () => {
+      // The device already holds a finished Jumbo, the way a browser does
+      // that used the app before it had accounts. A new account must still
+      // begin at the beginning.
+      const seed = {
+        onboarded: true, phoneVerified: true, permissions: {},
+        profile: { name: 'Old Local Name', phone: '' }, goals: ['fitness'], dataMode: 'live',
+        decisions: {}, dismissed: [], followedChannels: [], savedVideos: [], savedVideoData: {},
+        plan: 'free', theme: 'dark', addedMeals: {}, addedWorkouts: {}, addedSleep: {},
+        addedNotes: {}, addedMeasurements: [], plans: [], sessions: [],
+        events: [], readNotifications: [], milestones: [],
+      }
+      const { ctx, page, errors } = await open(browser, { seed })
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      await fillAuth(page, 'dana@example.com', 'danas-password')
+      await submitAuth(page)
+      await page.waitForTimeout(900)
+
+      r.check('they are in', await page.locator('#cloud-email').count() === 0)
+      const t = await text(page)
+      r.check('and setup is where they land, not the app',
+        /joined up|get started/i.test(t), t.slice(0, 160))
+      r.check('the tab bar is not up yet',
+        await page.locator('.tab-bar, nav .tab').count() === 0, 'went straight into the app')
+      await ctx.close()
+
+      // Now the other half: that same account, once through setup, signing
+      // in on a clean device must not be asked to do setup again.
+      const uid = sb.users.get('dana@example.com').id
+      sb.rows.set(uid, {
+        state: { ...seed, profile: { name: 'Dana', phone: '' } },
+        updated_at: new Date().toISOString(),
+      })
+      const second = await open(browser)
+      await fillAuth(second.page, 'dana@example.com', 'danas-password')
+      await submitAuth(second.page)
+      await second.page.waitForTimeout(1200)
+      r.check('signing in goes straight to the app',
+        await second.page.locator('.tab-bar, nav').count() > 0, 'a known account was sent back to setup')
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await second.ctx.close()
     })
   } finally {
     await browser.close()

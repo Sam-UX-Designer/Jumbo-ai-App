@@ -26,6 +26,23 @@ Email is still used for one thing: resetting a forgotten password. There is
 no way around that one, and without it a forgotten password is a lost
 account.
 
+## Which screen you land on
+
+| | |
+|---|---|
+| **Sign up** | Setup, from the beginning. Always |
+| **Sign in**, account already set up | The app |
+| **Sign in**, account never finished setup | Setup |
+
+Sign-up marks the account as new in `localStorage` (`jumbo.newAccount`) and
+the first pull spends that mark. The mark is needed because the app cannot
+tell a new account from an old one by the browser alone: a device that used
+Jumbo before accounts existed already holds `onboarded: true`, and without
+the mark a brand new account sails past setup and lands on "Welcome back"
+addressed to whoever used that browser last. The mark lives in
+`localStorage` rather than memory because with email confirmation on the
+account is made in one page load and the session arrives in another.
+
 ## Already done
 
 | | |
@@ -49,8 +66,12 @@ account.
 
 The app handles both honestly and does not assume either: Supabase returns a
 session when confirmation is off and an account with no session when it is
-on, and the screen says whichever actually happened (UC-76). Off is the
-frictionless flow; on is the safer one. Your call.
+on, and the screen says whichever actually happened (UC-76). Either way the
+link lands in setup, not back on a sign-in form.
+
+**A new project ships with this ON**, which is why the first real sign-up
+went to "check your inbox" rather than into the app. Turn it off for the
+frictionless flow; leave it on for the safer one. Your call.
 
 ## Why the key is in the browser
 

@@ -167,7 +167,17 @@ function Welcome({
     + Object.keys(state.addedNotes).length
     + state.addedMeasurements.length
     + state.plans.length
-  const returning = Boolean(name) || records > 0
+  /*
+   * "Welcome back" is for the local-only build, and only that.
+   *
+   * It exists because signing out there deletes nothing, so the welcome
+   * screen had to offer a way back into records still sitting in the
+   * browser. With real accounts that job belongs to the gate, and the
+   * question this screen answers is different: a brand new account starts
+   * at the beginning, however much the browser happens to be holding from
+   * whoever used it last.
+   */
+  const returning = !cloudConfigured && (Boolean(name) || records > 0)
 
   if (returning) {
     return (

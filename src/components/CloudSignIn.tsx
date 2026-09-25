@@ -81,10 +81,10 @@ export function CloudSignIn({
   if (confirm) {
     return (
       <Notice
-        title="Confirm your email"
-        body={`Your account is made. Open the link sent to ${trimmed} and you can sign in.`}
+        title="One link, then you are in"
+        body={`Your account is made. This project asks for the address to be confirmed first, so open the link sent to ${trimmed} on this device — it signs you in and takes you straight to setting Jumbo up. Nothing else to do here.`}
         onBack={() => { setConfirm(false); setMode('signIn') }}
-        backLabel="Back to sign in"
+        backLabel="Use a different email"
       />
     )
   }
