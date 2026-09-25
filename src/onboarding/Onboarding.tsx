@@ -6,6 +6,8 @@ import { Confidence, ErrorNotice, ProvenanceTag, Switch, UnavailableNotice } fro
 import { Sparkline } from '../components/Charts'
 import { useStore } from '../state/store'
 import { api, type ProviderInfo } from '../lib/api'
+import { cloudConfigured } from '../lib/cloud'
+import { CloudSignIn } from '../components/CloudSignIn'
 import { nativeBridge } from '../lib/native'
 import type { GoalKey } from '../data/types'
 import { celebrate, haptic, playSound } from '../lib/feedback'
@@ -136,6 +138,41 @@ function Welcome({
   onNext, onSkip, onSignIn,
 }: { onNext: () => void; onSkip: () => void; onSignIn: () => void }) {
   const { state } = useStore()
+  const [byEmail, setByEmail] = useState(false)
+  const onUseEmail = () => setByEmail(true)
+
+  /*
+   * The email route.
+   *
+   * Offered on both welcomes, because "I already have an account" and
+   * "this is a different email from the one on this device" are the same
+   * screen. Signing in pulls the account's records and merges them with
+   * whatever is already here rather than replacing either.
+   */
+  if (byEmail) {
+    return (
+      <>
+        <div className="ob__body">
+          <div className="ob-hero">
+            <BrandWordmark height={30} />
+            <div className="stack stack-4">
+              <h1 className="t-title1">Sign in to Jumbo</h1>
+              <p className="t-body dim" style={{ maxWidth: '32ch' }}>
+                Your records live with your account, so they are there on your
+                phone, your laptop, and anything else you sign in on.
+              </p>
+            </div>
+            <CloudSignIn />
+          </div>
+        </div>
+        <div className="ob__foot">
+          <button className="btn btn--ghost btn--block" onClick={() => setByEmail(false)}>
+            Back
+          </button>
+        </div>
+      </>
+    )
+  }
 
   /*
    * Is there already an account on this device?
@@ -187,12 +224,18 @@ function Welcome({
           <button className="btn btn--primary btn--lg btn--block" onClick={onSignIn}>
             Sign in <Icon name="chevron" size={16} />
           </button>
+          {cloudConfigured && (
+            <button className="btn btn--secondary btn--block" onClick={onUseEmail}>
+              Sign in with a different email
+            </button>
+          )}
           <button className="btn btn--ghost btn--block" onClick={onNext}>
             Set up a different account
           </button>
           <p className="t-caption dim2" style={{ textAlign: 'center' }}>
-            Jumbo keeps your records on this device. They do not follow you to
-            another phone yet.
+            {cloudConfigured
+              ? 'Signing in with your email brings your records to any device.'
+              : 'Jumbo keeps your records on this device.'}
           </p>
         </div>
       </>
@@ -223,6 +266,11 @@ function Welcome({
         <button className="btn btn--primary btn--lg btn--block" onClick={onNext}>
           Get started <Icon name="chevron" size={16} />
         </button>
+        {cloudConfigured && (
+          <button className="btn btn--secondary btn--block" onClick={onUseEmail}>
+            I already have an account
+          </button>
+        )}
         <button className="btn btn--ghost btn--block" onClick={onSkip}>Look around with sample data</button>
         <p className="t-caption dim2" style={{ textAlign: 'center' }}>
           Jumbo is a wellness companion, not a medical device.

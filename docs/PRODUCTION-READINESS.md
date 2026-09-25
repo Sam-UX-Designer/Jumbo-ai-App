@@ -45,7 +45,7 @@ Verified end to end, in a browser, in both themes:
 These are not polish. Each one is a promise a buyer will assume you have
 already made.
 
-### 2.1 There are no accounts, and data lives in one browser
+### 2.1 Accounts exist but are not switched on
 
 Everything a person records is in `localStorage` on the device they typed
 it into. There is no server-side record of any user.
@@ -55,13 +55,19 @@ starts empty. The same person on a laptop and a phone is two unrelated
 users. There is no backup and no recovery. For a health product people are
 meant to build months of history in, this is the single biggest gap.
 
-Signing out is safe: it ends the session and the welcome screen now
-recognises the device and offers to sign back in, with everything intact.
-What it cannot do is reach another device, because there is nothing to
-reach. Two browsers are two unrelated people, permanently.
+**This is now built, and switched off until it is configured.** Accounts
+run on Supabase: email magic-link sign-in, one row per person holding their
+record, and Row Level Security so the public key cannot read anybody else's.
+Signing in merges the device's records with the account's rather than
+replacing either, which is the part that would otherwise quietly delete a
+meal logged on the other phone. See [ACCOUNTS.md](./ACCOUNTS.md) for the
+four setup steps, and `src/lib/merge.ts` with `tests/unit/merge.mjs` for the
+merge itself.
 
-**Needed:** accounts, a database, and sync. Everything else here is smaller
-than this.
+Until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set, the app
+behaves exactly as described above: one browser, no recovery, and the
+Profile screen says so in those words rather than offering a sign-in that
+reaches nothing.
 
 ### 2.2 Sign-in is not real
 

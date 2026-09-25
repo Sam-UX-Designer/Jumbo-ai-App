@@ -7,6 +7,8 @@ import type { Route } from '../components/Nav'
 import { bestStreak, consistencyStreak, dailyProgress, hasData } from '../lib/analytics'
 import { planById } from '../data/plans'
 import { haptic } from '../lib/feedback'
+import { cloudConfigured } from '../lib/cloud'
+import { CloudSignIn } from '../components/CloudSignIn'
 
 /** One row of the grouped menu: where it goes, and what it is about. */
 interface MenuRow {
@@ -37,7 +39,7 @@ const MENU: MenuRow[] = [
  * a settings panel is neither.
  */
 export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) => void }) {
-  const { state, dispatch } = useStore()
+  const { state, leave } = useStore()
   const toast = useToast()
   const { confirm, node: confirmNode } = useConfirm()
 
@@ -146,6 +148,9 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
         ))}
       </nav>
 
+      {/* ────────────────────────────────────────────────────────── account */}
+      <AccountCard />
+
       {/* ────────────────────────────────────────────────────────── sign out */}
       <nav className="group" aria-label="Session">
         <button
@@ -154,7 +159,7 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
             title: 'Sign out of Jumbo?',
             body: 'Your records stay on this device. You will start again from the welcome screen.',
             confirmLabel: 'Sign out',
-            onConfirm: () => { dispatch({ type: 'signOut' }); haptic('impactLight') },
+            onConfirm: () => { void leave(); haptic('impactLight') },
           })}
         >
           <span
@@ -212,3 +217,92 @@ function Stat({
 
 /** Kept so the avatar in every other header still resolves from here. */
 export { AvatarButton }
+
+/* --------------------------------------------------------------- account */
+
+/**
+ * Where this person's records actually live.
+ *
+ * This is the one thing the app cannot afford to be vague about. Somebody
+ * who believes their health record is safe in an account, when it is
+ * sitting in one browser, finds out on the day they change phone. So the
+ * card states which of the two it is, and when it is only this device it
+ * says so in those words rather than staying quiet.
+ */
+function AccountCard() {
+  const { state } = useStore()
+  const { status, user, message } = state.cloud
+
+  if (!cloudConfigured) {
+    return (
+      <section className="group" aria-label="Your records">
+        <div className="row-item row-item--static">
+          <span
+            className="row-item__icon"
+            style={{ background: 'color-mix(in srgb, var(--ink-3) 16%, transparent)', color: 'var(--ink-3)' }}
+          >
+            <Icon name="phone" size={16} />
+          </span>
+          <span className="stack stack-1 grow" style={{ minWidth: 0 }}>
+            <span className="row-item__title">Saved on this device</span>
+            <span className="t-caption dim2">
+              Your records are in this browser only. They will not appear on
+              another phone or laptop.
+            </span>
+          </span>
+        </div>
+      </section>
+    )
+  }
+
+  if (!user) {
+    return (
+      <section className="group" aria-label="Your account">
+        <div className="row-item row-item--static" style={{ alignItems: 'flex-start' }}>
+          <span
+            className="row-item__icon"
+            style={{ background: 'var(--brand-dim)', color: 'var(--accent-text)' }}
+          >
+            <Icon name="link" size={16} />
+          </span>
+          <span className="stack stack-3 grow" style={{ minWidth: 0 }}>
+            <span className="stack stack-1">
+              <span className="row-item__title">Keep these on every device</span>
+              <span className="t-caption dim2">
+                Right now your records are in this browser only. Sign in and
+                they follow you to your phone, your laptop, anywhere.
+              </span>
+            </span>
+            <CloudSignIn />
+          </span>
+        </div>
+      </section>
+    )
+  }
+
+  const say: Record<string, string> = {
+    syncing: 'Bringing your records together…',
+    synced: 'Everything here is in your account.',
+    error: message ?? 'Your records could not reach your account just now.',
+    signedOut: 'Signed out.',
+    off: '',
+  }
+  const tint = status === 'error' ? 'var(--critical)' : 'var(--positive)'
+
+  return (
+    <section className="group" aria-label="Your account">
+      <div className="row-item row-item--static">
+        <span
+          className="row-item__icon"
+          style={{ background: `color-mix(in srgb, ${tint} 18%, transparent)`, color: tint }}
+        >
+          <Icon name={status === 'error' ? 'info' : 'check'} size={16} />
+        </span>
+        <span className="stack stack-1 grow" style={{ minWidth: 0 }}>
+          <span className="row-item__title">{user.email ?? 'Signed in'}</span>
+          <span className="t-caption dim2">{say[status] ?? ''}</span>
+        </span>
+      </div>
+    </section>
+  )
+}

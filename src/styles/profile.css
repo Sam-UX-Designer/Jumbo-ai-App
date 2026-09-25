@@ -317,3 +317,8 @@ button.row-item:focus-visible { outline: 2px solid var(--brand); outline-offset:
   font-size: var(--t-caption); font-weight: 660;
   white-space: nowrap;
 }
+
+/* A row that states something rather than going somewhere. Same shape as
+   the rest of the menu, without the affordances of a control. */
+.row-item--static { cursor: default; text-align: left; }
+.row-item--static:hover { background: transparent; }

@@ -11,10 +11,12 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "vercel-build": "npm run build",
-    "test": "node tests/e2e/run.mjs",
-    "test:e2e": "npm run build && node tests/e2e/run.mjs"
+    "test": "node tests/unit/merge.mjs && node tests/e2e/run.mjs",
+    "test:e2e": "npm run build && node tests/e2e/run.mjs",
+    "test:unit": "node tests/unit/merge.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

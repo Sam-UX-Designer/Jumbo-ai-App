@@ -60,7 +60,7 @@ export function Settings({
    */
   arriveOn?: Panel
 }) {
-  const { state, dispatch, sync, refreshProviders } = useStore()
+  const { state, dispatch, sync, refreshProviders, leave } = useStore()
   const toast = useToast()
   const { confirm, node: confirmNode } = useConfirm()
   const [panel, setPanel] = useState<Panel>(arriveOn ?? null)
@@ -206,7 +206,7 @@ export function Settings({
             title: 'Sign out of Jumbo?',
             body: 'Your records stay on this device. You will start again from the welcome screen.',
             confirmLabel: 'Sign out',
-            onConfirm: () => { dispatch({ type: 'signOut' }); haptic('impactLight') },
+            onConfirm: () => { void leave(); haptic('impactLight') },
           })}
         >
           <span className="row-item__icon row-item__icon--plain" style={{ color: 'var(--critical)' }}>

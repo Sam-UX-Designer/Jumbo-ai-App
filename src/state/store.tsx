@@ -1,5 +1,6 @@
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef,
+  type ReactNode,
 } from 'react'
 import type { Viz } from '../components/DataViz'
 import type {
@@ -15,6 +16,10 @@ import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type Youtube
 import type { PlanId } from '../data/plans'
 import { planWorkoutType, type PlanSession, type TrainingPlan } from '../data/training'
 import { hoursToHM, uid } from '../lib/util'
+import {
+  cloudConfigured, currentUser, onAuthChange, pullAndMerge, push, signOutCloud,
+  type CloudUser,
+} from '../lib/cloud'
 
 const STORAGE_KEY = 'jumbo.state.v2'
 
@@ -116,7 +121,15 @@ export interface Persisted {
   sessions: PlanSession[]
 }
 
+export type CloudStatus = 'off' | 'signedOut' | 'syncing' | 'synced' | 'error'
+
 export interface State extends Persisted {
+  /**
+   * The account this device is signed into, when accounts are configured at
+   * all. Runtime only: the session itself belongs to Supabase, which keeps
+   * it, so nothing here is written to local storage.
+   */
+  cloud: { status: CloudStatus; user: CloudUser | null; message: string | null }
   days: DayRecord[]
   measurements: Measurement[]
   baseline: Baseline
@@ -208,6 +221,8 @@ export type Action =
   | { type: 'chatClear' }
   | { type: 'finishOnboarding' }
   | { type: 'signOut' }
+  | { type: 'cloudUser'; user: CloudUser | null }
+  | { type: 'cloudStatus'; status: CloudStatus; message?: string | null }
   | { type: 'resetAll' }
   | { type: 'addMeal'; date: string; meal: MealEntry }
   | { type: 'removeMeal'; date: string; mealId: string }
@@ -338,7 +353,7 @@ function composeDays(p: Persisted, live: SyncedDay[]): DayRecord[] {
 
 type Runtime = Pick<State,
   'server' | 'serverReachable' | 'providers' | 'liveDays' | 'syncErrors' | 'lastSyncAt'
-  | 'syncing' | 'bootstrapped' | 'selectedDate' | 'chat'>
+  | 'syncing' | 'bootstrapped' | 'selectedDate' | 'chat' | 'cloud'>
 
 const emptyRuntime: Runtime = {
   server: null, serverReachable: null, providers: [],
@@ -346,6 +361,7 @@ const emptyRuntime: Runtime = {
   bootstrapped: false,
   selectedDate: TODAY,
   chat: [],
+  cloud: { status: cloudConfigured ? 'signedOut' : 'off', user: null, message: null },
 }
 
 function derive(p: Persisted, rt: Runtime): State {
@@ -382,6 +398,7 @@ const runtimeOf = (s: State): Runtime => ({
   liveDays: s.liveDays, syncErrors: s.syncErrors, lastSyncAt: s.lastSyncAt,
   syncing: s.syncing, bootstrapped: s.bootstrapped,
   selectedDate: s.selectedDate, chat: s.chat,
+  cloud: s.cloud,
 })
 
 function reducer(state: State, action: Action): State {
@@ -420,6 +437,19 @@ function reducer(state: State, action: Action): State {
      * where they are; the person lands back at the start and signs in again.
      */
     case 'signOut': return next({ onboarded: false, phoneVerified: false })
+
+    case 'cloudUser':
+      return next({}, {
+        cloud: {
+          status: action.user ? 'syncing' : (cloudConfigured ? 'signedOut' : 'off'),
+          user: action.user,
+          message: null,
+        },
+      })
+    case 'cloudStatus':
+      return next({}, {
+        cloud: { ...rt.cloud, status: action.status, message: action.message ?? null },
+      })
 
     /* Day selection and the conversation live outside `Persisted`, so they are
        patched straight onto state rather than round-tripped through derive(). */
@@ -668,12 +698,20 @@ interface Ctx {
   dispatch: (a: Action) => void
   refreshProviders: () => Promise<void>
   sync: () => Promise<void>
+  /** End the session on this device, in the account and in the app. */
+  leave: () => Promise<void>
 }
 
 const StoreCtx = createContext<Ctx | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => derive(defaultPersisted, emptyRuntime))
+
+  // The newest state, for the async account work below. Reading `state`
+  // inside a promise gives whatever it was when the effect was created,
+  // which is how a sync quietly writes back an old copy.
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   // Read once. `bootstrapped` gates the writer below, so a double-mount in
   // development can never overwrite stored state with defaults.
@@ -695,8 +733,79 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!state.bootstrapped) return
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedOf(state))) } catch { /* private mode */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedOf(state)))
+      // When this device last wrote. The account's copy carries the same
+      // idea as a server timestamp, and the two are compared to decide
+      // which side's preferences win in a merge.
+      localStorage.setItem('jumbo.savedAt', String(Date.now()))
+    } catch { /* private mode */ }
   }, [state])
+
+  /*
+   * The account.
+   *
+   * Nothing below runs when accounts are not configured: the app stays
+   * exactly as it was, on this device, and the interface says so rather
+   * than offering a sign-in that cannot work.
+   */
+  useEffect(() => {
+    if (!cloudConfigured) return
+    let live = true
+    void currentUser().then((user) => { if (live) dispatch({ type: 'cloudUser', user }) })
+    const stop = onAuthChange((user) => dispatch({ type: 'cloudUser', user }))
+    return () => { live = false; stop() }
+  }, [])
+
+  /*
+   * Signing in pulls the account's records and merges them with this
+   * device's, then writes the result back. Merged, not replaced: a meal
+   * logged on a phone and a workout logged on a laptop both survive. See
+   * lib/merge.ts.
+   */
+  const signedInAs = state.cloud.user?.id ?? null
+  useEffect(() => {
+    if (!cloudConfigured || !signedInAs || !state.bootstrapped) return
+    let live = true
+    ;(async () => {
+      dispatch({ type: 'cloudStatus', status: 'syncing' })
+      const pulled = await pullAndMerge(persistedOf(stateRef.current))
+      if (!live) return
+      if (!pulled.ok) {
+        dispatch({ type: 'cloudStatus', status: 'error', message: pulled.message })
+        return
+      }
+      dispatch({ type: 'hydrate', payload: pulled.data })
+      const wrote = await push(pulled.data)
+      if (!live) return
+      dispatch(wrote.ok
+        ? { type: 'cloudStatus', status: 'synced' }
+        : { type: 'cloudStatus', status: 'error', message: wrote.message })
+    })()
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedInAs, state.bootstrapped])
+
+  /*
+   * Afterwards, changes are pushed on a delay.
+   *
+   * Typing a note fires the reducer on every keystroke, and a write per
+   * keystroke is a write the database does not need and the person's
+   * connection does not want. Two seconds of quiet, then one write.
+   */
+  useEffect(() => {
+    if (!cloudConfigured || !signedInAs || !state.bootstrapped) return
+    if (state.cloud.status === 'syncing') return
+    const t = window.setTimeout(() => {
+      void push(persistedOf(stateRef.current)).then((r) => {
+        dispatch(r.ok
+          ? { type: 'cloudStatus', status: 'synced' }
+          : { type: 'cloudStatus', status: 'error', message: r.message })
+      })
+    }, 2000)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, signedInAs])
 
   const refreshProviders = useCallback(async () => {
     const r = await api.providers()
@@ -750,7 +859,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { setHapticsEnabled(state.settings.haptics) }, [state.settings.haptics])
   useEffect(() => { setSoundEnabled(state.settings.sound) }, [state.settings.sound])
 
-  const value = useMemo(() => ({ state, dispatch, refreshProviders, sync }), [state, refreshProviders, sync])
+  /**
+   * Leaving the app on this device.
+   *
+   * Two things end, in an order that matters: the Supabase session first,
+   * so the sync effects stop the moment there is no account, and then the
+   * app's own session. The records stay exactly where they are, on the
+   * device and in the account, and signing back in brings both together.
+   */
+  const leave = useCallback(async () => {
+    if (cloudConfigured) await signOutCloud()
+    dispatch({ type: 'signOut' })
+  }, [])
+
+  const value = useMemo(
+    () => ({ state, dispatch, refreshProviders, sync, leave }),
+    [state, refreshProviders, sync, leave],
+  )
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>
 }
 
