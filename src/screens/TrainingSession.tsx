@@ -169,6 +169,7 @@ export function SessionRunner({
             note,
             workoutId: `w-${uid()}`,
             time: nowClock(),
+            done: complete,
           })
           dispatch({ type: 'awardMilestone', id: 'first-workout' })
           celebrate('complete')

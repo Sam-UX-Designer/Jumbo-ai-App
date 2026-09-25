@@ -209,6 +209,30 @@ export interface TrainingPlan {
 }
 
 /**
+ * A session that was actually done.
+ *
+ * The plan already counted how many times it had been done, but a count is
+ * not a history: someone who finishes a session and then goes looking for
+ * it has nothing to find. Each one is kept whole, with the plan's name
+ * copied in so the record survives the plan being deleted.
+ */
+export interface PlanSession {
+  id: string
+  planId: string
+  planName: string
+  /** The day it was logged against, matching the workout it created. */
+  date: string
+  minutes: number
+  /** Movements ticked off, and how many the plan holds. */
+  done: number
+  total: number
+  intensity: 1 | 2 | 3
+  effort?: number
+  note?: string
+  at: number
+}
+
+/**
  * How long a plan takes, from its own blocks.
  *
  * Work plus rest plus a little for moving between movements. It is an

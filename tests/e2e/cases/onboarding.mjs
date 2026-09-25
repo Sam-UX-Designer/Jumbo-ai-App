@@ -6,7 +6,7 @@
  * is a stranger's health record wearing their name. These cases check that
  * it is never reached by accident.
  */
-import { openApp, saved, screenText, account } from '../harness.mjs'
+import { openApp, saved, screenText, account, goTo, todayISO } from '../harness.mjs'
 
 /** Walk a fresh install as far as the connect step. */
 async function toConnect(page) {
@@ -144,4 +144,49 @@ export default async function onboarding({ browser, origin, r }) {
     await ctx.close()
   })
 
+  await r.run('UC-05', 'Signing out does not cost you your account', async () => {
+    // Reported from real use: "every time I log out I have to create a new
+    // account". Signing out never deleted anything, but the welcome screen
+    // offered one door, so the only way back was to answer setup again.
+    const { ctx, page } = await openApp(browser, origin, account({
+      profile: { name: 'Priya', phone: '' },
+      addedNotes: { [todayISO()]: 'A good day.' },
+    }))
+
+    await goTo(page, 'profile')
+    await page.waitForTimeout(600)
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('button')].find((x) => /^Sign out$/i.test(x.innerText.trim()))
+      b?.click()
+    })
+    await page.waitForTimeout(600)
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('.sheet button')].find((x) => /^Sign out$/i.test(x.innerText.trim()))
+      b?.click()
+    })
+    await page.waitForTimeout(1200)
+
+    const text = await screenText(page)
+    r.check('they are recognised rather than greeted as a stranger',
+      /welcome back/i.test(text), text.slice(0, 80))
+    r.check('by name', /Priya/.test(text))
+    r.check('and told nothing was deleted', /nothing was deleted|still on this device/i.test(text))
+    r.check('a sign in is offered',
+      await page.getByRole('button', { name: /^Sign in$/ }).count() > 0)
+    r.check('setting up a different account is still possible',
+      await page.getByRole('button', { name: /different account/i }).count() > 0)
+    r.check('and it does not claim the records follow them elsewhere',
+      /do not follow you|on this device/i.test(text))
+
+    // One tap back in, not fourteen.
+    await page.getByRole('button', { name: /^Sign in$/ }).click()
+    await page.waitForTimeout(1400)
+    const back = await saved(page)
+    r.check('one tap puts them back in the app', back?.onboarded === true)
+    r.check('with the note they wrote', back?.addedNotes?.[todayISO()] === 'A good day.')
+    r.check('and their name', back?.profile?.name === 'Priya')
+    r.check('the app itself is on screen, not setup',
+      !/welcome back/i.test(await screenText(page)))
+    await ctx.close()
+  })
 }

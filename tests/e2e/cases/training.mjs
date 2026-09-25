@@ -240,4 +240,78 @@ export default async function training({ browser, origin, r }) {
     r.check('and then it is gone', ((await saved(page))?.plans || []).length === 0)
     await ctx.close()
   })
+
+  await r.run('UC-68', 'A finished session can be found again afterwards', async () => {
+    // Reported from real use: "I complete a plan, I get a pop-up, but I
+    // don't see where that data is". It was being saved the whole time. The
+    // defect was that nothing showed it back.
+    const { ctx, page } = await openApp(browser, origin, account())
+    await openTraining(page)
+    await buildPlan(page, 'Morning strength', ['Bodyweight squat', 'Push-up', 'Plank'])
+
+    await page.locator('.plan-card').getByRole('button', { name: /^Start/ }).click()
+    await page.waitForTimeout(600)
+    const items = await page.locator('.session__item').all()
+    for (const it of items.slice(0, 2)) { await it.click(); await page.waitForTimeout(110) }
+    await page.getByRole('button', { name: /Finish session/ }).click()
+    await page.waitForTimeout(600)
+    await page.getByRole('button', { name: 'Save to today' }).click()
+    await page.waitForTimeout(1300)
+
+    await openTraining(page)
+    const rows = await page.locator('.session-row').count()
+    r.check('the session is listed on the Training screen', rows === 1, `${rows} rows`)
+
+    const row = rows ? await page.locator('.session-row').first().innerText() : ''
+    r.check('it names the plan', /Morning strength/.test(row), row)
+    r.check('it says how much was done', /2 of 3/.test(row), row)
+    r.check('and when', /today/i.test(row), row)
+
+    const s = await saved(page)
+    r.check('it is a record in its own right', (s?.sessions || []).length === 1)
+    r.check('carrying the plan name, so deleting the plan cannot erase it',
+      s?.sessions?.[0]?.planName === 'Morning strength')
+    r.check('it also wrote a workout to the day',
+      Boolean(s?.addedWorkouts?.[todayISO()]))
+
+    // The plan can go; what was done cannot.
+    await page.getByRole('button', { name: /^Delete Morning strength$/ }).click()
+    await page.waitForTimeout(500)
+    await page.getByRole('button', { name: /^Delete plan$/ }).click()
+    await page.waitForTimeout(900)
+    const after = await saved(page)
+    r.check('deleting the plan keeps the sessions already done',
+      (after?.sessions || []).length === 1, `${(after?.sessions || []).length} left`)
+    r.check('and they still read correctly',
+      await page.locator('.session-row').count() === 1)
+    await ctx.close()
+  })
+
+  await r.run('UC-69', 'Training is reachable without hunting for it', async () => {
+    // Reported from real use: "Training is not showing on mobile". It was
+    // showing, at 1126px down a screen 844px tall.
+    const { ctx, page } = await openApp(browser, origin, account(),
+      { viewport: { width: 390, height: 844 } })
+
+    // From the centre button, on any screen.
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(700)
+    const menu = await page.evaluate(() =>
+      [...document.querySelectorAll('.quickadd__item')].map((b) => b.innerText.trim()))
+    r.check('the + offers Training', menu.includes('Training'), menu.join(', '))
+    await page.getByRole('menuitem', { name: 'Training' }).click()
+    await page.waitForTimeout(800)
+    r.check('and it opens the screen', await page.locator('.suggest').count() > 0)
+
+    // And on Capture, near the top rather than below everything.
+    await goTo(page, 'capture')
+    await page.waitForTimeout(600)
+    const y = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('button')].find((b) => /Workout suggestions/i.test(b.innerText))
+      return el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null
+    })
+    r.check('the Capture entry is above one full scroll', y !== null && y < 844,
+      `sits at ${y}px on an 844px screen`)
+    await ctx.close()
+  })
 }

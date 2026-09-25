@@ -285,6 +285,12 @@ export async function goTo(page, screen) {
   // waits thirty seconds for a target it will never reach.
   await dismissSheets(page)
   const map = { today: 'Today', future: 'Lifestyle', explore: 'Explore' }
+  // An unknown name used to fall through to `hasText: undefined`, which
+  // matches the first tab and lands on Today. A test then passes or fails
+  // for a reason that has nothing to do with the screen it named.
+  if (!map[screen] && screen !== 'capture' && screen !== 'profile') {
+    throw new Error(`goTo: no tab called "${screen}". Use ${Object.keys(map).concat('capture', 'profile').join(', ')}.`)
+  }
   if (screen === 'capture') {
     // The centre button raises the quick-add menu rather than navigating;
     // the records themselves are the last item in it.

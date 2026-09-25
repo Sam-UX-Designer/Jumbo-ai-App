@@ -237,7 +237,21 @@ export function TabBar({
                 where everything already recorded is listed — could only be
                 reached by opening a form and closing it again, which is a
                 strange price to pay for looking at what you logged. */}
+            {/* Training is not a thing you record, it is a thing you do, so
+                it sits apart from the five and above the way through to the
+                day. It is here because on a phone it was otherwise a long
+                scroll down Capture and people did not find it. */}
             <li role="none" style={{ '--i': QUICK_ADD.length } as React.CSSProperties}>
+              <button
+                className="quickadd__item" role="menuitem"
+                style={{ '--tint': 'var(--brand)' } as React.CSSProperties}
+                onClick={() => { haptic('selection'); setAdding(false); onNavigate('training') }}
+              >
+                <span className="quickadd__icon"><Icon name="training" size={20} /></span>
+                <span className="quickadd__label">Training</span>
+              </button>
+            </li>
+            <li role="none" style={{ '--i': QUICK_ADD.length + 1 } as React.CSSProperties}>
               <button
                 className="quickadd__item quickadd__item--quiet" role="menuitem"
                 onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}

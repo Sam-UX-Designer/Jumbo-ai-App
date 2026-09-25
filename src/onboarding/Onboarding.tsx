@@ -89,7 +89,13 @@ export function Onboarding() {
           )}
         </div>
 
-        {step === 'welcome' && <Welcome onNext={() => go('you')} onSkip={exploreWithSamples} />}
+        {step === 'welcome' && (
+          <Welcome
+            onNext={() => go('you')}
+            onSkip={exploreWithSamples}
+            onSignIn={() => { haptic('success'); dispatch({ type: 'finishOnboarding' }) }}
+          />
+        )}
         {step === 'you' && <YouStep onNext={() => go('verify')} />}
         {step === 'verify' && <VerifyStep onNext={() => go('goals')} />}
         {step === 'goals' && <GoalsStep onNext={() => go('connect')} />}
@@ -126,7 +132,73 @@ export function Onboarding() {
 }
 
 /* --------------------------------------------------------------- welcome */
-function Welcome({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+function Welcome({
+  onNext, onSkip, onSignIn,
+}: { onNext: () => void; onSkip: () => void; onSignIn: () => void }) {
+  const { state } = useStore()
+
+  /*
+   * Is there already an account on this device?
+   *
+   * Signing out never deleted anything: it only ended the session, leaving
+   * every meal, workout and plan exactly where it was. But the welcome
+   * screen offered one door, "Get started", so the only way back in was to
+   * answer fourteen questions again and hope. People reasonably read that
+   * as having lost the account.
+   *
+   * So the screen looks for the marks of a real account: a name they typed,
+   * or anything they recorded. Sample data does not count, because someone
+   * who only ever looked around has nothing to come back to.
+   */
+  const name = state.profile.name.trim()
+  const records = Object.keys(state.addedMeals).length
+    + Object.keys(state.addedWorkouts).length
+    + Object.keys(state.addedSleep).length
+    + Object.keys(state.addedNotes).length
+    + state.addedMeasurements.length
+    + state.plans.length
+  const returning = Boolean(name) || records > 0
+
+  if (returning) {
+    return (
+      <>
+        <div className="ob__body">
+          <div className="ob-hero">
+            <BrandWordmark height={30} />
+            <div className="stack stack-4">
+              <h1 className="t-hero">
+                {name ? <>Welcome back,<br />{name.split(' ')[0]}.</> : <>Welcome back.</>}
+              </h1>
+              <p className="t-body dim" style={{ maxWidth: '32ch' }}>
+                Your Jumbo is still on this device, exactly as you left it.
+                Nothing was deleted when you signed out.
+              </p>
+            </div>
+            {records > 0 && (
+              <div className="row row--wrap" style={{ gap: 'var(--s-2)' }}>
+                <span className="tag">
+                  {records} thing{records === 1 ? '' : 's'} you recorded
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="ob__foot">
+          <button className="btn btn--primary btn--lg btn--block" onClick={onSignIn}>
+            Sign in <Icon name="chevron" size={16} />
+          </button>
+          <button className="btn btn--ghost btn--block" onClick={onNext}>
+            Set up a different account
+          </button>
+          <p className="t-caption dim2" style={{ textAlign: 'center' }}>
+            Jumbo keeps your records on this device. They do not follow you to
+            another phone yet.
+          </p>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="ob__body">

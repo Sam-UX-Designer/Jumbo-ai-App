@@ -309,6 +309,13 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
         <CaptureAction kind={kind} onStart={() => startCapture(kind)} />
       </section>
 
+      {/* ────────────────────────────── training
+          Logging a workout records what you did. This is the other half:
+          deciding what to do, and having something to follow while doing
+          it. It sits directly under the five kinds because down at the
+          bottom, past every record of the day, nobody found it. */}
+      <TrainingWay />
+
       {progress.recovery < 0.4 && !today.workout && (
         <div className="card card--brand row row--top" style={{ gap: 'var(--s-3)' }}>
           <AiOrb size="sm" />
@@ -428,13 +435,6 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
           </ul>
         )}
       </section>
-
-      {/* ────────────────────────────── training
-          Logging a workout records what you did. This is the other half:
-          deciding what to do, and having something to follow while you do
-          it. It sits here rather than on its own tab because it is the
-          same part of the day. */}
-      <TrainingWay />
 
       {/* ────────────────────────────── the other ways in */}
       <section className="stack stack-3">

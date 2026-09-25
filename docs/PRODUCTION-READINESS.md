@@ -45,7 +45,7 @@ Verified end to end, in a browser, in both themes:
 These are not polish. Each one is a promise a buyer will assume you have
 already made.
 
-### 2.1 There are no accounts — data lives in one browser
+### 2.1 There are no accounts, and data lives in one browser
 
 Everything a person records is in `localStorage` on the device they typed
 it into. There is no server-side record of any user.
@@ -54,6 +54,11 @@ This means: clearing site data erases everything, permanently. A new phone
 starts empty. The same person on a laptop and a phone is two unrelated
 users. There is no backup and no recovery. For a health product people are
 meant to build months of history in, this is the single biggest gap.
+
+Signing out is safe: it ends the session and the welcome screen now
+recognises the device and offers to sign back in, with everything intact.
+What it cannot do is reach another device, because there is nothing to
+reach. Two browsers are two unrelated people, permanently.
 
 **Needed:** accounts, a database, and sync. Everything else here is smaller
 than this.

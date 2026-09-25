@@ -15,7 +15,8 @@ import { suggestSession, planFor } from '../lib/training'
 import {
   EQUIPMENT, EXERCISES, EXPERIENCE, MUSCLES, blockAmount, exerciseById,
   planMinutes, planMuscles,
-  type Equipment, type Level, type Muscle, type PlanBlock, type TrainingPlan,
+  type Equipment, type Level, type Muscle, type PlanBlock, type PlanSession,
+  type TrainingPlan,
 } from '../data/training'
 import { SessionRunner } from './TrainingSession'
 
@@ -139,6 +140,8 @@ export function Training({ onBack }: { onBack: () => void }) {
         )}
       </section>
 
+      <History sessions={state.sessions} />
+
       <PlanEditor
         plan={editing === 'new' ? null : editing}
         open={editing !== null}
@@ -162,6 +165,57 @@ export function Training({ onBack }: { onBack: () => void }) {
 
       {confirmNode}
     </div>
+  )
+}
+
+/* -------------------------------------------------------------- history */
+
+/**
+ * Sessions actually done.
+ *
+ * A plan knowing it had been done four times was not the same as being able
+ * to see the four. Somebody who finished a session, got the confirmation and
+ * then went looking for it had nothing to find, which reads as the app
+ * having lost it. Each row is one session, and the day's workout it wrote
+ * sits on Capture alongside everything else logged that day.
+ */
+function History({ sessions }: { sessions: PlanSession[] }) {
+  if (!sessions.length) return null
+
+  const when = (s: PlanSession) => {
+    const d = new Date(`${s.date}T00:00:00`)
+    const today = new Date()
+    const days = Math.round((+new Date(today.toDateString()) - +new Date(d.toDateString())) / 86_400_000)
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Yesterday'
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <section className="stack stack-4">
+      <SectionHead title="Sessions you have done" />
+      <ul className="sessions">
+        {sessions.slice(0, 12).map((s) => (
+          <li key={s.id} className="session-row">
+            <span className="session-row__when t-caption dim2">{when(s)}</span>
+            <span className="stack stack-1 grow" style={{ minWidth: 0 }}>
+              <span className="t-callout strong">{s.planName}</span>
+              <span className="t-caption dim2">
+                {s.done === s.total
+                  ? `All ${s.total} movements`
+                  : `${s.done} of ${s.total} movements`}
+                {s.effort ? ` · felt ${s.effort}/10` : ''}
+              </span>
+            </span>
+            <span className="session-row__mins num">{s.minutes}<em>min</em></span>
+          </li>
+        ))}
+      </ul>
+      <p className="t-caption dim2">
+        Each of these also saved a workout to its day, so it counts towards
+        your movement on Today.
+      </p>
+    </section>
   )
 }
 

@@ -13,7 +13,7 @@ import type { Levers } from '../lib/trajectory'
 import { setHapticsEnabled, setSoundEnabled } from '../lib/feedback'
 import { api, type ProviderInfo, type ServerConfig, type SyncedDay, type YoutubeVideo } from '../lib/api'
 import type { PlanId } from '../data/plans'
-import { planWorkoutType, type TrainingPlan } from '../data/training'
+import { planWorkoutType, type PlanSession, type TrainingPlan } from '../data/training'
 import { hoursToHM, uid } from '../lib/util'
 
 const STORAGE_KEY = 'jumbo.state.v2'
@@ -112,6 +112,8 @@ export interface Persisted {
    * plans, the same way an account with no meals has no meals.
    */
   plans: TrainingPlan[]
+  /** Every session worked through, newest first. */
+  sessions: PlanSession[]
 }
 
 export interface State extends Persisted {
@@ -184,6 +186,7 @@ const defaultPersisted: Persisted = {
   addedMeals: {},
   addedWorkouts: {},
   plans: [],
+  sessions: [],
   addedSleep: {},
   addedNotes: {},
   addedMeasurements: [],
@@ -210,7 +213,7 @@ export type Action =
   | { type: 'removeMeal'; date: string; mealId: string }
   | { type: 'savePlan'; plan: TrainingPlan }
   | { type: 'removePlan'; planId: string }
-  | { type: 'finishSession'; date: string; plan: TrainingPlan; minutes: number; intensity: 1 | 2 | 3; effort?: number; note?: string; workoutId: string; time: string }
+  | { type: 'finishSession'; date: string; plan: TrainingPlan; minutes: number; intensity: 1 | 2 | 3; effort?: number; note?: string; workoutId: string; time: string; done: number }
   | { type: 'logWorkout'; date: string; workout: WorkoutEntry }
   | { type: 'removeWorkout'; date: string }
   | { type: 'logSleep'; date: string; sleep: SleepEntry }
@@ -503,6 +506,8 @@ function reducer(state: State, action: Action): State {
     }
 
     case 'removePlan':
+      // The sessions stay. They happened, and the name was copied into each
+      // one precisely so deleting the plan does not erase the history.
       return next({ plans: p.plans.filter((x) => x.id !== action.planId) })
 
     /**
@@ -518,6 +523,21 @@ function reducer(state: State, action: Action): State {
         plans: p.plans.map((x) => (x.id === action.plan.id
           ? { ...x, lastDoneAt: Date.now(), timesDone: x.timesDone + 1 }
           : x)),
+        // The history, newest first. Capped: a person who trains daily for
+        // three years should not carry a thousand rows in localStorage.
+        sessions: [{
+          id: action.workoutId,
+          planId: action.plan.id,
+          planName: action.plan.name,
+          date: action.date,
+          minutes: action.minutes,
+          done: action.done,
+          total: action.plan.blocks.length,
+          intensity: action.intensity,
+          effort: action.effort,
+          note: action.note,
+          at: Date.now(),
+        }, ...p.sessions].slice(0, 200),
         addedWorkouts: {
           ...p.addedWorkouts,
           [action.date]: {

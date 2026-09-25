@@ -30,6 +30,7 @@ app behaves correctly as built; it does not mean the product is finished.
 | UC-02 | Sample data is never given to someone who did not ask | A stranger's health record wearing your name is worse than an empty screen |
 | UC-03 | Sample data can be chosen deliberately, and left again | It is a real feature when it is a choice |
 | UC-04 | Leaving sample data asks first and can be cancelled | The person may be about to find an empty app; say so before it happens |
+| UC-05 | Signing out does not cost you your account | Sign out kept the data but offered no way back to it, so it read as losing the account |
 
 ## Recording and retrieving — `tests/e2e/cases/logging.mjs`
 
@@ -98,6 +99,8 @@ saved to Capture and counted for nothing on Today.
 | UC-65 | A session worked through is logged and counts towards the day | Including a duration they can correct if the phone locked mid-session |
 | UC-66 | Leaving a session part-way logs nothing | An unfinished session is not a workout, and one stray tap must not lose it |
 | UC-67 | A plan can be edited and deleted, and deleting asks first | Editing must not quietly leave a second copy |
+| UC-68 | A finished session can be found again afterwards | It was always saved; nothing showed it back, which reads as losing it |
+| UC-69 | Training is reachable without hunting for it | It sat 1126px down an 844px screen, which is indistinguishable from absent |
 
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`
 
