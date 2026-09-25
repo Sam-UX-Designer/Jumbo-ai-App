@@ -24,7 +24,17 @@ import { mergeStates } from './merge'
  */
 
 const URL_ = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+
+/*
+ * The publishable key, with the older name still accepted.
+ *
+ * Supabase now issues `sb_publishable_...` keys, which can be rotated on
+ * their own without invalidating every session. The JWT-shaped `anon` key
+ * still works and older deployments may have been set up with it, so both
+ * names are read and the newer one wins.
+ */
+const KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined
 
 /** Whether accounts are available at all in this deployment. */
 export const cloudConfigured = Boolean(URL_ && KEY)

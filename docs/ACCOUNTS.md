@@ -1,87 +1,72 @@
-# Turning on accounts
+# Accounts
 
-Until the two variables below exist, Jumbo works exactly as it always has:
-records live in one browser, and the app says so on the Profile screen
-rather than offering a sign-in that cannot reach anything. Nothing here is
-half-on.
+Live on Supabase project **Jumbo** (`onaijekfptajutpbuzqp`, ap-south-1).
 
-Four steps, about ten minutes.
+## Already done
 
-## 1. Make the Supabase project
+| | |
+|---|---|
+| Table | `public.jumbo_state` — one row per person, `state jsonb`, `updated_at` |
+| Row Level Security | On, with four policies scoped to `authenticated` |
+| Isolation | Verified: signed-out sees 0 rows, each user sees only their own |
+| Trigger | `updated_at` set by the database, not trusted from the client |
+| Security advisors | Zero findings |
+| Vercel | `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` set on production and preview |
 
-[supabase.com](https://supabase.com) → **New project**. Free tier is enough.
-Pick a region near your users; everything else can stay as it comes.
+## The one thing left, and it is not optional
 
-## 2. Create the table
-
-Dashboard → **SQL Editor** → **New query**. Paste all of
-[`supabase/schema.sql`](../supabase/schema.sql) and press Run. It is safe to
-run twice.
-
-**Do not skip the policies in that file.** Supabase's anon key is meant to
-be public and ships inside the app, exactly like a Google Maps key. What
-keeps one person out of another's health record is Row Level Security, and
-nothing else. With RLS off, that public key reads every row in the table.
-The file turns it on and writes the four policies; if you ever rebuild the
-table by hand, do the same.
-
-## 3. Turn on email links
-
-Dashboard → **Authentication** → **Sign In / Providers** → Email. Leave
-**Enable Email provider** on, and **turn off** "Confirm email" if you want
-the first link to sign people straight in rather than only confirming them.
-
-Then **Authentication → URL Configuration**:
+**Supabase Dashboard → Authentication → URL Configuration**
 
 | Field | Value |
 |---|---|
 | Site URL | `https://jumbo-ai-app.vercel.app` |
 | Redirect URLs | `https://jumbo-ai-app.vercel.app/**` |
 
-Without the redirect URL the link in the email lands on an error page.
+A new project defaults its Site URL to `http://localhost:3000`. Supabase
+checks the address an email link returns to against that allow-list, and
+sends people to the Site URL when it does not match. Leave it as it is and
+every sign-in link lands on a dead localhost page.
 
-Supabase sends these emails itself on the free tier, rate limited to a few
-an hour. That is fine for you and for early users; before any real launch,
-add your own SMTP under **Project Settings → Auth → SMTP** or the limit
-will bite.
+While you are on that screen, **Authentication → Sign In / Providers →
+Email**: leave the email provider on, and turn **Confirm email** off if you
+want the first link to sign somebody in rather than only confirm them.
 
-## 4. Give Vercel the two keys
+## Why the key is in the browser
 
-Dashboard → **Project Settings → API**. Copy the **Project URL** and the
-**anon / public** key.
-
-In Vercel → your project → **Settings → Environment Variables**, add both to
-Production and Preview:
+`VITE_` variables are compiled into the JavaScript every visitor downloads,
+so the publishable key is public. That is what it is for, the same way a
+Maps key is. What keeps one person out of another's health record is Row
+Level Security, and this was checked rather than assumed:
 
 ```
-VITE_SUPABASE_URL       = https://xxxxxxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY  = eyJhbGciOi...
+anon, not signed in  ->  0 row(s): nothing
+alice                ->  1 row(s): alice
+bob                  ->  1 row(s): bob
 ```
 
-Redeploy. That is it.
+**The `service_role` key is a different thing entirely.** It bypasses every
+policy above. Nothing in this app uses it, and it must never go into a
+`VITE_` variable or this repository.
 
-**Never add the `service_role` key.** It bypasses every policy above. It is
-not needed by anything in this app, and a `VITE_` variable is compiled into
-the JavaScript every visitor downloads.
+## How sync behaves
 
-## What happens then
-
-- Welcome offers **I already have an account**, and Profile offers to sign in.
-- One email field, no password. The link creates the account if there is not
-  one, and signs in if there is, so nobody has to know which they are doing.
-- On signing in, the device's records and the account's are **merged**, not
-  swapped. A meal logged on a phone and a workout logged on a laptop both
-  survive. `src/lib/merge.ts` decides field by field; `tests/unit/merge.mjs`
-  holds it to that.
+- One email field, no password. The same link creates the account if there
+  is not one and signs in if there is.
+- Signing in **merges** the device's records with the account's rather than
+  replacing either, so a meal logged on a phone and a workout logged on a
+  laptop both survive. `src/lib/merge.ts` decides field by field;
+  `tests/unit/merge.mjs` holds it to that across 18 cases.
+- Records keyed by id or date are unioned. Where both devices wrote to the
+  same day, the newer save takes that day. Preferences take the newer device.
 - Changes push two seconds after you stop making them.
 - Signing out ends both sessions and deletes nothing.
 
-## What this still is not
+## Known limits
 
-Sync is per record, not per keystroke, and the newer save wins where two
-devices wrote to the same day. Two people editing the same account at the
-same second is not something Jumbo handles gracefully, and it is not
-something a personal health app usually meets.
+Supabase sends the sign-in emails itself on the free tier, rate limited to a
+few an hour. Fine for you and early users; add your own SMTP under **Project
+Settings → Auth → SMTP** before a real launch. Free projects also pause
+after about a week with no traffic.
 
-There is still no billing, and the AI routes are still unauthenticated. See
-[PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) sections 2.3 and 2.4.
+Still outstanding elsewhere: billing, and authentication on the AI routes.
+See [PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md) 2.3 and 2.4.
