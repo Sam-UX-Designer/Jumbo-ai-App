@@ -57,6 +57,8 @@ function fakeSupabase() {
   const rows = new Map()
   /** Flipped by a case to make sign-up require a confirmation click. */
   let requireConfirm = false
+  /** Flipped off to prove the app still works with no function deployed. */
+  let functionUp = true
 
   const userObj = (u, email) => ({
     id: u.id, aud: 'authenticated', role: 'authenticated', email,
@@ -74,6 +76,8 @@ function fakeSupabase() {
     users, rows,
     setRequireConfirm(v) { requireConfirm = v },
     get requireConfirm() { return requireConfirm },
+    setFunctionUp(v) { functionUp = v },
+    get functionUp() { return functionUp },
     userObj, session,
   }
 }
@@ -110,6 +114,18 @@ async function start(sb) {
         'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
       })
       return res.end()
+    }
+
+    /* ── the account-create function ──────────────────────────────────── */
+    if (p === '/functions/v1/account-create') {
+      // Not deployed. The app has to cope with this on its own.
+      if (!sb.functionUp) return json(res, 404, { error: 'not found' })
+      const { email, password } = await read(req)
+      if (!password || password.length < 8) return json(res, 400, { error: 'password' })
+      // The admin API gives a straight answer, unlike the public sign-up.
+      if (sb.users.has(email)) return json(res, 409, { error: 'exists' })
+      sb.users.set(email, { id: randomUUID(), password, confirmed: true })
+      return json(res, 200, { ok: true })
     }
 
     /* ── auth ─────────────────────────────────────────────────────────── */
@@ -429,7 +445,11 @@ async function main() {
     })
 
     /* ── UC-76 ───────────────────────────────────────────────────────── */
-    await r.run('UC-76', 'With confirmation switched on, Jumbo says so instead of lying', async () => {
+    await r.run('UC-76', 'With no function deployed, Jumbo falls back and stays honest', async () => {
+      // Deleting supabase/functions/account-create is a supported state: the
+      // app drops back to Supabase's own sign-up, which obeys the project's
+      // confirmation setting and cannot say whether an address is taken.
+      sb.setFunctionUp(false)
       sb.setRequireConfirm(true)
       const { ctx, page } = await open(browser)
       await page.click('button:has-text("Create an account")')
@@ -463,6 +483,7 @@ async function main() {
       await again.ctx.close()
 
       sb.setRequireConfirm(false)
+      sb.setFunctionUp(true)
     })
 
     /* ── UC-77 ───────────────────────────────────────────────────────── */
@@ -508,6 +529,45 @@ async function main() {
         await second.page.locator('.tab-bar, nav').count() > 0, 'a known account was sent back to setup')
       r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
       await second.ctx.close()
+    })
+    /* ── UC-79 ───────────────────────────────────────────────────────── */
+    await r.run('UC-79', 'An address that already has an account is told so, plainly', async () => {
+      // The whole reason supabase/functions/account-create exists. Supabase's
+      // own sign-up will not answer this question once confirmation is on.
+      const { ctx, page, errors } = await open(browser)
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      await fillAuth(page, 'alice@example.com', 'a-different-password')
+      await submitAuth(page)
+
+      const t = await text(page)
+      r.check('it says the address is taken', /already an account with that email/i.test(t), t.slice(0, 200))
+      r.check('it points at signing in', /sign in instead/i.test(t), t.slice(0, 200))
+      r.check('it does not send them to an inbox', !/open the link sent to/i.test(t), t.slice(0, 200))
+      r.check('and Alice\u2019s password was not changed by the attempt',
+        sb.users.get('alice@example.com').password === 'correct-horse')
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
+    })
+
+    /* ── UC-80 ───────────────────────────────────────────────────────── */
+    await r.run('UC-80', 'A new account goes straight to setup, with no inbox trip', async () => {
+      const { ctx, page, errors } = await open(browser)
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      await fillAuth(page, 'erin@example.com', 'erins-password')
+      await submitAuth(page)
+      await page.waitForTimeout(900)
+
+      r.check('the account exists', sb.users.has('erin@example.com'))
+      r.check('and needed no confirmation', sb.users.get('erin@example.com').confirmed === true)
+      r.check('they are through the door', await page.locator('#cloud-email').count() === 0,
+        'still on the sign-in screen')
+      const t = await text(page)
+      r.check('no inbox anywhere in it', !/open the link sent to|confirm your email/i.test(t), t.slice(0, 200))
+      r.check('and setup is what they land on', /joined up|get started/i.test(t), t.slice(0, 160))
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
     })
   } finally {
     await browser.close()

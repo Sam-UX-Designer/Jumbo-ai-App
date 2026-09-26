@@ -141,6 +141,28 @@ export async function signUp(
   const c = db()
   if (!c) return { ok: false, message: 'Accounts are not set up on this copy of Jumbo yet.' }
 
+  const made = await createAccount(email, password)
+  if (made === 'exists') {
+    return { ok: false, message: 'There is already an account with that email. Sign in instead.' }
+  }
+
+  if (made === 'made') {
+    // Created and confirmed server-side, so there is nothing to wait for:
+    // sign in and the app opens on setup.
+    const back = await c.auth.signInWithPassword({ email: email.trim(), password })
+    if (back.error) {
+      console.error('[jumbo] sign in after sign up', back.error)
+      return { ok: false, message: plain(back.error, 'Your account was made, but signing in did not work. Try signing in.') }
+    }
+    markNewAccount(email)
+    return { ok: true, data: { signedIn: true } }
+  }
+
+  /*
+   * No account-create function to talk to. Fall back to Supabase's own
+   * sign-up, which still works — it just cannot say whether the address is
+   * taken, and obeys the project's email confirmation setting.
+   */
   const { data, error } = await c.auth.signUp({
     email: email.trim(),
     password,
@@ -150,28 +172,54 @@ export async function signUp(
     console.error('[jumbo] sign up', error)
     return { ok: false, message: plain(error, 'That account could not be created. Please try again.') }
   }
-
-  /*
-   * Signing up with an address that already has an account.
-   *
-   * With email confirmation off, Supabase says so plainly and the error
-   * above catches it. With confirmation on it deliberately does not: telling
-   * a stranger "that address is registered" would turn the sign-up form into
-   * a way to find out who has an account. So it returns success, with a
-   * hollow user — no identities on it — and sends nothing.
-   *
-   * Passing that through as success is the worst of both worlds. The person
-   * is told their account was made and to go and open a link that is not
-   * coming, when what they actually need is to sign in. The empty
-   * identities array is the documented tell, so it is read here and the
-   * person is sent to the right door.
-   */
   if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
     return { ok: false, message: 'There is already an account with that email. Sign in instead.' }
   }
-
   markNewAccount(email)
   return { ok: true, data: { signedIn: Boolean(data.session) } }
+}
+
+/*
+ * Making the account on the server, where a straight answer is possible.
+ *
+ * Supabase's own sign-up endpoint will not say whether an address is
+ * already registered once email confirmation is on: it answers success with
+ * a hollow user and sends nothing, so that a sign-up form cannot be used to
+ * find out who has an account. The app cannot tell that apart from a real
+ * new account, which is how somebody who already had one ended up being
+ * told to go and wait for a link that was never coming.
+ *
+ * supabase/functions/account-create runs with the service role and asks the
+ * admin API instead, which does give a straight answer, and creates the
+ * account already confirmed so sign-up leads into the app rather than out to
+ * an inbox. 'unavailable' covers it not being deployed, which is a supported
+ * state — the caller then uses Supabase's own sign-up.
+ */
+async function createAccount(
+  email: string,
+  password: string,
+): Promise<'made' | 'exists' | 'unavailable'> {
+  if (!URL_ || !KEY) return 'unavailable'
+
+  // fetch has no deadline of its own, and a sign-up button that never comes
+  // back is worse than one that fails.
+  const abort = new AbortController()
+  const bell = setTimeout(() => abort.abort(), 15_000)
+  try {
+    const res = await fetch(`${URL_}/functions/v1/account-create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: KEY, Authorization: `Bearer ${KEY}` },
+      body: JSON.stringify({ email: email.trim(), password }),
+      signal: abort.signal,
+    })
+    if (res.status === 409) return 'exists'
+    if (res.ok) return 'made'
+    return 'unavailable'
+  } catch {
+    return 'unavailable'
+  } finally {
+    clearTimeout(bell)
+  }
 }
 
 /** Sign in to an account that already exists. */

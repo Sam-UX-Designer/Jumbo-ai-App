@@ -55,23 +55,39 @@ account is made in one page load and the session arrives in another.
 | Vercel | `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` on production and preview |
 | Site URL | `https://jumbo-ai-app.vercel.app`, with `/**` on the redirect allow-list |
 
-## The setting that decides how sign-up feels
+## Sign-up does not go via an inbox
 
-**Authentication → Sign In / Providers → Email → Confirm email**
+`supabase/functions/account-create` is why. Supabase's own sign-up endpoint
+cannot give a straight answer: once **Confirm email** is on it will not say
+whether an address is already registered, because a sign-up form that
+answers that question is a way to find out who has an account. It returns
+success with a hollow user and sends nothing. The app could not tell that
+apart from a real new account, which is how somebody who already had one
+was told to go and wait for a link that was never coming.
 
-| | Confirm email **off** | Confirm email **on** |
-|---|---|---|
-| Sign-up | Straight into the app | "Check your inbox", then a click, then sign in |
-| Cost | Anyone can sign up with an address that is not theirs | An address is proven before it holds a record |
+The function runs with the service role and asks the admin API instead,
+which does answer:
 
-The app handles both honestly and does not assume either: Supabase returns a
-session when confirmation is off and an account with no session when it is
-on, and the screen says whichever actually happened (UC-76). Either way the
-link lands in setup, not back on a sign-in form.
+| | |
+|---|---|
+| Address is free | Account created, already confirmed → signed in → setup |
+| Address is taken | 409 → "There is already an account with that email. Sign in instead." |
+| Function not deployed | The app falls back to `supabase.auth.signUp` on its own (UC-76) |
 
-**A new project ships with this ON**, which is why the first real sign-up
-went to "check your inbox" rather than into the app. Turn it off for the
-frictionless flow; leave it on for the safer one. Your call.
+**The trade-off, stated plainly:** an address is no longer proven before it
+holds a record. Somebody can sign up with an address that is not theirs.
+That is the cost of not sending people to an inbox, and it is reversible —
+delete the function and the fallback takes over, obeying whatever the
+dashboard's **Confirm email** setting says.
+
+`verify_jwt` is off on it, because somebody creating their first account has
+no token yet. The gateway still requires the project's publishable key, so
+the exposure is the same as Supabase's own public sign-up route. The
+service role key never leaves the function: it is read from the platform
+environment and is never returned, logged, or sent to the browser.
+
+Redeploy it with the Supabase CLI, or `deploy_edge_function` — and keep
+`verify_jwt: false`, or first sign-ups will be rejected with a 401.
 
 ## Why the key is in the browser
 
