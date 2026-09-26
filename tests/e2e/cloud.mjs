@@ -255,6 +255,18 @@ async function open(browser, opts = {}) {
 
 const text = (page) => page.evaluate(() => document.body.innerText)
 
+/** Drop the session and reload, landing back on the door. */
+async function signOutAndReload(page) {
+  await page.evaluate(() => {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (k && /^sb-.*-auth-token$/.test(k)) localStorage.removeItem(k)
+    }
+  })
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForTimeout(800)
+}
+
 async function fillAuth(page, email, password) {
   await page.fill('#cloud-email', email)
   if (password !== undefined) await page.fill('#cloud-password', password)
@@ -569,6 +581,155 @@ async function main() {
       r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
       await ctx.close()
     })
+    /* ── UC-81 ───────────────────────────────────────────────────────── */
+    await r.run('UC-81', 'Signing in never shows setup, however many times you do it', async () => {
+      // Reported from real use: "again now I sign in, it's showing
+      // onboarding flow". Sign-up used to leave a flag in localStorage that
+      // the sign-in event could read before it was written — so it sat
+      // there and sent the *next* sign in to setup instead.
+      const { ctx, page, errors } = await open(browser)
+
+      // A real sign-up, then setup finished, the way a person would.
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      await fillAuth(page, 'frank@example.com', 'franks-password')
+      await submitAuth(page)
+      await page.waitForTimeout(900)
+      r.check('signing up lands on setup', /joined up|get started/i.test(await text(page)))
+
+      const uid = sb.users.get('frank@example.com').id
+      sb.rows.set(uid, {
+        state: { onboarded: true, profile: { name: 'Frank', phone: '' }, plans: [], sessions: [] },
+        updated_at: new Date().toISOString(),
+      })
+
+      // Three sign-ins in a row on this same browser. Every one is the app.
+      for (const attempt of [1, 2, 3]) {
+        await signOutAndReload(page)
+        r.check(`attempt ${attempt}: the door is shown after signing out`,
+          await page.locator('#cloud-email').count() === 1)
+
+        await fillAuth(page, 'frank@example.com', 'franks-password')
+        await submitAuth(page)
+        await page.waitForTimeout(1200)
+
+        const t = await text(page)
+        r.check(`attempt ${attempt}: signing in goes to the app`,
+          await page.locator('.tab-bar, nav').count() > 0, t.slice(0, 140))
+        r.check(`attempt ${attempt}: and not to setup`,
+          !/get started|look around with sample data/i.test(t), t.slice(0, 140))
+      }
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
+    })
+
+    /* ── UC-82 ───────────────────────────────────────────────────────── */
+    await r.run('UC-82', 'The sign-in door asks for two things and nothing else', async () => {
+      const { ctx, page } = await open(browser)
+      const t = await text(page)
+      r.check('an email field', await page.locator('#cloud-email').count() === 1)
+      r.check('a password field', await page.locator('#cloud-password').count() === 1)
+      r.check('a way back in if the password is gone', /forgot password/i.test(t), t.slice(0, 200))
+      r.check('a way to make an account', /create an account/i.test(t), t.slice(0, 200))
+      r.check('no setup questions on the way in',
+        !/what would you like to improve|connect|permissions|your name/i.test(t), t.slice(0, 200))
+      r.check('nothing about an inbox', !/link|inbox|confirm/i.test(t), t.slice(0, 200))
+
+      // Forgot password is a real route, not a label.
+      await page.click('button:has-text("Forgot password?")')
+      await page.waitForTimeout(300)
+      r.check('forgot password asks only for the address',
+        await page.locator('#cloud-password').count() === 0)
+      await page.fill('#cloud-email', 'frank@example.com')
+      await page.click('form button[type="submit"]')
+      await page.waitForTimeout(700)
+      r.check('and says where to look', /check your email/i.test(await text(page)))
+      await ctx.close()
+    })
+
+    /* ── UC-83 ───────────────────────────────────────────────────────── */
+    await r.run('UC-83', 'An account that quit setup halfway is offered it again', async () => {
+      // The one case where signing in *should* reach setup: they made the
+      // account, closed the tab, and never answered anything.
+      const { ctx, page } = await open(browser)
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      await fillAuth(page, 'gina@example.com', 'ginas-password')
+      await submitAuth(page)
+      await page.waitForTimeout(900)
+      r.check('setup opens on sign-up', /joined up|get started/i.test(await text(page)))
+
+      // She walks away. Whatever got pushed still says setup is unfinished.
+      const uid = sb.users.get('gina@example.com').id
+      const row = sb.rows.get(uid)
+      r.check('a row was written for her', Boolean(row))
+      r.check('and it does not claim setup was done',
+        row?.state?.onboarded !== true, JSON.stringify(row?.state ?? {}).slice(0, 140))
+
+      await signOutAndReload(page)
+      await fillAuth(page, 'gina@example.com', 'ginas-password')
+      await submitAuth(page)
+      await page.waitForTimeout(1200)
+      r.check('coming back puts her in setup, not the app',
+        /joined up|get started/i.test(await text(page)))
+      await ctx.close()
+    })
+
+    /* ── UC-84 ───────────────────────────────────────────────────────── */
+    await r.run('UC-84', 'A sign-up that never completed cannot send a later sign-in to setup', async () => {
+      /*
+       * The actual sequence behind "again now I sign in, it's showing
+       * onboarding". Sign-up used to write a "this is a new account" flag to
+       * localStorage before it knew whether a session had come back. On the
+       * path where none does — confirmation on, or the address already
+       * taken — the flag was written and nothing ever read it. It waited
+       * there until the next sign in and sent that one to setup.
+       *
+       * So: a sign-up that dead-ends, then a normal sign-in to a finished
+       * account, in that order, in one browser.
+       */
+      sb.setFunctionUp(false)
+      sb.setRequireConfirm(true)
+
+      const { ctx, page, errors } = await open(browser)
+      await page.click('button:has-text("Create an account")')
+      await page.waitForTimeout(250)
+      // A genuinely new address, so sign-up succeeds and then stops dead
+      // waiting for a confirmation click. This is the path that used to
+      // leave the flag behind.
+      await fillAuth(page, 'hal@example.com', 'hals-password')
+      await submitAuth(page)
+      await page.waitForTimeout(700)
+      r.check('the sign-up dead-ends rather than signing them in',
+        await page.locator('.tab-bar, nav .tab').count() === 0)
+      r.check('and it is the confirmation wall they hit',
+        /open the link sent to/i.test(await text(page)), (await text(page)).slice(0, 160))
+
+      // Whatever was blocking sign-up is no longer relevant. They go and
+      // sign in properly, which is what they should have done.
+      sb.setRequireConfirm(false)
+      sb.setFunctionUp(true)
+
+      // Frank finished setup long ago (UC-81 left his row that way).
+      const uid = sb.users.get('frank@example.com').id
+      r.check('his account still says setup is done',
+        sb.rows.get(uid)?.state?.onboarded === true)
+
+      await page.reload({ waitUntil: 'networkidle' })
+      await page.waitForTimeout(800)
+      await fillAuth(page, 'frank@example.com', 'franks-password')
+      await submitAuth(page)
+      await page.waitForTimeout(1300)
+
+      const t = await text(page)
+      r.check('signing in reaches the app',
+        await page.locator('.tab-bar, nav').count() > 0, t.slice(0, 160))
+      r.check('and setup is nowhere near it',
+        !/get started|look around with sample data|joined up/i.test(t), t.slice(0, 160))
+      r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+      await ctx.close()
+    })
+
   } finally {
     await browser.close()
     server.close()

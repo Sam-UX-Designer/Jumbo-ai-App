@@ -154,7 +154,6 @@ export async function signUp(
       console.error('[jumbo] sign in after sign up', back.error)
       return { ok: false, message: plain(back.error, 'Your account was made, but signing in did not work. Try signing in.') }
     }
-    markNewAccount(email)
     return { ok: true, data: { signedIn: true } }
   }
 
@@ -175,7 +174,6 @@ export async function signUp(
   if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
     return { ok: false, message: 'There is already an account with that email. Sign in instead.' }
   }
-  markNewAccount(email)
   return { ok: true, data: { signedIn: Boolean(data.session) } }
 }
 
@@ -289,33 +287,6 @@ export async function signOutCloud(): Promise<void> {
 }
 
 const OWNER = 'jumbo.accountId'
-const FRESH = 'jumbo.newAccount'
-
-/*
- * "This email just made an account here."
- *
- * A new account has to start at onboarding, and the app cannot tell that
- * from the account alone: a device that used Jumbo before signing up
- * already has `onboarded: true` sitting in it, and would sail straight past
- * setup. So sign-up leaves a mark and the first pull spends it.
- *
- * In localStorage rather than memory because the trip is not always within
- * one page: with email confirmation on, the account is made here and the
- * session arrives later, from a link, in a fresh load of the app.
- */
-function markNewAccount(email: string) {
-  try { localStorage.setItem(FRESH, email.toLowerCase()) } catch { /* private mode */ }
-}
-
-function spendNewAccountMark(): boolean {
-  try {
-    const mark = localStorage.getItem(FRESH)
-    if (mark === null) return false
-    localStorage.removeItem(FRESH)
-    return true
-  } catch { return false }
-}
-
 /**
  * Whether the records sitting in this browser belong to the person now
  * signed in.
@@ -366,23 +337,35 @@ export async function pullAndMerge(
   }
 
   const owner = localOwner(uid)
-  const isNew = spendNewAccountMark()
 
   /*
-   * Nothing stored yet: this device's records become the account's, unless
-   * they are somebody else's (see localOwner).
+   * No row at all: this account has never saved anything, anywhere.
    *
-   * Signing up sends you to setup, whatever this browser happens to hold.
-   * Signing in to an account that has been through setup never does.
+   * That is the whole definition of a new account, and it is the account's
+   * own fact rather than anything this browser claims — which matters,
+   * because the browser is exactly what cannot be trusted here. A device
+   * that used Jumbo before accounts existed still says `onboarded: true`,
+   * so without overriding it a new account would sail past setup; and an
+   * earlier version of this used a flag written to localStorage at sign-up,
+   * which could be written after the sign-in event had already read it, and
+   * then sat there until the *next* sign-in and sent that one to setup
+   * instead. A row either exists or it does not.
+   *
+   * Sign up, therefore, always starts at setup. Signing in to an account
+   * that has saved anything never does. An account that signed up and quit
+   * halfway through setup gets setup again, which is right.
+   *
+   * The first push happens seconds later, so the row exists from then on.
    */
   if (!data) {
     const base = owner === 'someone else' ? {} : mine
-    return { ok: true, data: isNew ? { ...base, onboarded: false } : base }
+    return { ok: true, data: { ...base, onboarded: false } }
   }
 
+  // A row exists, so this account has been here before: whatever it says
+  // about setup is the answer, and signing in goes wherever that points.
   const theirs = (data.state ?? {}) as Partial<Persisted>
   if (owner === 'someone else') return { ok: true, data: theirs }
-  if (isNew) return { ok: true, data: { ...theirs, onboarded: false } }
 
   /*
    * Which side speaks for the preferences — the name, the goals, the theme.

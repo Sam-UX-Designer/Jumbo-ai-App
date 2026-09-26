@@ -127,6 +127,10 @@ a bare array — so what these exercise is the app's own logic. Run them with
 | UC-77 | Signing up starts at setup; signing in never does | A device that used Jumbo before accounts existed already says `onboarded: true`, so a new account sailed straight past setup and landed on "Welcome back" addressed to whoever used the browser last |
 | UC-79 | An address that already has an account is told so, plainly | The whole reason `supabase/functions/account-create` exists — Supabase's own sign-up will not answer this once confirmation is on |
 | UC-80 | A new account goes straight to setup, with no inbox trip | Sign-up hands back a session, so there is nothing to wait for |
+| UC-81 | Signing in never shows setup, however many times you do it | Three sign-ins in a row on one browser, all reaching the app |
+| UC-82 | The sign-in door asks for two things and nothing else | Email, password, a way back in if the password is gone. No setup questions, no inbox |
+| UC-83 | An account that quit setup halfway is offered it again | The one case where signing in *should* reach setup |
+| UC-84 | A sign-up that never completed cannot send a later sign-in to setup | The reported bug. Sign-up wrote a "new account" flag to localStorage before it knew whether a session had come back; on the paths where none does, nothing ever read it, and it waited there to catch the next sign-in. Verified by running it against the shipped build, where it fails |
 
 ## Integrity across the app — `tests/e2e/cases/integrity.mjs`
 
