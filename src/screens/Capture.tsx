@@ -136,7 +136,18 @@ const MEASURE_KINDS: Array<{ kind: MeasurementKind; label: string; unit: string;
   { kind: 'vitaminD', label: 'Vitamin D', unit: 'ng/mL', step: 1, dp: 0, start: 38 },
 ]
 
-export function Capture({ reopenMeal, openKind, onOpened }: {
+/**
+ * Two screens, one component.
+ *
+ * Capture and Log are the two halves this screen always had — the ways to
+ * add something, and the record of what was added — and they now have a
+ * tab each rather than being stacked on one page nobody could reach. They
+ * share every bit of state behind them (the day, the records, the sheets),
+ * so they stay one component with a view rather than two that have to be
+ * kept in step by hand.
+ */
+export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
+  view?: 'add' | 'log'
   reopenMeal?: { date: string; mealId: string } | null
   /** A kind chosen from the centre button, to open on arrival. */
   openKind?: CaptureKind | null
@@ -277,11 +288,13 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
     <div className="stack stack-6">
       <header className="stack stack-5">
         <div className="scr-head">
-          <h1 className="scr-head__title">Capture</h1>
+          <h1 className="scr-head__title">{view === 'log' ? 'Log' : 'Capture'}</h1>
           <p className="scr-head__sub">
-            {isToday
-              ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
-              : `Adding to ${prettyDate(date)}.`}
+            {view === 'log'
+              ? (isToday ? 'Everything you have recorded today.' : `Recorded on ${prettyDate(date)}.`)
+              : isToday
+                ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
+                : `Adding to ${prettyDate(date)}.`}
           </p>
         </div>
         {state.dataMode === 'demo' && (
@@ -291,6 +304,7 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
       </header>
 
       {/* ────────────────── what you came to add, and the way to add it */}
+      {view === 'add' && (
       <section className="stack stack-3">
         <div className="cap-tiles" role="group" aria-label="What to add">
           {KINDS.map((k) => (
@@ -321,15 +335,16 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
           </button>
         )}
       </section>
+      )}
 
       {/* ────────────────────────────── training
           Logging a workout records what you did. This is the other half:
           deciding what to do, and having something to follow while doing
           it. It sits directly under the five kinds because down at the
           bottom, past every record of the day, nobody found it. */}
-      <TrainingWay />
+      {view === 'add' && <TrainingWay />}
 
-      {progress.recovery < 0.4 && !today.workout && (
+      {view === 'add' && progress.recovery < 0.4 && !today.workout && (
         <div className="card card--brand row row--top" style={{ gap: 'var(--s-3)' }}>
           <AiOrb size="sm" />
           <p className="t-callout">
@@ -341,6 +356,7 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
 
       <ShareSheet card={shareCard} open={shareCard !== null} onClose={() => setShareCard(null)} />
 
+      {view === 'log' && (
       <section className="section">
         <SectionHead
           title="Recently added"
@@ -485,8 +501,10 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
           </ul>
         )}
       </section>
+      )}
 
       {/* ────────────────────────────── the other ways in */}
+      {view === 'add' && (
       <section className="stack stack-3">
         <SectionHead title="More ways to add" />
         <div className="rail" role="group" aria-label="Other ways to add">
@@ -506,6 +524,7 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
           </button>
         </div>
       </section>
+      )}
 
       <MealDetail
         open={openMealId !== null}

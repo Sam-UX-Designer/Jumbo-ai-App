@@ -404,6 +404,20 @@ export function Today() {
         </p>
       </section>
 
+      {/* Explore lost its tab to Log and Capture. This is its way back. */}
+      <button
+        className="btn btn--ghost btn--block"
+        onClick={() => { haptic('selection'); navigate('explore') }}
+        style={{ justifyContent: 'space-between' }}
+      >
+        <span className="row" style={{ gap: 'var(--s-2)' }}>
+          <Icon name="explore" size={17} /> Explore
+        </span>
+        <span className="row t-caption dim2" style={{ gap: 6 }}>
+          Worth watching <Icon name="chevron" size={14} />
+        </span>
+      </button>
+
       <button
         className="btn btn--ghost btn--block"
         onClick={() => navigate('measurements')}

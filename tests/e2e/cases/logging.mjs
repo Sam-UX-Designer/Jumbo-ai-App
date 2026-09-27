@@ -35,9 +35,9 @@ export default async function logging({ browser, origin, r }) {
     r.check('Today does not claim nothing was recorded',
       !/Nothing recorded yet/i.test(todayText))
 
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
     const cap = await screenText(page)
-    r.check('Capture lists it under Recently added', /Cycle/.test(cap) && /130/.test(cap))
+    r.check('Log lists it under Recently added', /Cycle/.test(cap) && /130/.test(cap))
     r.check('its time reads in 12-hour form', /11:30 AM/.test(cap), cap.match(/\d{1,2}:\d{2}\s?[AP]M/)?.[0] ?? 'none')
 
     await page.reload({ waitUntil: 'networkidle' })
@@ -213,7 +213,7 @@ export default async function logging({ browser, origin, r }) {
     const { ctx, page, errors } = await openApp(browser, origin, account({
       addedMeals: { [today]: [aMeal()] },
     }))
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
     await page.waitForTimeout(500)
 
     const open = page.getByRole('button', { name: /share what you ate/i })
@@ -260,7 +260,7 @@ export default async function logging({ browser, origin, r }) {
       const seeded = await openApp(browser, origin, account({
         addedMeals: { [today]: [aMeal(photo ? { photo } : {})] },
       }))
-      await goTo(seeded.page, 'capture')
+      await goTo(seeded.page, 'log')
       await seeded.page.waitForTimeout(500)
       await clickClear(seeded.page, seeded.page.getByRole('button', { name: /share what you ate/i }).first())
       await seeded.page.waitForSelector('.share-preview__img', { timeout: 8000 }).catch(() => null)
@@ -311,8 +311,8 @@ export default async function logging({ browser, origin, r }) {
     r.check('the calories reach Today', /430/.test(text), 'the 430 kcal appear nowhere')
     r.check('nutrition is no longer "Not logged"', !/Nutrition[\s\S]{0,40}Not logged/i.test(text))
 
-    await goTo(page, 'capture')
-    r.check('Capture lists the meal', /Chicken salad|Lunch/i.test(await screenText(page)))
+    await goTo(page, 'log')
+    r.check('Log lists the meal', /Chicken salad|Lunch/i.test(await screenText(page)))
 
     await page.reload({ waitUntil: 'networkidle' })
     await page.waitForTimeout(900)
@@ -365,9 +365,9 @@ export default async function logging({ browser, origin, r }) {
     r.check('the workout is kept alongside them', Boolean(s?.addedWorkouts?.[today]))
     r.check('the note is kept too', Boolean(s?.addedNotes?.[today]))
 
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
     const cap = await screenText(page)
-    r.check('Capture lists every record', /Lunch/i.test(cap) && /Dinner/i.test(cap) && /Cycle/i.test(cap))
+    r.check('Log lists every record', /Lunch/i.test(cap) && /Dinner/i.test(cap) && /Cycle/i.test(cap))
 
     // Newest first, by the time each was recorded — never by category.
     const order = await page.evaluate(() =>
@@ -384,7 +384,7 @@ export default async function logging({ browser, origin, r }) {
   await r.run('UC-15', 'A record can be deleted, and stays deleted', async () => {
     const { ctx, page } = await openApp(browser, origin,
       account({ addedWorkouts: { [today]: aWorkout() } }))
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
 
     const del = page.locator('button[aria-label^="Remove" i]').first()
     const canDelete = await del.count() > 0
@@ -445,8 +445,8 @@ export default async function logging({ browser, origin, r }) {
       !/Sleep[\s\S]{0,30}not recorded/i.test(text))
     r.check('the day is no longer empty', !/Nothing recorded yet/i.test(text))
 
-    await goTo(page, 'capture')
-    r.check('Capture lists the night', /Sleep/i.test(await screenText(page)))
+    await goTo(page, 'log')
+    r.check('Log lists the night', /Sleep/i.test(await screenText(page)))
 
     await page.reload({ waitUntil: 'networkidle' })
     await page.waitForTimeout(900)
@@ -492,8 +492,8 @@ export default async function logging({ browser, origin, r }) {
 
     // Coming back must not reopen a form nobody asked for.
     await goTo(page, 'today')
-    await goTo(page, 'capture')
-    r.check('returning to Capture does not reopen the form',
+    await goTo(page, 'log')
+    r.check('returning to Log does not reopen the form',
       await page.locator('.sheet[role=dialog]').count() === 0)
     r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
     await ctx.close()

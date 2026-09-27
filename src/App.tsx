@@ -23,7 +23,7 @@ import { scheduleReminders } from './lib/reminders'
 import { haptic } from './lib/feedback'
 
 const TITLES: Record<Route, string> = {
-  today: 'Today', future: 'Lifestyle', capture: 'Capture',
+  today: 'Today', log: 'Log', future: 'Lifestyle', capture: 'Capture',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
   chat: 'Ask Jumbo', settings: 'Settings', subscribe: 'Plans',
   notifications: 'Notifications', training: 'Training',
@@ -115,8 +115,9 @@ function Shell() {
             <ErrorBoundary area="this screen" resetKey={route}>
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
-            {route === 'capture' && (
+            {(route === 'capture' || route === 'log') && (
               <Capture
+                view={route === 'log' ? 'log' : 'add'}
                 reopenMeal={focus?.kind === 'meal' ? focus : null}
                 openKind={quickKind}
                 onOpened={() => setQuickKind(null)}

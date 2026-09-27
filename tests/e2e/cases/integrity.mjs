@@ -456,6 +456,77 @@ export default async function integrity({ browser, origin, r }) {
   })
 
 
+  await r.run('UC-88', 'Every screen has a door, and the add button is not standing in one', async () => {
+    /*
+     * Reported from real use: "there is no option to enter the capture
+     * screen directly". There was not. The + occupied the middle slot of
+     * the bar, so Capture had no tab, and the only way to the day's
+     * records was a quiet item at the bottom of the add menu — found by
+     * people who already knew it was there.
+     *
+     * The + is an action, not a destination, so it came out of the row.
+     */
+    const { ctx, page, errors } = await openApp(browser, origin, account({
+      addedMeals: { [todayISO()]: [aMeal()] },
+    }))
+
+    const tabs = await page.evaluate(() =>
+      [...document.querySelectorAll('.tabbar__item span')].map((s) => s.textContent.trim()))
+    r.check('the bar carries five destinations',
+      tabs.join('|') === 'Home|Log|Lifestyle|Capture|Profile', tabs.join('|'))
+
+    // Each one actually lands somewhere, and somewhere different.
+    for (const [label, heading] of [
+      ['Log', /^Log$/], ['Capture', /^Capture$/], ['Lifestyle', /./], ['Home', /./],
+    ]) {
+      await page.locator('.tabbar__item', { hasText: label }).first().click()
+      await page.waitForTimeout(700)
+      const h1 = await page.locator('h1').first().innerText().catch(() => '')
+      r.check(`${label} reaches its own screen`, heading.test(h1.trim()), `h1="${h1.trim()}"`)
+    }
+
+    /*
+     * The + floats now, and the screens it floats over have the Ask Jumbo
+     * composer pinned to the bottom. Landing on top of that composer is
+     * the same bug as UC-49 in a different coat, so it is measured rather
+     * than eyeballed.
+     */
+    const clear = await page.evaluate(() => {
+      const fab = document.querySelector('.tabbar__fab')
+      const dock = document.querySelector('.askdock')
+      const bar = document.querySelector('.tabbar')
+      if (!fab || !bar) return null
+      const f = fab.getBoundingClientRect()
+      const b = bar.getBoundingClientRect()
+      return {
+        inBar: bar.contains(fab),
+        overDock: dock ? Math.round(f.bottom - dock.getBoundingClientRect().top) : null,
+        aboveBar: Math.round(b.top - f.bottom),
+        rightSide: f.left > window.innerWidth / 2,
+        size: Math.round(f.width),
+      }
+    })
+    r.check('the + is no longer one of the tabs', clear?.inBar === false)
+    r.check('it sits on the right, where a thumb is', clear?.rightSide === true)
+    r.check('it clears the tab bar', (clear?.aboveBar ?? -1) >= 0, `gap=${clear?.aboveBar}`)
+    r.check('and it does not land on the Ask Jumbo composer',
+      clear?.overDock === null || clear.overDock <= 0, `overlap=${clear?.overDock}px`)
+    r.check('it is still a real target', (clear?.size ?? 0) >= 44, `${clear?.size}px`)
+
+    // Explore lost its tab in the swap. It must not have lost its way in.
+    await goTo(page, 'explore')
+    r.check('Explore is still reachable from Home',
+      /explore/i.test(await screenText(page)), (await screenText(page)).slice(0, 80))
+
+    await goTo(page, 'profile')
+    r.check('and from Profile too',
+      await page.getByRole('button', { name: /Explore\s*Things worth watching/i }).count() > 0)
+
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+
   await r.run('UC-54', 'The landing page offers a way in, and shows the app working', async () => {
     // Two complaints made this case. The first: the page had one button and
     // it went straight into the app, with no sign in and no sign up. The

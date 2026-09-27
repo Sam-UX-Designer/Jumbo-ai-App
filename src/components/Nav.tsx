@@ -6,8 +6,8 @@ import { haptic } from '../lib/feedback'
 import { useGlassGroup } from '../lib/useGlass'
 
 export type Route =
-  | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
-  | 'settings' | 'subscribe' | 'notifications' | 'training'
+  | 'today' | 'log' | 'future' | 'capture' | 'explore' | 'you' | 'measurements'
+  | 'chat' | 'settings' | 'subscribe' | 'notifications' | 'training'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -45,33 +45,43 @@ export function NavProvider({ navigate, children }: { navigate: Navigate; childr
 interface NavItem { route: Route; label: string; icon: IconName }
 
 /**
- * Four destinations around one action. Capture is the centre button rather
- * than a fifth tab because adding something is the thing people come back to
- * do, and it should be reachable without aiming.
+ * Five destinations, and the add button floating clear of them.
+ *
+ * The centre of the bar used to be the + itself, which meant Capture had no
+ * tab at all: the only way to the day's records was a quiet item at the
+ * bottom of the add menu, found by people who already knew it was there.
+ * A screen reachable only by accident is not a screen.
+ *
+ * So the bar carries the destinations and nothing else, and adding — which
+ * is an action, not a place — lifts out of the row into a button of its
+ * own. Log is the record of the day; Capture is where a new one starts.
  */
-const LEFT: NavItem[] = [
-  { route: 'today',  label: 'Today',     icon: 'today' },
-  { route: 'future', label: 'Lifestyle', icon: 'future' },
+const PRIMARY_TABS: NavItem[] = [
+  { route: 'today',   label: 'Home',      icon: 'today' },
+  { route: 'log',     label: 'Log',       icon: 'list' },
+  { route: 'future',  label: 'Lifestyle', icon: 'future' },
+  { route: 'capture', label: 'Capture',   icon: 'camera' },
+  { route: 'you',     label: 'Profile',   icon: 'profile' },
 ]
 
-const RIGHT: NavItem[] = [
-  { route: 'explore', label: 'Explore', icon: 'explore' },
-  { route: 'you',     label: 'You',     icon: 'profile' },
-]
+export const PRIMARY: NavItem[] = PRIMARY_TABS
 
-export const PRIMARY: NavItem[] = [
-  ...LEFT,
-  { route: 'capture', label: 'Capture', icon: 'capture' },
-  ...RIGHT,
-]
-
+/*
+ * Explore came off the bar to make room. It is a content feed, and a feed
+ * matters less than the record of your own day — but it is not orphaned:
+ * Home carries a row into it, so does Profile, and on a wide screen the
+ * sidebar below still lists it outright.
+ */
 const SIDEBAR: NavItem[] = [
-  ...LEFT,
-  { route: 'chat',    label: 'Ask Jumbo',    icon: 'ai' },
-  { route: 'capture', label: 'Capture',      icon: 'capture' },
-  { route: 'training', label: 'Training',      icon: 'training' },
+  { route: 'today',   label: 'Home',      icon: 'today' },
+  { route: 'log',     label: 'Log',       icon: 'list' },
+  { route: 'future',  label: 'Lifestyle', icon: 'future' },
+  { route: 'chat',    label: 'Ask Jumbo', icon: 'ai' },
+  { route: 'capture', label: 'Capture',   icon: 'camera' },
+  { route: 'training', label: 'Training', icon: 'training' },
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
-  ...RIGHT,
+  { route: 'explore', label: 'Explore',   icon: 'explore' },
+  { route: 'you',     label: 'Profile',   icon: 'profile' },
 ]
 
 /**
@@ -179,6 +189,9 @@ export function TabBar({
       || (item.route === 'today' && route === 'notifications')
       // Training is opened from Capture and Back returns there.
       || (item.route === 'capture' && route === 'training')
+      // Explore has no tab of its own any more; Home is the door it is
+      // reached through, so Home is what stays lit behind it.
+      || (item.route === 'today' && route === 'explore')
       || (route === 'chat' && item.route === origin)
 
     /**
@@ -205,9 +218,15 @@ export function TabBar({
   }
 
   return (
+    <>
+    {/* The bar holds destinations. The add button is an action and sits
+        outside it, so walking the navigation landmark does not turn up a
+        control that goes nowhere. */}
     <nav className="tabbar" aria-label="Primary" ref={bar}>
-      {LEFT.map(tab)}
+      {PRIMARY_TABS.map(tab)}
+    </nav>
 
+    <div className="addlayer">
       {adding && (
         <>
           <button
@@ -264,18 +283,16 @@ export function TabBar({
       )}
 
       <button
-        className={`tabbar__fab${route === 'capture' ? ' is-current' : ''}${adding ? ' is-open' : ''}`}
+        className={`tabbar__fab${adding ? ' is-open' : ''}`}
         aria-label={adding ? 'Close the add menu' : 'Add to today'}
         aria-expanded={adding}
         aria-haspopup="menu"
-        aria-current={route === 'capture' && !adding ? 'page' : undefined}
         onClick={() => { haptic('selection'); setAdding((v) => !v) }}
       >
         <Icon name="plus" size={26} strokeWidth={2.4} />
       </button>
-
-      {RIGHT.map(tab)}
-    </nav>
+    </div>
+    </>
   )
 }
 
