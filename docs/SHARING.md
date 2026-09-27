@@ -1,9 +1,16 @@
 # Sharing a card
 
 Three things can be shared as a picture: a finished training session, a
-day's health score, and a meal. Each draws a 1080×1920 PNG — the Instagram
-Story frame — on a canvas, previews it, and hands it to the phone's share
-sheet.
+day's health score, and a meal.
+
+**It is a widget, not a poster.** What people actually post is their own
+photograph — the shoes on the road, the shadow on the pavement — with a
+small card from the app sitting on it, the way Apple's Fitness widgets do.
+A full-bleed card made by Jumbo would replace the picture somebody wanted
+to share. A widget sits on it and lets them keep it.
+
+So the sheet offers **Add your photo** first, and draws the card over it.
+With no photo it falls back to Jumbo's own gradient rather than refusing.
 
 ## Why it is not a one-tap jump into Instagram
 
@@ -25,6 +32,18 @@ saves to downloads instead, which is the same two steps in the other order.
 `canShareImage()` decides by handing the browser a real file and asking,
 rather than sniffing the user agent — several browsers have
 `navigator.share` and refuse anything but a URL.
+
+## Two ways out
+
+| | |
+|---|---|
+| **Share** | The whole 1080×1920 story to the phone's share sheet, where Instagram takes it as a story background. One flow |
+| **Sticker** | The card alone, on transparency, at its own size. Saves to the camera roll, to place over a story by hand |
+
+The sticker exists because the web cannot place something *inside* an
+Instagram story automatically. Apple's Fitness widgets do it through the
+native `stickerImage` parameter, which is part of the same native-only API
+described above.
 
 ## What the cards say
 

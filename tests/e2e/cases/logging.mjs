@@ -146,8 +146,35 @@ export default async function logging({ browser, origin, r }) {
     const sheetText = await screenText(page)
     r.check('and the wording does not promise a jump into Instagram it cannot make',
       !/share to instagram/i.test(sheetText), sheetText.slice(0, 160))
-    r.check('saving it is offered for browsers with no share sheet',
-      await page.getByRole('button', { name: /^Save$/ }).count() > 0)
+    r.check('the card alone can be taken as a sticker',
+      await page.getByRole('button', { name: /^Sticker$/ }).count() > 0)
+
+    // Their own photograph behind it, which is the whole point of a widget.
+    r.check('their own photo can go behind it',
+      await page.getByRole('button', { name: /add your photo/i }).count() > 0)
+    const before = await page.getAttribute('.share-preview__img', 'src')
+    await page.evaluate(async () => {
+      const c = document.createElement('canvas')
+      c.width = 900; c.height = 1200
+      const g = c.getContext('2d')
+      g.fillStyle = '#7a8b62'; g.fillRect(0, 0, 900, 1200)
+      const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.9))
+      const dt = new DataTransfer()
+      dt.items.add(new File([blob], 'run.jpg', { type: 'image/jpeg' }))
+      const input = document.querySelector('input[type=file][accept="image/*"]')
+      input.files = dt.files
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await page.waitForTimeout(1600)
+    const after = await page.evaluate(() => {
+      const img = document.querySelector('.share-preview__img')
+      return img ? { src: img.getAttribute('src'), w: img.naturalWidth, h: img.naturalHeight } : null
+    })
+    r.check('the card is redrawn over the photo', after?.src !== before, 'the preview never changed')
+    r.check('and is still the Story shape', after?.w === 1080 && after?.h === 1920, `${after?.w}×${after?.h}`)
+    r.check('the photo can be taken back off again',
+      await page.getByRole('button', { name: /^Remove$/ }).count() > 0)
+
     await page.keyboard.press('Escape')
     await page.waitForTimeout(500)
 

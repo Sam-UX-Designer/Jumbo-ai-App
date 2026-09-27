@@ -1,16 +1,23 @@
 /**
- * The picture that goes to Instagram.
+ * The widget that goes on a story.
  *
- * Drawn on a canvas at 1080×1920 — the Story frame — because that is the
- * only shape that fills the screen without Instagram cropping something
- * important out of it. Everything is drawn rather than screenshotted: a
- * screenshot of the app would carry the tab bar, the safe-area padding and
- * whatever the person had scrolled to.
+ * Not a poster. What people actually post is their own photograph — the
+ * shoes on the road, the shadow on the pavement — with a small card from
+ * the app sitting on top of it, the way Apple's Fitness widgets do. A
+ * full-bleed card made by Jumbo replaces the picture somebody wanted to
+ * share. A widget sits on it and lets them keep it.
  *
- * The one rule that matters here is the same one that governs the rest of
- * Jumbo: a number nobody measured is not a zero. Anything unmeasured is
- * drawn as an em dash, never as 0, and never left off in a way that makes
- * the remaining figures look like the whole picture.
+ * So there are two things drawn here:
+ *
+ *   sticker  the card alone on a transparent canvas, at its own size, to
+ *            drop onto a story by hand
+ *   story    1080x1920 with the card laid over a background — their
+ *            photograph if they picked one, Jumbo's own gradient if not
+ *
+ * The rule that governs the rest of the app governs this more strictly,
+ * not less: a number nobody measured is drawn as an em dash, never as a
+ * zero. The card leaves Jumbo and is read by people who cannot ask what a
+ * figure meant.
  */
 
 export type ShareCard =
@@ -25,7 +32,7 @@ export type ShareCard =
     }
   | {
       kind: 'day'
-      /** 0–1, or null when nothing was recorded. */
+      /** 0-1, or null when nothing was recorded. */
       score: number | null
       sleep: number | null
       movement: number | null
@@ -45,14 +52,25 @@ export type ShareCard =
       photo?: string
     }
 
+export interface ShareOptions {
+  /** A photograph to lay the card over. A data URL, from their camera roll. */
+  background?: string
+  /** Draw the card alone, on transparency, to place by hand in Instagram. */
+  stickerOnly?: boolean
+}
+
 const W = 1080
 const H = 1920
 
+/** The card's own geometry. Everything below is measured from these. */
+const CARD_W = 860
+const PAD = 52
+const RADIUS = 52
+
 const INK = '#FFFFFF'
-const DIM = 'rgba(255,255,255,0.56)'
-const FAINT = 'rgba(255,255,255,0.30)'
+const DIM = 'rgba(255,255,255,0.62)'
+const FAINT = 'rgba(255,255,255,0.40)'
 const BRAND = '#92E82A'
-const BG = '#08090B'
 
 const SLEEP = '#A45CFF'
 const MOVEMENT = '#00E58A'
@@ -61,205 +79,232 @@ const RECOVERY = '#14AEFF'
 
 /** The app's own stack. All system faces, so nothing has to load first. */
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
-const face = (size: number, weight = 400) => `${weight} ${size}px ${FONT}`
+const face = (size: number, weight = 400) => weight + ' ' + size + 'px ' + FONT
 
 /** An unmeasured value is a dash. It is never a zero. */
-const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}`)
+const pct = (v: number | null) => (v === null ? '—' : String(Math.round(v * 100)))
 
 const INTENSITY = ['', 'Easy', 'Steady', 'Hard'] as const
 
-export async function drawShareCard(card: ShareCard): Promise<Blob> {
+export async function drawShareCard(card: ShareCard, opts: ShareOptions = {}): Promise<Blob> {
+  const body = plan(card)
+  const cardH = height(body)
+
   const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
-  const g = c.getContext('2d')
-  if (!g) throw new Error('canvas unavailable')
+  const g = ctx(c, opts.stickerOnly ? CARD_W : W, opts.stickerOnly ? cardH : H)
 
-  frame(g)
-
-  if (card.kind === 'session') session(g, card)
-  else if (card.kind === 'day') day(g, card)
-  else await meal(g, card)
-
-  footer(g, card.date)
+  if (opts.stickerOnly) {
+    // Transparent around it, so it can be placed over anything.
+    widget(g, body, 0, 0, cardH)
+  } else {
+    await backdrop(g, opts.background)
+    widget(g, body, (W - CARD_W) / 2, (H - cardH) / 2, cardH)
+  }
 
   return new Promise<Blob>((ok, no) => {
     c.toBlob((b) => (b ? ok(b) : no(new Error('could not draw the card'))), 'image/png')
   })
 }
 
-/* ── the frame every card shares ───────────────────────────────────────── */
-function frame(g: CanvasRenderingContext2D) {
-  g.fillStyle = BG
-  g.fillRect(0, 0, W, H)
-
-  // A wash of brand green behind the top third, so the card reads as Jumbo
-  // at thumbnail size before a word of it is legible.
-  const glow = g.createRadialGradient(W / 2, 300, 0, W / 2, 300, 900)
-  glow.addColorStop(0, 'rgba(146, 232, 42, 0.16)')
-  glow.addColorStop(1, 'rgba(146, 232, 42, 0)')
-  g.fillStyle = glow
-  g.fillRect(0, 0, W, 1200)
-
-  g.font = face(58, 800)
-  g.fillStyle = BRAND
-  g.textAlign = 'center'
-  g.letterSpacing = '2px'
-  g.fillText('JUMBO', W / 2, 220)
-  g.letterSpacing = '0px'
+function ctx(c: HTMLCanvasElement, w: number, h: number): CanvasRenderingContext2D {
+  c.width = w
+  c.height = h
+  const g = c.getContext('2d')
+  if (!g) throw new Error('canvas unavailable')
+  return g
 }
 
-function eyebrow(g: CanvasRenderingContext2D, text: string) {
-  g.font = face(30, 700)
-  g.fillStyle = FAINT
-  g.textAlign = 'center'
-  g.letterSpacing = '6px'
-  g.fillText(text.toUpperCase(), W / 2, 330)
-  g.letterSpacing = '0px'
+/* -- what goes on the card --------------------------------------------- */
+interface Stat { label: string; value: string; tint?: string }
+interface Body {
+  eyebrow: string
+  title?: string
+  hero: string
+  unit: string
+  stats: Stat[]
+  note?: string
+  date: string
 }
 
-/** The one enormous number the card exists to show. */
-function hero(g: CanvasRenderingContext2D, value: string, unit: string, y: number) {
-  g.textAlign = 'center'
-  g.font = face(260, 800)
-  g.fillStyle = INK
-  g.fillText(value, W / 2, y)
-
-  g.font = face(44, 600)
-  g.fillStyle = DIM
-  g.fillText(unit, W / 2, y + 74)
-}
-
-function title(g: CanvasRenderingContext2D, text: string, y: number) {
-  g.textAlign = 'center'
-  g.font = face(64, 700)
-  g.fillStyle = INK
-  g.fillText(clip(g, text, W - 160), W / 2, y)
-}
-
-/** Three or four figures in a row along the bottom of the card. */
-function stats(
-  g: CanvasRenderingContext2D,
-  items: Array<{ label: string; value: string; tint?: string }>,
-  y: number,
-) {
-  const gap = W / items.length
-  items.forEach((it, i) => {
-    const x = gap * i + gap / 2
-    g.textAlign = 'center'
-    g.font = face(64, 700)
-    g.fillStyle = it.tint ?? INK
-    g.fillText(it.value, x, y)
-    g.font = face(26, 600)
-    g.fillStyle = FAINT
-    g.letterSpacing = '2px'
-    g.fillText(it.label.toUpperCase(), x, y + 44)
-    g.letterSpacing = '0px'
-  })
-}
-
-/*
- * The date, and the line above the figures.
- *
- * Both sit well inside the frame rather than against its edges: Instagram
- * lays its own controls over roughly the top and bottom 250px of a Story,
- * and anything down there is under a button.
- */
-function footer(g: CanvasRenderingContext2D, date: string) {
-  g.textAlign = 'center'
-  g.font = face(30, 500)
-  g.fillStyle = FAINT
-  g.fillText(prettyDate(date), W / 2, 1600)
-}
-
-function rule(g: CanvasRenderingContext2D, y: number) {
-  g.strokeStyle = 'rgba(255,255,255,0.10)'
-  g.lineWidth = 2
-  g.beginPath()
-  g.moveTo(140, y)
-  g.lineTo(W - 140, y)
-  g.stroke()
-}
-
-/* ── the three cards ───────────────────────────────────────────────────── */
-function session(g: CanvasRenderingContext2D, s: Extract<ShareCard, { kind: 'session' }>) {
-  eyebrow(g, 'Training')
-  title(g, s.planName, 520)
-  hero(g, String(s.minutes), s.minutes === 1 ? 'minute' : 'minutes', 900)
-
-  rule(g, 1170)
-  stats(g, [
-    { label: 'Movements', value: `${s.done}/${s.total}` },
-    { label: 'Effort', value: INTENSITY[s.intensity], tint: BRAND },
-  ], 1330)
-}
-
-function day(g: CanvasRenderingContext2D, d: Extract<ShareCard, { kind: 'day' }>) {
-  eyebrow(g, 'Health score')
-
-  if (d.score === null) {
-    // Nothing was recorded. Drawing a 0 here would be a claim about the
-    // person's day rather than about the absence of data.
-    title(g, 'Nothing recorded', 800)
-    g.textAlign = 'center'
-    g.font = face(36, 500)
-    g.fillStyle = DIM
-    g.fillText('No reading for this day.', W / 2, 880)
-  } else {
-    hero(g, String(Math.round(d.score * 100)), 'out of 100', 880)
-  }
-
-  rule(g, 1170)
-  stats(g, [
-    { label: 'Sleep', value: pct(d.sleep), tint: SLEEP },
-    { label: 'Move', value: pct(d.movement), tint: MOVEMENT },
-    { label: 'Food', value: pct(d.nutrition), tint: NUTRITION },
-    { label: 'Recovery', value: pct(d.recovery), tint: RECOVERY },
-  ], 1330)
-
-  if ([d.sleep, d.movement, d.nutrition, d.recovery].some((v) => v === null)) {
-    g.textAlign = 'center'
-    g.font = face(26, 500)
-    g.fillStyle = FAINT
-    g.fillText('— means nothing measured it', W / 2, 1450)
-  }
-}
-
-async function meal(g: CanvasRenderingContext2D, m: Extract<ShareCard, { kind: 'meal' }>) {
-  eyebrow(g, 'Meal')
-
-  let top = 560
-  if (m.photo) {
-    const img = await load(m.photo)
-    if (img) {
-      const size = 480
-      const x = (W - size) / 2
-      const y = 400
-      g.save()
-      roundRect(g, x, y, size, size, 48)
-      g.clip()
-      // Cover, not stretch: the shorter side fills and the rest is cropped.
-      const scale = Math.max(size / img.width, size / img.height)
-      const dw = img.width * scale
-      const dh = img.height * scale
-      g.drawImage(img, x + (size - dw) / 2, y + (size - dh) / 2, dw, dh)
-      g.restore()
-      top = y + size + 110
+function plan(card: ShareCard): Body {
+  if (card.kind === 'session') {
+    return {
+      eyebrow: 'Training',
+      title: card.planName,
+      hero: String(card.minutes),
+      unit: 'min',
+      stats: [
+        { label: 'Movements', value: card.done + '/' + card.total },
+        { label: 'Effort', value: INTENSITY[card.intensity], tint: BRAND },
+      ],
+      date: card.date,
     }
   }
 
-  title(g, m.dish, top)
-  hero(g, String(m.kcal), 'kcal', top + 250)
+  if (card.kind === 'day') {
+    const missing = [card.sleep, card.movement, card.nutrition, card.recovery]
+      .some((v) => v === null)
+    return {
+      eyebrow: 'Health score',
+      // Nothing recorded is said in words. A zero here would be a claim
+      // about the person's day rather than about the absence of data.
+      hero: card.score === null ? '—' : String(Math.round(card.score * 100)),
+      unit: card.score === null ? 'nothing recorded' : 'out of 100',
+      stats: [
+        { label: 'Sleep', value: pct(card.sleep), tint: SLEEP },
+        { label: 'Move', value: pct(card.movement), tint: MOVEMENT },
+        { label: 'Food', value: pct(card.nutrition), tint: NUTRITION },
+        { label: 'Recovery', value: pct(card.recovery), tint: RECOVERY },
+      ],
+      note: missing ? '— nothing measured it' : undefined,
+      date: card.date,
+    }
+  }
 
-  rule(g, 1250)
-  stats(g, [
-    { label: 'Protein', value: `${Math.round(m.protein)}g` },
-    { label: 'Carbs', value: `${Math.round(m.carbs)}g` },
-    { label: 'Fat', value: `${Math.round(m.fat)}g` },
-  ], 1400)
+  return {
+    eyebrow: 'Meal',
+    title: card.dish,
+    hero: String(card.kcal),
+    unit: 'kcal',
+    stats: [
+      { label: 'Protein', value: Math.round(card.protein) + 'g' },
+      { label: 'Carbs', value: Math.round(card.carbs) + 'g' },
+      { label: 'Fat', value: Math.round(card.fat) + 'g' },
+    ],
+    date: card.date,
+  }
 }
 
-/* ── odds and ends ─────────────────────────────────────────────────────── */
+function height(b: Body): number {
+  let h = PAD + 34            // header row
+  h += 54                     // gap
+  if (b.title) h += 52
+  h += 132                    // the number
+  h += 56                     // gap above the figures
+  h += 86                     // the figures
+  if (b.note) h += 58
+  return h + PAD
+}
+
+/* -- the widget --------------------------------------------------------- */
+function widget(g: CanvasRenderingContext2D, b: Body, x: number, y: number, h: number) {
+  // Near-black and faintly translucent, so a photograph underneath reads
+  // through it, with a hairline to lift it off a busy shot.
+  g.save()
+  roundRect(g, x, y, CARD_W, h, RADIUS)
+  g.fillStyle = 'rgba(14, 16, 18, 0.82)'
+  g.fill()
+  g.strokeStyle = 'rgba(255,255,255,0.12)'
+  g.lineWidth = 2
+  g.stroke()
+  g.clip()
+
+  const left = x + PAD
+  const right = x + CARD_W - PAD
+  let cursor = y + PAD + 30
+
+  // Header: the mark, the category, and the day.
+  g.textAlign = 'left'
+  g.font = face(30, 800)
+  g.fillStyle = BRAND
+  g.letterSpacing = '1px'
+  g.fillText('JUMBO', left, cursor)
+  const markW = g.measureText('JUMBO').width
+  g.letterSpacing = '0px'
+
+  g.font = face(28, 600)
+  g.fillStyle = FAINT
+  g.fillText(b.eyebrow, left + markW + 24, cursor)
+
+  g.textAlign = 'right'
+  g.font = face(26, 500)
+  g.fillStyle = FAINT
+  g.fillText(shortDate(b.date), right, cursor)
+
+  cursor += 54
+
+  // What it was.
+  if (b.title) {
+    g.textAlign = 'left'
+    g.font = face(40, 600)
+    g.fillStyle = DIM
+    g.fillText(clip(g, b.title, CARD_W - PAD * 2), left, cursor + 26)
+    cursor += 52
+  }
+
+  // The number.
+  g.textAlign = 'left'
+  g.font = face(124, 800)
+  g.fillStyle = INK
+  g.fillText(b.hero, left, cursor + 104)
+  const heroW = g.measureText(b.hero).width
+
+  g.font = face(36, 600)
+  g.fillStyle = DIM
+  g.fillText(b.unit, left + heroW + 20, cursor + 104)
+  cursor += 132 + 56
+
+  // The figures beneath it, spread across the card.
+  const span = (CARD_W - PAD * 2) / b.stats.length
+  b.stats.forEach((s, i) => {
+    const sx = left + span * i
+    g.textAlign = 'left'
+    g.font = face(48, 700)
+    g.fillStyle = s.tint ?? INK
+    g.fillText(s.value, sx, cursor + 34)
+    g.font = face(22, 600)
+    g.fillStyle = FAINT
+    g.letterSpacing = '1.5px'
+    g.fillText(s.label.toUpperCase(), sx, cursor + 74)
+    g.letterSpacing = '0px'
+  })
+  cursor += 86
+
+  if (b.note) {
+    // Clear of the labels above it: at 28 the descenders of RECOVERY and
+    // the dash ran into each other.
+    g.textAlign = 'left'
+    g.font = face(24, 500)
+    g.fillStyle = FAINT
+    g.fillText(b.note, left, cursor + 44)
+  }
+
+  g.restore()
+}
+
+/* -- what sits behind it ------------------------------------------------ */
+async function backdrop(g: CanvasRenderingContext2D, photo?: string) {
+  const img = photo ? await load(photo) : null
+
+  if (img) {
+    // Cover, not stretch: the shorter side fills and the rest is cropped.
+    const scale = Math.max(W / img.width, H / img.height)
+    const dw = img.width * scale
+    const dh = img.height * scale
+    g.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh)
+
+    // A scrim, heavier at the edges. Without it a bright photograph eats
+    // the white text on the card's translucent panel.
+    const veil = g.createLinearGradient(0, 0, 0, H)
+    veil.addColorStop(0, 'rgba(0,0,0,0.42)')
+    veil.addColorStop(0.5, 'rgba(0,0,0,0.18)')
+    veil.addColorStop(1, 'rgba(0,0,0,0.48)')
+    g.fillStyle = veil
+    g.fillRect(0, 0, W, H)
+    return
+  }
+
+  // No photograph: Jumbo's own backdrop rather than a flat black rectangle.
+  g.fillStyle = '#08090B'
+  g.fillRect(0, 0, W, H)
+  const glow = g.createRadialGradient(W / 2, 640, 0, W / 2, 640, 1100)
+  glow.addColorStop(0, 'rgba(146, 232, 42, 0.20)')
+  glow.addColorStop(1, 'rgba(146, 232, 42, 0)')
+  g.fillStyle = glow
+  g.fillRect(0, 0, W, H)
+}
+
+/* -- odds and ends ------------------------------------------------------ */
 function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   g.beginPath()
   g.moveTo(x + r, y)
@@ -274,27 +319,28 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
 function clip(g: CanvasRenderingContext2D, text: string, max: number): string {
   if (g.measureText(text).width <= max) return text
   let out = text
-  while (out.length > 1 && g.measureText(`${out}…`).width > max) out = out.slice(0, -1)
-  return `${out}…`
+  while (out.length > 1 && g.measureText(out + '…').width > max) out = out.slice(0, -1)
+  return out + '…'
 }
 
 function load(src: string): Promise<HTMLImageElement | null> {
   return new Promise((ok) => {
     const img = new Image()
-    // The photo is a data URL held in the record, so there is no network
-    // and nothing to taint the canvas. A broken one must not take the card
-    // down with it.
+    // Data URLs only - from the record, or from a file they just picked -
+    // so there is no network and nothing to taint the canvas. A broken one
+    // must not take the card down with it.
     img.onload = () => ok(img)
     img.onerror = () => ok(null)
     img.src = src
   })
 }
 
-function prettyDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`)
+function shortDate(iso: string): string {
+  const d = new Date(iso + 'T12:00:00')
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 /** A filename somebody will recognise in their camera roll. */
-export const cardFilename = (card: ShareCard) => `jumbo-${card.kind}-${card.date}.png`
+export const cardFilename = (card: ShareCard, sticker = false) =>
+  'jumbo-' + card.kind + (sticker ? '-sticker' : '') + '-' + card.date + '.png'
