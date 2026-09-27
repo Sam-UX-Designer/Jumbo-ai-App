@@ -52,6 +52,7 @@ was once saved and listed on Capture while every number on Today ignored it.
 | UC-19 | A hand-written night is used when nothing measured one |
 | UC-85 | What you did can be shared, as a picture, honestly | A real 1080×1920 card is drawn, and no button claims to open Instagram directly — the web cannot |
 | UC-86 | A day with nothing in it is not offered up for sharing | A card reading "nothing recorded" is not something anybody posts |
+| UC-87 | The day's food shares as food, with the calories opt-in | Calorie-forward design is the part of tracking apps the research flags as harmful, and a card leaves the app and is seen by people who never chose to look at it. The default must not drift |
 | UC-78 | Any food can be added, and is remembered | The built-in list is thirty Western staples, which is no use to somebody eating chapati — and typing it once should be enough |
 
 ## Profile, preferences and data controls — `tests/e2e/cases/settings.mjs`

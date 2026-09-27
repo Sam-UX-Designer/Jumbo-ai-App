@@ -1,7 +1,7 @@
 # Sharing a card
 
-Three things can be shared as a picture: a finished training session, a
-day's health score, and a meal.
+Four things can be shared as a picture: a finished training session, a
+day's health score, the day's food, and a single meal.
 
 **It is a widget, not a poster.** What people actually post is their own
 photograph — the shoes on the road, the shadow on the pavement — with a
@@ -47,11 +47,36 @@ described above.
 
 ## What the cards say
 
-| Card | Hero | Beneath it |
+| Card | Lead | Beneath it |
 |---|---|---|
 | Session | Minutes | Movements done / total, effort |
-| Day | Health score out of 100 | Sleep, move, food, recovery |
-| Meal | Calories | Protein, carbs, fat, and the photo if there is one |
+| Day | **The rings**, beside the score | Sleep, move, food, recovery |
+| Today's food | The food, by name | How many items. Calories only if asked for |
+| Meal | Calories | Protein, carbs, fat |
+
+### Why the day card has rings
+
+A viewer reads four arcs in an instant and reads "39 out of 100" not at
+all. That is why Apple's rings travel between apps and a bare number never
+has — the ring is legible at thumbnail size, before a single word is read.
+Same order and colours as the app, outside in.
+
+**An unmeasured ring is the faint track and nothing else.** Drawing it as
+a closed-nothing arc would be the same lie as printing a zero: a day
+nobody took a heart reading on would look like a day of no recovery.
+
+### Why the food card does not lead with calories
+
+The literature on diet and fitness trackers is consistent that
+calorie-forward design is the part that harms people already vulnerable to
+disordered eating, and the standing recommendation is to build around food
+rather than numbers. A share card is the worst possible place to break
+that: it leaves the app, it is seen by people who never chose to look at
+it, and a number on it invites comparison from strangers.
+
+So the plate leads. The total is a checkbox in the share sheet, **off by
+default**, that a person turns on for their own post. UC-87 fails if that
+default ever flips.
 
 **Unmeasured is an em dash, never a zero.** A day card where nothing read
 your heart rate shows `—` under RECOVERY and a line saying what the dash

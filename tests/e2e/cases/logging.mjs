@@ -197,6 +197,53 @@ export default async function logging({ browser, origin, r }) {
   })
 
 
+  /* ── UC-87 ─────────────────────────────────────────────────────────── */
+  await r.run('UC-87', 'The day\u2019s food shares as food, with the calories opt-in', async () => {
+    /*
+     * Two things are being held here. The first is that the day's eating
+     * can go out as one card at all. The second matters more: the calorie
+     * total is off unless asked for.
+     *
+     * That is a considered default, not an omission. The research on diet
+     * and fitness trackers points at calorie-forward design as the part
+     * that harms people already vulnerable to disordered eating, and a
+     * card is the worst place to lead with a number — it leaves the app
+     * and is seen by people who never chose to look at it.
+     */
+    const { ctx, page, errors } = await openApp(browser, origin, account({
+      addedMeals: { [today]: [aMeal()] },
+    }))
+    await goTo(page, 'capture')
+    await page.waitForTimeout(500)
+
+    const open = page.getByRole('button', { name: /share what you ate/i })
+    r.check('the day\u2019s food can be shared as one card', await open.count() > 0)
+    await clickClear(page, open.first())
+    await page.waitForSelector('.share-preview__img', { timeout: 8000 }).catch(() => null)
+
+    const card = await page.evaluate(() => {
+      const img = document.querySelector('.share-preview__img')
+      return img ? { src: img.getAttribute('src'), w: img.naturalWidth, h: img.naturalHeight } : null
+    })
+    r.check('it really draws', card?.w === 1080 && card?.h === 1920, `${card?.w}×${card?.h}`)
+
+    const box = page.locator('.share-opt input')
+    r.check('the calorie total is offered as a choice', await box.count() === 1)
+    r.check('and it is off until it is asked for',
+      await box.isChecked() === false, 'calories were on by default')
+
+    const before = card?.src
+    await box.check()
+    await page.waitForTimeout(1500)
+    const after = await page.getAttribute('.share-preview__img', 'src')
+    r.check('turning it on really changes the card', after !== before,
+      'the preview did not redraw when calories were switched on')
+
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+
   /* ── UC-86 ─────────────────────────────────────────────────────────── */
   await r.run('UC-86', 'A day with nothing in it is not offered up for sharing', async () => {
     // A card reading "nothing recorded" is not something anybody posts, and

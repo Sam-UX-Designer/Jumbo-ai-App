@@ -999,3 +999,11 @@ a { color: var(--accent-text); }
 @media (prefers-reduced-motion: reduce) {
   .share-preview__wait { animation: none }
 }
+
+/* A choice offered beside the share preview, not buried in settings. */
+.share-opt {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-3); border-radius: var(--r-card);
+  border: 1px solid var(--card-line); cursor: pointer;
+}
+.share-opt input { margin-top: 3px; flex: none; accent-color: var(--brand); width: 20px; height: 20px; }

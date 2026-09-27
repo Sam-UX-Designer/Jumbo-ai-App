@@ -6,6 +6,8 @@ import { DateRail } from '../components/DateRail'
 import { Empty, SectionHead, Segmented, Sheet, Stepper, Switch, useConfirm, useToast } from '../components/UI'
 import { useDictation } from '../lib/useDictation'
 import { MealCapture } from './MealCapture'
+import { ShareSheet } from '../components/ShareSheet'
+import type { ShareCard } from '../lib/shareCard'
 import { MealDetail } from './MealDetail'
 import { useStore } from '../state/store'
 import type { MealEntry, Measurement, MeasurementKind, WorkoutEntry, WorkoutType } from '../data/types'
@@ -144,6 +146,7 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
   const [modal, setModal] = useState<Modal>(null)
   // The meal whose detail is open, by id. Null when the list is showing.
   const [openMealId, setOpenMealId] = useState<string | null>(null)
+  const [shareCard, setShareCard] = useState<ShareCard | null>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
   const [dictate, setDictate] = useState(false)
   const [filter, setFilter] = useState<Category | 'all'>('all')
@@ -336,11 +339,35 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
         </div>
       )}
 
+      <ShareSheet card={shareCard} open={shareCard !== null} onClose={() => setShareCard(null)} />
+
       <section className="section">
         <SectionHead
           title="Recently added"
           sub={isToday ? prettyDate(today.date) : `On ${prettyDate(today.date)}`}
         />
+
+        {/* The day's eating, as one card. Separate from the score card on
+            Today, because "here is what I ate" and "here is how I scored"
+            are two different posts. */}
+        {today.meals.length > 0 && (
+          <button
+            className="btn btn--secondary btn--block"
+            onClick={() => {
+              haptic('selection')
+              setShareCard({
+                kind: 'meals',
+                items: today.meals.flatMap((m) =>
+                  m.items.map((it) => ({ name: it.name, photo: m.photo }))),
+                kcal: today.meals.reduce(
+                  (sum, m) => sum + m.items.reduce((a, it) => a + it.kcal, 0), 0),
+                date: today.date,
+              })
+            }}
+          >
+            <Icon name="external" size={16} /> Share what you ate
+          </button>
+        )}
 
         {records.length > 0 && (
           <div className="rec__filters rail" role="group" aria-label="Filter by category">

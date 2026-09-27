@@ -38,10 +38,21 @@ export function ShareSheet({
   const [blob, setBlob] = useState<Blob | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  /**
+   * Whether a card about food carries its calorie total.
+   *
+   * Off until asked for. The research on diet trackers points at
+   * calorie-forward design as the part that harms people already
+   * vulnerable to disordered eating, and a card is the worst place to lead
+   * with a number: it leaves the app and is seen by people who never chose
+   * to look at it. So the plate leads, and the figure is something a
+   * person adds to their own post on purpose.
+   */
+  const [calories, setCalories] = useState(false)
 
   // Forget the photograph when the sheet closes. Carrying it to the next
   // thing they share would put last week's run behind tonight's dinner.
-  useEffect(() => { if (!open) setPhoto(null) }, [open])
+  useEffect(() => { if (!open) { setPhoto(null); setCalories(false) } }, [open])
 
   // Redraw whenever the card or its backdrop changes, and let the preview
   // go afterwards so a 1080x1920 bitmap is not held for a closed sheet.
@@ -53,7 +64,7 @@ export function ShareSheet({
     setBlob(null)
     setUrl(null)
 
-    void drawShareCard(card, { background: photo ?? undefined })
+    void drawShareCard(card, { background: photo ?? undefined, calories })
       .then((b) => {
         if (!live) return
         made = URL.createObjectURL(b)
@@ -69,7 +80,7 @@ export function ShareSheet({
       live = false
       if (made) URL.revokeObjectURL(made)
     }
-  }, [open, card, photo])
+  }, [open, card, photo, calories])
 
   if (!card) return null
 
@@ -97,7 +108,7 @@ export function ShareSheet({
     if (busy) return
     setBusy(true)
     try {
-      const b = await drawShareCard(card, { stickerOnly: true })
+      const b = await drawShareCard(card, { stickerOnly: true, calories })
       const how = await shareImage(b, cardFilename(card, true))
       if (how === 'saved') {
         toast({ text: 'Sticker saved. Add it over your story photo in Instagram.', icon: 'check' })
@@ -155,6 +166,23 @@ export function ShareSheet({
             </button>
           )}
         </div>
+
+        {/* Only a card about food has a number worth withholding. */}
+        {card.kind === 'meals' && (
+          <label className="share-opt">
+            <input
+              type="checkbox" checked={calories}
+              onChange={(e) => { haptic('selection'); setCalories(e.target.checked) }}
+            />
+            <span className="stack stack-1">
+              <span className="t-callout">Show the calorie total</span>
+              <span className="t-caption dim2">
+                Off by default. The food is the post; the number is yours to
+                add if you want it.
+              </span>
+            </span>
+          </label>
+        )}
 
         <p className="t-caption dim2" style={{ textAlign: 'center' }}>
           {photo
