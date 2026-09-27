@@ -31,48 +31,6 @@ type Modal = null | 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
  */
 type CaptureKind = 'meal' | 'workout' | 'sleep' | 'measurement' | 'note'
 
-const KINDS: Array<{
-  id: CaptureKind
-  label: string
-  icon: IconName
-  tint: string
-  heading: string
-  blurb: string
-  cta: string
-  ctaIcon: IconName
-}> = [
-  {
-    id: 'meal', label: 'Meal', icon: 'camera', tint: 'var(--nutrition)',
-    heading: 'Snap your meal',
-    blurb: 'Take a photo and Jumbo’s AI estimates the foods and nutrition, or type it yourself. Either way you correct it before anything is saved.',
-    cta: 'Take photo', ctaIcon: 'camera',
-  },
-  {
-    id: 'workout', label: 'Workout', icon: 'training', tint: 'var(--movement)',
-    heading: 'Log a workout',
-    blurb: 'Type, minutes and how hard it was. How it felt counts as much as how long it lasted.',
-    cta: 'Log a workout', ctaIcon: 'training',
-  },
-  {
-    id: 'sleep', label: 'Sleep', icon: 'sleep', tint: 'var(--sleep)',
-    heading: 'Log last night',
-    blurb: 'How long you slept, and when you turned in. Roughly is fine — it is the pattern that matters, not the minute.',
-    cta: 'Log sleep', ctaIcon: 'sleep',
-  },
-  {
-    id: 'measurement', label: 'Measure', icon: 'measure', tint: 'var(--measure)',
-    heading: 'Add a measurement',
-    blurb: 'Waist, grip, VO₂ max, a lab result. The slow numbers, entered on the days you have them.',
-    cta: 'Add a measurement', ctaIcon: 'plus',
-  },
-  {
-    id: 'note', label: 'Note', icon: 'note', tint: 'var(--note)',
-    heading: 'Write a note',
-    blurb: 'How the day actually felt, in your own words. The context the numbers cannot carry.',
-    cta: 'Write a note', ctaIcon: 'note',
-  },
-]
-
 /**
  * The categories a record can carry. They are labels and filters. They are
  * never the sort: see `byNewest`.
@@ -137,17 +95,20 @@ const MEASURE_KINDS: Array<{ kind: MeasurementKind; label: string; unit: string;
 ]
 
 /**
- * Two screens, one component.
+ * Log: the record of the day, and the few ways to add to it that the + does
+ * not already offer.
  *
- * Capture and Log are the two halves this screen always had — the ways to
- * add something, and the record of what was added — and they now have a
- * tab each rather than being stacked on one page nobody could reach. They
- * share every bit of state behind them (the day, the records, the sheets),
- * so they stay one component with a view rather than two that have to be
- * kept in step by hand.
+ * This used to be Capture, with a grid of five kinds and a large card for
+ * each — every one of which the floating + also does, one tap closer. Two
+ * doors to the same room is not a choice, it is clutter, and it cost
+ * Explore its tab. So adding lives on the +, and this screen keeps only
+ * what the + cannot do: type a meal instead of photographing it, say it
+ * out loud, and get to Training.
+ *
+ * The component keeps its old name because the sheets it owns are what the
+ * + opens, wherever you are.
  */
-export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
-  view?: 'add' | 'log'
+export function Capture({ reopenMeal, openKind, onOpened }: {
   reopenMeal?: { date: string; mealId: string } | null
   /** A kind chosen from the centre button, to open on arrival. */
   openKind?: CaptureKind | null
@@ -156,6 +117,7 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
   const { state, dispatch } = useStore()
   const [modal, setModal] = useState<Modal>(null)
   // The meal whose detail is open, by id. Null when the list is showing.
+  const navigate = useNavigate()
   const [openMealId, setOpenMealId] = useState<string | null>(null)
   const [shareCard, setShareCard] = useState<ShareCard | null>(null)
   const [mealMode, setMealMode] = useState<MealMode>('camera')
@@ -163,7 +125,6 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
   const [filter, setFilter] = useState<Category | 'all'>('all')
   // Meal first: it is the thing a wearable cannot see, which is why this
   // screen exists at all.
-  const [kind, setKind] = useState<CaptureKind>('meal')
   const { confirm, node: confirmNode } = useConfirm()
   const toast = useToast()
 
@@ -198,7 +159,6 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
    */
   useEffect(() => {
     if (!openKind) return
-    setKind(openKind)
     startCapture(openKind)
     onOpened?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -288,13 +248,9 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
     <div className="stack stack-6">
       <header className="stack stack-5">
         <div className="scr-head">
-          <h1 className="scr-head__title">{view === 'log' ? 'Log' : 'Capture'}</h1>
+          <h1 className="scr-head__title">Log</h1>
           <p className="scr-head__sub">
-            {view === 'log'
-              ? (isToday ? 'Everything you have recorded today.' : `Recorded on ${prettyDate(date)}.`)
-              : isToday
-                ? 'Sleep, steps and heart data arrive on their own. This is only for the gaps.'
-                : `Adding to ${prettyDate(date)}.`}
+            {isToday ? 'Everything you have recorded today.' : `Recorded on ${prettyDate(date)}.`}
           </p>
         </div>
         {state.dataMode === 'demo' && (
@@ -303,48 +259,29 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
         <DateRail selected={date} onSelect={(d) => dispatch({ type: 'selectDate', date: d })} />
       </header>
 
-      {/* ────────────────── what you came to add, and the way to add it */}
-      {view === 'add' && (
-      <section className="stack stack-3">
-        <div className="cap-tiles" role="group" aria-label="What to add">
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              className={`cap-tile${kind === k.id ? ' is-on' : ''}`}
-              style={{ ['--tint' as string]: k.tint }}
-              aria-pressed={kind === k.id}
-              onClick={() => { haptic('selection'); setKind(k.id) }}
-            >
-              <span className="cap-tile__icon">
-                <Icon name={k.icon} size={19} />
-              </span>
-              <span className="cap-tile__title">{k.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <CaptureAction kind={kind} onStart={() => startCapture(kind)} />
-
-        {/* The other half of logging a meal, next to the first half rather
-            than at the bottom of the screen under "more ways to add". Food
-            eaten out of a packet, at a desk, or already finished does not
-            get photographed, and that is most of it. */}
-        {kind === 'meal' && (
-          <button className="btn btn--secondary btn--block" onClick={() => openMeal('manual')}>
-            <Icon name="note" size={16} /> Type or search a food instead
+      {/*
+       * What the + cannot do, kept high on the screen. Training once sat
+       * 1126px down a screen 844px tall, which is indistinguishable from not
+       * being there (UC-69), so this row goes above the records, not below.
+       */}
+      <div className="logways" role="group" aria-label="Other ways to add">
+        <button className="logways__btn" onClick={() => openMeal('manual')}>
+          <Icon name="note" size={20} /> <span>Type a meal</span>
+        </button>
+        {dictation.supported && (
+          <button
+            className="logways__btn"
+            onClick={() => { haptic('selection'); setDictate(true); setModal('note') }}
+          >
+            <Icon name="mic" size={20} /> <span>Voice log</span>
           </button>
         )}
-      </section>
-      )}
+        <button className="logways__btn" onClick={() => { haptic('selection'); navigate('training') }}>
+          <Icon name="training" size={20} /> <span>Training</span>
+        </button>
+      </div>
 
-      {/* ────────────────────────────── training
-          Logging a workout records what you did. This is the other half:
-          deciding what to do, and having something to follow while doing
-          it. It sits directly under the five kinds because down at the
-          bottom, past every record of the day, nobody found it. */}
-      {view === 'add' && <TrainingWay />}
-
-      {view === 'add' && progress.recovery < 0.4 && !today.workout && (
+      {progress.recovery < 0.4 && !today.workout && (
         <div className="card card--brand row row--top" style={{ gap: 'var(--s-3)' }}>
           <AiOrb size="sm" />
           <p className="t-callout">
@@ -356,7 +293,6 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
 
       <ShareSheet card={shareCard} open={shareCard !== null} onClose={() => setShareCard(null)} />
 
-      {view === 'log' && (
       <section className="section">
         <SectionHead
           title="Recently added"
@@ -501,30 +437,6 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
           </ul>
         )}
       </section>
-      )}
-
-      {/* ────────────────────────────── the other ways in */}
-      {view === 'add' && (
-      <section className="stack stack-3">
-        <SectionHead title="More ways to add" />
-        <div className="rail" role="group" aria-label="Other ways to add">
-          <button className="chip" onClick={() => openMeal('manual')}>
-            <Icon name="search" size={16} /> Search food
-          </button>
-          {dictation.supported && (
-            <button
-              className="chip"
-              onClick={() => { haptic('selection'); setDictate(true); setModal('note') }}
-            >
-              <Icon name="mic" size={16} /> Voice log
-            </button>
-          )}
-          <button className="chip" onClick={() => openMeal('manual')}>
-            <Icon name="note" size={16} /> Type manually
-          </button>
-        </div>
-      </section>
-      )}
 
       <MealDetail
         open={openMealId !== null}
@@ -555,39 +467,6 @@ export function Capture({ view = 'add', reopenMeal, openKind, onOpened }: {
   )
 }
 
-/**
- * The action for whichever kind is picked.
- *
- * The dashed rim is the same cue the photograph slot has always used: a
- * space waiting to be filled, rather than a card already filled in. Only
- * the meal shows a thumbnail, because only the meal is read from a picture.
- */
-function CaptureAction({ kind, onStart }: { kind: CaptureKind; onStart: () => void }) {
-  const k = KINDS.find((x) => x.id === kind) ?? KINDS[0]
-  return (
-    <button
-      className="capact"
-      key={k.id}
-      style={{ ['--tint' as string]: k.tint }}
-      onClick={onStart}
-    >
-      {k.id === 'meal' ? (
-        <AssetImage asset="mealPhoto" alt="" rounded="tile" className="capact__shot" />
-      ) : (
-        <span className="capact__shot capact__shot--icon">
-          <Icon name={k.icon} size={30} strokeWidth={1.7} />
-        </span>
-      )}
-      <span className="capact__body">
-        <span className="capact__title">{k.heading}</span>
-        <span className="capact__blurb">{k.blurb}</span>
-        <span className="capact__cta">
-          <Icon name={k.ctaIcon} size={15} /> {k.cta}
-        </span>
-      </span>
-    </button>
-  )
-}
 
 /* ---------------------------------------------------------------- workout */
 function WorkoutSheet({ open, onClose, date }: { open: boolean; onClose: () => void; date: string }) {
@@ -673,42 +552,6 @@ function WorkoutSheet({ open, onClose, date }: { open: boolean; onClose: () => v
 
 /* -------------------------------------------------------------- training */
 
-/**
- * The way through to Training.
- *
- * It says what is there rather than naming a feature, and how many plans
- * the person has — which is honest either way: none is a real answer and
- * the screen behind it is built for it.
- */
-function TrainingWay() {
-  const { state } = useStore()
-  const navigate = useNavigate()
-  const count = state.plans.length
-
-  return (
-    <section className="stack stack-3">
-      <SectionHead title="Training" />
-      <button
-        className="capact"
-        style={{ '--tint': 'var(--movement)' } as React.CSSProperties}
-        onClick={() => { haptic('selection'); navigate('training') }}
-      >
-        <span className="capact__shot capact__shot--icon" aria-hidden="true">
-          <Icon name="training" size={26} />
-        </span>
-        <span className="stack stack-1 grow" style={{ minWidth: 0, textAlign: 'left' }}>
-          <span className="t-callout strong">Workout suggestions and plans</span>
-          <span className="t-caption dim2">
-            {count === 0
-              ? 'What to train today, and a session to follow. Build one, or let Jumbo draft it.'
-              : `${count} plan${count > 1 ? 's' : ''} saved · what to train today`}
-          </span>
-        </span>
-        <Icon name="chevron" size={18} style={{ color: 'var(--ink-3)', flex: 'none' }} />
-      </button>
-    </section>
-  )
-}
 
 /* ------------------------------------------------------------ measurement */
 function MeasurementSheet({ open, onClose }: { open: boolean; onClose: () => void }) {

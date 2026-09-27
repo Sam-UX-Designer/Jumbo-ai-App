@@ -285,25 +285,17 @@ export async function goTo(page, screen) {
   // waits thirty seconds for a target it will never reach.
   await dismissSheets(page)
   /*
-   * Five tabs now: Home, Log, Lifestyle, Capture, Profile. The + came out
-   * of the bar and floats, which is what finally gave Capture a tab of its
-   * own — before this the only way in was an item at the bottom of the add
-   * menu. Explore lost its tab in the swap and is reached from Home.
+   * The bar: Home, Log, Lifestyle, Explore, Profile. The + floats on its
+   * own. There is no Capture tab — adding is the +, and the few things the
+   * + cannot do (type a meal, voice, Training) are a row on Log.
    */
   const map = {
-    today: 'Home', log: 'Log', future: 'Lifestyle', capture: 'Capture', profile: 'Profile',
+    today: 'Home', log: 'Log', future: 'Lifestyle', explore: 'Explore', profile: 'Profile',
   }
-  if (!map[screen] && screen !== 'explore') {
-    throw new Error(`goTo: no tab called "${screen}". Use ${Object.keys(map).concat('explore').join(', ')}.`)
+  if (!map[screen]) {
+    throw new Error(`goTo: no tab called "${screen}". Use ${Object.keys(map).join(', ')}.`)
   }
-  if (screen === 'explore') {
-    // Off the bar: Home carries the row into it.
-    await page.locator('.tabbar__item', { hasText: 'Home' }).first().click()
-    await page.waitForTimeout(400)
-    await clickClear(page, page.getByRole('button', { name: /^Explore\s*Worth watching$/i }).first())
-  } else {
-    await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
-  }
+  await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
   await page.waitForTimeout(800)
 }
 

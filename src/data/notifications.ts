@@ -150,13 +150,13 @@ export const SAMPLE_NOTIFICATIONS: AppNotification[] = [
     body: 'Seven days of logging in a row.',
   },
   {
-    id: 'demo-meal', kind: 'meal', route: 'capture',
+    id: 'demo-meal', kind: 'meal', route: 'log',
     at: ago(H * 7),
     title: 'Meal analysis complete',
     body: 'Your lunch has been analysed and added to the day.',
   },
   {
-    id: 'demo-reminder', kind: 'reminder', route: 'capture',
+    id: 'demo-reminder', kind: 'reminder', route: 'log',
     at: ago(D + H * 4),
     title: 'Gentle reminder',
     body: 'Dinner has not been logged yet.',

@@ -6,7 +6,7 @@ import { haptic } from '../lib/feedback'
 import { useGlassGroup } from '../lib/useGlass'
 
 export type Route =
-  | 'today' | 'log' | 'future' | 'capture' | 'explore' | 'you' | 'measurements'
+  | 'today' | 'log' | 'future' | 'explore' | 'you' | 'measurements'
   | 'chat' | 'settings' | 'subscribe' | 'notifications' | 'training'
 
 /**
@@ -47,37 +47,30 @@ interface NavItem { route: Route; label: string; icon: IconName }
 /**
  * Five destinations, and the add button floating clear of them.
  *
- * The centre of the bar used to be the + itself, which meant Capture had no
- * tab at all: the only way to the day's records was a quiet item at the
- * bottom of the add menu, found by people who already knew it was there.
- * A screen reachable only by accident is not a screen.
+ * The centre of the bar used to be the + itself, which meant the day's
+ * records had no tab: the only way to them was a quiet item at the bottom
+ * of the add menu. The + came out of the row to fix that.
  *
- * So the bar carries the destinations and nothing else, and adding — which
- * is an action, not a place — lifts out of the row into a button of its
- * own. Log is the record of the day; Capture is where a new one starts.
+ * For a day there was also a Capture tab — a grid of the same five kinds
+ * the + already offers, one tap further away. Two doors to one room, and
+ * it pushed Explore off the bar to make space. It is gone: adding is the
+ * +, and Log keeps the few things the + cannot do.
  */
 const PRIMARY_TABS: NavItem[] = [
   { route: 'today',   label: 'Home',      icon: 'today' },
   { route: 'log',     label: 'Log',       icon: 'list' },
   { route: 'future',  label: 'Lifestyle', icon: 'future' },
-  { route: 'capture', label: 'Capture',   icon: 'camera' },
+  { route: 'explore', label: 'Explore',   icon: 'explore' },
   { route: 'you',     label: 'Profile',   icon: 'profile' },
 ]
 
 export const PRIMARY: NavItem[] = PRIMARY_TABS
 
-/*
- * Explore came off the bar to make room. It is a content feed, and a feed
- * matters less than the record of your own day — but it is not orphaned:
- * Home carries a row into it, so does Profile, and on a wide screen the
- * sidebar below still lists it outright.
- */
 const SIDEBAR: NavItem[] = [
   { route: 'today',   label: 'Home',      icon: 'today' },
   { route: 'log',     label: 'Log',       icon: 'list' },
   { route: 'future',  label: 'Lifestyle', icon: 'future' },
   { route: 'chat',    label: 'Ask Jumbo', icon: 'ai' },
-  { route: 'capture', label: 'Capture',   icon: 'camera' },
   { route: 'training', label: 'Training', icon: 'training' },
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
   { route: 'explore', label: 'Explore',   icon: 'explore' },
@@ -188,10 +181,8 @@ export function TabBar({
       // there, so Today stays lit rather than no tab at all.
       || (item.route === 'today' && route === 'notifications')
       // Training is opened from Capture and Back returns there.
-      || (item.route === 'capture' && route === 'training')
-      // Explore has no tab of its own any more; Home is the door it is
-      // reached through, so Home is what stays lit behind it.
-      || (item.route === 'today' && route === 'explore')
+      // Training is reached from Log's row and from the +; Log stays lit.
+      || (item.route === 'log' && route === 'training')
       || (route === 'chat' && item.route === origin)
 
     /**
@@ -244,7 +235,7 @@ export function TabBar({
                     haptic('impactLight')
                     setAdding(false)
                     if (onQuickAdd) onQuickAdd(q.kind)
-                    else onNavigate('capture')
+                    else onNavigate('log')
                   }}
                 >
                   <span className="quickadd__icon"><Icon name={q.icon} size={20} /></span>
@@ -273,7 +264,7 @@ export function TabBar({
             <li role="none" style={{ '--i': QUICK_ADD.length + 1 } as React.CSSProperties}>
               <button
                 className="quickadd__item quickadd__item--quiet" role="menuitem"
-                onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}
+                onClick={() => { haptic('selection'); setAdding(false); onNavigate('log') }}
               >
                 <span className="quickadd__label">See today’s records</span>
               </button>

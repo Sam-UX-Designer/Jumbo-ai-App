@@ -55,14 +55,14 @@ export default async function logging({ browser, origin, r }) {
     // listed item, I can add whatever I need". The built-in list is thirty
     // Western staples, which is no use to somebody eating chapati.
     const { ctx, page, errors } = await openApp(browser, origin, account())
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
     await page.waitForTimeout(400)
 
-    r.check('typing a meal is offered beside photographing one',
-      await page.getByRole('button', { name: /type or search a food/i }).count() > 0,
-      'the manual door is still buried at the bottom of the screen')
+    r.check('typing a meal is offered near the top of Log',
+      await page.getByRole('button', { name: /^Type a meal$/i }).count() > 0,
+      'the manual door is missing from Log')
 
-    await clickClear(page, page.getByRole('button', { name: /type or search a food/i }).first())
+    await clickClear(page, page.getByRole('button', { name: /^Type a meal$/i }).first())
     await page.waitForTimeout(700)
 
     const search = page.getByLabel(/search or type any food/i)
@@ -99,7 +99,7 @@ export default async function logging({ browser, origin, r }) {
       JSON.stringify(s1?.customFoods ?? []).slice(0, 200))
 
     // Second time around it should be one tap, with nothing to type.
-    await clickClear(page, page.getByRole('button', { name: /type or search a food/i }).first())
+    await clickClear(page, page.getByRole('button', { name: /^Type a meal$/i }).first())
     await page.waitForTimeout(700)
     r.check('the second time it is already on the list',
       await page.getByRole('button', { name: /^Chapati$/ }).count() > 0,
@@ -179,9 +179,9 @@ export default async function logging({ browser, origin, r }) {
     await page.waitForTimeout(500)
 
     // ── a session, from Training
-    await goTo(page, 'capture')
+    await goTo(page, 'log')
     await page.waitForTimeout(400)
-    await page.getByRole('button', { name: /Workout suggestions and plans/i }).click()
+    await page.getByRole('button', { name: /^Training$/i }).click()
     await page.waitForTimeout(800)
     const sessionShare = page.getByRole('button', { name: /share upper body strength/i })
     r.check('a finished session can be shared', await sessionShare.count() > 0)

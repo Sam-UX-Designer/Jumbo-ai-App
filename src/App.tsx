@@ -23,7 +23,7 @@ import { scheduleReminders } from './lib/reminders'
 import { haptic } from './lib/feedback'
 
 const TITLES: Record<Route, string> = {
-  today: 'Today', log: 'Log', future: 'Lifestyle', capture: 'Capture',
+  today: 'Today', log: 'Log', future: 'Lifestyle',
   explore: 'Explore', you: 'Profile', measurements: 'Measurements',
   chat: 'Ask Jumbo', settings: 'Settings', subscribe: 'Plans',
   notifications: 'Notifications', training: 'Training',
@@ -40,7 +40,15 @@ const DOCKLESS = new Set<Route>(['chat', 'settings', 'subscribe', 'notifications
 
 function Shell() {
   const { state } = useStore()
-  const [route, setRoute] = useState<Route>('today')
+  const [route, setRouteRaw] = useState<Route>('today')
+  /*
+   * 'capture' was a route until the Capture tab was folded into Log. The
+   * type no longer allows it, but notifications and events already saved
+   * in people's browsers still carry it — and a route nothing renders is a
+   * blank screen. Every way of changing screen passes through here, so
+   * this is the one place that has to know.
+   */
+  const setRoute = (to: Route) => setRouteRaw((to as string) === 'capture' ? 'log' : to)
   // A question handed to the chat from another screen, asked once on arrival.
   const [handover, setHandover] = useState<string | undefined>()
   // Where Ask Jumbo was opened from, so closing it returns you there rather
@@ -65,7 +73,8 @@ function Shell() {
   const [panel, setPanel] = useState<string | null>(null)
   const toast = useToast()
 
-  const navigate = (next: Route, question?: string, nextFocus?: ChatFocus) => {
+  const navigate = (to: Route, question?: string, nextFocus?: ChatFocus) => {
+    const next: Route = (to as string) === 'capture' ? 'log' : to
     setHandover(next === 'chat' ? question : undefined)
     if (next === 'chat') {
       if (route !== 'chat') setOrigin(route)
@@ -89,7 +98,7 @@ function Shell() {
   useEffect(
     () => scheduleReminders(state.reminders, (kind) => {
       haptic('impactLight')
-      setRoute('capture')
+      setRoute('log')
       toast({ text: `${kind[0].toUpperCase()}${kind.slice(1)} reminder`, icon: 'bell' })
     }),
     [state.reminders, toast],
@@ -115,16 +124,15 @@ function Shell() {
             <ErrorBoundary area="this screen" resetKey={route}>
             {route === 'today' && <Today />}
             {route === 'future' && <Future />}
-            {(route === 'capture' || route === 'log') && (
+            {route === 'log' && (
               <Capture
-                view={route === 'log' ? 'log' : 'add'}
                 reopenMeal={focus?.kind === 'meal' ? focus : null}
                 openKind={quickKind}
                 onOpened={() => setQuickKind(null)}
               />
             )}
             {route === 'explore' && <Explore />}
-            {route === 'training' && <Training onBack={() => setRoute('capture')} />}
+            {route === 'training' && <Training onBack={() => setRoute('log')} />}
             {route === 'measurements' && <Measurements onBack={() => setRoute('today')} />}
             {route === 'chat' && (
               <Chat initialQuestion={handover} focus={focus} onClose={() => navigate(origin)} />
@@ -143,7 +151,7 @@ function Shell() {
         {!DOCKLESS.has(route) && <AskDock screen={route} />}
         <TabBar
           route={route} origin={origin} onNavigate={setRoute}
-          onQuickAdd={(kind) => { setQuickKind(kind); setRoute('capture') }}
+          onQuickAdd={(kind) => { setQuickKind(kind); setRoute('log') }}
         />
       </div>
     </NavProvider>

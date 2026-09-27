@@ -129,24 +129,6 @@ export function You({ onNavigate }: { onNavigate: (r: Route, anchor?: string) =>
         <span className="plancard__cta">{isFree ? 'Explore plans' : 'Manage plan'}</span>
       </button>
 
-      {/* Explore came off the tab bar to make room for Log and Capture, so
-          it needs a door somewhere obvious. Here and on Home. */}
-      <nav className="group" aria-label="Elsewhere in Jumbo">
-        <button className="row-item" onClick={() => { haptic('selection'); onNavigate('explore') }}>
-          <span
-            className="row-item__icon"
-            style={{ background: 'color-mix(in srgb, var(--brand) 18%, transparent)', color: 'var(--accent-text)' }}
-          >
-            <Icon name="explore" size={16} />
-          </span>
-          <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
-            <span className="row-item__title">Explore</span>
-            <span className="row-item__sub">Things worth watching, picked for what you are working on</span>
-          </span>
-          <Icon name="chevron" size={16} style={{ flex: 'none', color: 'var(--ink-3)' }} />
-        </button>
-      </nav>
-
       {/* ─────────────────────────────────────────────────────────── the menu */}
       <nav className="group" aria-label="Settings">
         {MENU.map((row) => (

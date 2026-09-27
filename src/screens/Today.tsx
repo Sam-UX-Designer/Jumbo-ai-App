@@ -115,7 +115,7 @@ export function Today() {
             <button
               className="round-btn"
               aria-label="Add to today"
-              onClick={() => { haptic('selection'); navigate('capture') }}
+              onClick={() => { haptic('selection'); navigate('log') }}
             >
               <Icon name="plus" size={19} strokeWidth={2.2} />
             </button>
@@ -361,7 +361,7 @@ export function Today() {
       <section className="stack stack-3">
         <div className="sec-head">
           <h2 className="sec-head__title">{isToday ? 'Today’s focus' : 'That day’s focus'}</h2>
-          <button className="sec-head__link" onClick={() => navigate('capture')}>
+          <button className="sec-head__link" onClick={() => navigate('log')}>
             Add <Icon name="plus" size={14} />
           </button>
         </div>
@@ -403,20 +403,6 @@ export function Today() {
             : 'Built on sleeping and moving enough. One off day is forgiven.'}
         </p>
       </section>
-
-      {/* Explore lost its tab to Log and Capture. This is its way back. */}
-      <button
-        className="btn btn--ghost btn--block"
-        onClick={() => { haptic('selection'); navigate('explore') }}
-        style={{ justifyContent: 'space-between' }}
-      >
-        <span className="row" style={{ gap: 'var(--s-2)' }}>
-          <Icon name="explore" size={17} /> Explore
-        </span>
-        <span className="row t-caption dim2" style={{ gap: 6 }}>
-          Worth watching <Icon name="chevron" size={14} />
-        </span>
-      </button>
 
       <button
         className="btn btn--ghost btn--block"

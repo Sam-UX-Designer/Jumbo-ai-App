@@ -794,7 +794,7 @@ function Sources({
         <span className="eyebrow">Not covered by any source</span>
         <div className="row row--between">
           <span className="t-callout">Meals</span>
-          <button className="btn btn--secondary btn--sm" onClick={() => onNavigate('capture')}>
+          <button className="btn btn--secondary btn--sm" onClick={() => onNavigate('log')}>
             <Icon name="camera" size={14} /> Photograph one
           </button>
         </div>

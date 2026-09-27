@@ -518,7 +518,7 @@ function reducer(state: State, action: Action): State {
         events: record(p.events, {
           id: `ev-meal-${action.meal.id}`,
           kind: 'meal',
-          route: 'capture',
+          route: 'log',
           at: new Date().toISOString(),
           title: action.meal.method === 'camera' ? 'Meal analysis complete' : 'Meal saved',
           body: action.meal.method === 'camera'
@@ -595,7 +595,7 @@ function reducer(state: State, action: Action): State {
         events: record(p.events, {
           id: `ev-session-${action.workoutId}`,
           kind: 'workout',
-          route: 'capture',
+          route: 'log',
           at: new Date().toISOString(),
           title: 'Session finished',
           body: `${action.plan.name}, ${action.minutes} minutes, added to the day.`,
@@ -608,7 +608,7 @@ function reducer(state: State, action: Action): State {
         events: record(p.events, {
           id: `ev-workout-${action.workout.id}`,
           kind: 'workout',
-          route: 'capture',
+          route: 'log',
           at: new Date().toISOString(),
           title: 'Workout saved',
           body: `${action.workout.type}, ${action.workout.minutes} minutes, added to the day.`,
@@ -624,7 +624,7 @@ function reducer(state: State, action: Action): State {
         events: record(p.events, {
           id: `ev-sleep-${action.date}`,
           kind: 'insight',
-          route: 'capture',
+          route: 'log',
           at: new Date().toISOString(),
           title: 'Sleep saved',
           body: `${hoursToHM(action.sleep.hours)} recorded for the night.`,
