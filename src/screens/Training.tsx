@@ -8,6 +8,8 @@ import {
   useConfirm, useToast,
 } from '../components/UI'
 import { useStore } from '../state/store'
+import { ShareSheet } from '../components/ShareSheet'
+import type { ShareCard } from '../lib/shareCard'
 import { haptic } from '../lib/feedback'
 import { uid } from '../lib/util'
 import { api } from '../lib/api'
@@ -180,6 +182,8 @@ export function Training({ onBack }: { onBack: () => void }) {
  * sits on Capture alongside everything else logged that day.
  */
 function History({ sessions }: { sessions: PlanSession[] }) {
+  // Hooks before the early return, or the order changes with the data.
+  const [card, setCard] = useState<ShareCard | null>(null)
   if (!sessions.length) return null
 
   const when = (s: PlanSession) => {
@@ -194,6 +198,7 @@ function History({ sessions }: { sessions: PlanSession[] }) {
   return (
     <section className="stack stack-4">
       <SectionHead title="Sessions you have done" />
+      <ShareSheet card={card} open={card !== null} onClose={() => setCard(null)} />
       <ul className="sessions">
         {sessions.slice(0, 12).map((s) => (
           <li key={s.id} className="session-row">
@@ -208,6 +213,25 @@ function History({ sessions }: { sessions: PlanSession[] }) {
               </span>
             </span>
             <span className="session-row__mins num">{s.minutes}<em>min</em></span>
+            {/* A session is the thing people want to show somebody. */}
+            <button
+              className="icon-btn none session-row__share"
+              aria-label={`Share ${s.planName}`}
+              onClick={() => {
+                haptic('selection')
+                setCard({
+                  kind: 'session',
+                  planName: s.planName,
+                  minutes: s.minutes,
+                  done: s.done,
+                  total: s.total,
+                  intensity: s.intensity,
+                  date: s.date,
+                })
+              }}
+            >
+              <Icon name="external" size={16} />
+            </button>
           </li>
         ))}
       </ul>

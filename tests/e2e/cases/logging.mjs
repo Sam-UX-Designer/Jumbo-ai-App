@@ -109,6 +109,81 @@ export default async function logging({ browser, origin, r }) {
   })
 
 
+  /* ── UC-85 ─────────────────────────────────────────────────────────── */
+  await r.run('UC-85', 'What you did can be shared, as a picture, honestly', async () => {
+    // Instagram's own "share to Stories" hook needs a native app and a
+    // Facebook App ID, so from the web the card goes to the phone's share
+    // sheet instead. What is testable here is that the picture is really
+    // drawn, at the Story shape, and offered only where there is something
+    // worth sharing.
+    const { ctx, page, errors } = await openApp(browser, origin, account({
+      addedWorkouts: { [today]: aWorkout() },
+      addedMeals: { [today]: [aMeal()] },
+      sessions: [{
+        id: 's-share', planId: 'p1', planName: 'Upper body strength', date: today,
+        minutes: 42, done: 6, total: 7, intensity: 2, effort: 7, at: Date.now(),
+      }],
+    }))
+
+    /** The preview, once the canvas has actually produced something. */
+    const drawn = async () => {
+      await page.waitForSelector('.share-preview__img', { timeout: 8000 }).catch(() => null)
+      return page.evaluate(() => {
+        const img = document.querySelector('.share-preview__img')
+        if (!img) return null
+        return { src: img.getAttribute('src') ?? '', w: img.naturalWidth, h: img.naturalHeight }
+      })
+    }
+
+    // ── a day, from Today
+    r.check('the day can be shared', await page.getByRole('button', { name: /share this day/i }).count() > 0)
+    await page.getByRole('button', { name: /share this day/i }).click()
+    const dayCard = await drawn()
+    r.check('a card is really drawn, not a placeholder',
+      dayCard?.src.startsWith('blob:') === true, String(dayCard?.src).slice(0, 24))
+    r.check('at the Story shape Instagram wants',
+      dayCard?.w === 1080 && dayCard?.h === 1920, `${dayCard?.w}×${dayCard?.h}`)
+    const sheetText = await screenText(page)
+    r.check('and the wording does not promise a jump into Instagram it cannot make',
+      !/share to instagram/i.test(sheetText), sheetText.slice(0, 160))
+    r.check('saving it is offered for browsers with no share sheet',
+      await page.getByRole('button', { name: /^Save$/ }).count() > 0)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+
+    // ── a session, from Training
+    await goTo(page, 'capture')
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: /Workout suggestions and plans/i }).click()
+    await page.waitForTimeout(800)
+    const sessionShare = page.getByRole('button', { name: /share upper body strength/i })
+    r.check('a finished session can be shared', await sessionShare.count() > 0)
+    if (await sessionShare.count() > 0) {
+      await sessionShare.first().click()
+      const s = await drawn()
+      r.check('the session card draws too', s?.w === 1080 && s?.h === 1920, `${s?.w}×${s?.h}`)
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(400)
+    }
+    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
+    await ctx.close()
+  })
+
+
+  /* ── UC-86 ─────────────────────────────────────────────────────────── */
+  await r.run('UC-86', 'A day with nothing in it is not offered up for sharing', async () => {
+    // A card reading "nothing recorded" is not something anybody posts, and
+    // offering it invites a share of a day that says nothing happened.
+    const { ctx, page } = await openApp(browser, origin, account())
+    const t = await screenText(page)
+    r.check('the day really is empty', /Nothing recorded/i.test(t), t.slice(0, 120))
+    r.check('and there is nothing to share',
+      await page.getByRole('button', { name: /share this day/i }).count() === 0,
+      'an empty day offered a share card')
+    await ctx.close()
+  })
+
+
   /* ── UC-11 ─────────────────────────────────────────────────────────── */
   await r.run('UC-11', 'A logged meal is saved and reaches the nutrition figures', async () => {
     const { ctx, page } = await openApp(browser, origin,

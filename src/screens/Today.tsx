@@ -8,6 +8,8 @@ import { Rings, MiniRing } from '../components/Rings'
 import { Sparkline } from '../components/Charts'
 import { Confidence, Sheet, UnavailableNotice } from '../components/UI'
 import { useStore } from '../state/store'
+import { ShareSheet } from '../components/ShareSheet'
+import type { ShareCard } from '../lib/shareCard'
 import { useInsights } from '../lib/useInsights'
 import { useNavigate } from '../components/Nav'
 import { SAMPLE_NOTIFICATIONS } from '../data/notifications'
@@ -36,6 +38,8 @@ const METRIC_EXPLAIN: Record<KeyMetric['key'], string> = {
 export function Today() {
   const { state, dispatch } = useStore()
   const navigate = useNavigate()
+  const [shareCard, setShareCard] = useState<ShareCard | null>(null)
+
   const insights = useInsights()
 
   const date = state.selectedDate
@@ -130,6 +134,8 @@ export function Today() {
         />
       </header>
 
+      <ShareSheet card={shareCard} open={shareCard !== null} onClose={() => setShareCard(null)} />
+
       {/* ──────────────────────────── the rings, and the score inside them */}
       <section className="stack stack-3" aria-labelledby="score-h">
         <h2 className="sr-only" id="score-h">
@@ -151,6 +157,30 @@ export function Today() {
               </>
             )}
           </Rings>
+
+          {/* Sharing the day. Only when there is a day to share: a card
+              reading "nothing recorded" is not something anybody posts. */}
+          {dayRecorded && (
+            <button
+              className="icon-btn none score-card__share"
+              aria-label="Share this day"
+              onClick={() => {
+                haptic('selection')
+                setShareCard({
+                  kind: 'day',
+                  score: progress.overall,
+                  sleep: progress.sleep,
+                  movement: progress.movement,
+                  nutrition: progress.nourish,
+                  // Unmeasured recovery is not a nought, and the card says so.
+                  recovery: progress.recoveryKnown ? progress.recovery : null,
+                  date,
+                })
+              }}
+            >
+              <Icon name="external" size={18} />
+            </button>
+          )}
 
           <div className="score__say">
             {dayRecorded ? (

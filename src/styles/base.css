@@ -970,3 +970,32 @@ a { color: var(--accent-text); }
   color: var(--accent-text);
   background: var(--brand-dim);
 }
+
+/*
+ * The share card, previewed before it goes anywhere.
+ *
+ * The card is drawn at 1080×1920 and shown at whatever fits, capped so the
+ * sheet's own buttons stay on screen on a short phone — a preview you have
+ * to scroll past to reach "share" is not doing its job.
+ */
+.share-preview { display: grid; place-items: center; }
+.share-preview__img {
+  width: auto;
+  max-width: 100%;
+  max-height: min(56vh, 520px);
+  aspect-ratio: 1080 / 1920;
+  border-radius: var(--r-card);
+  border: 1px solid var(--card-line);
+}
+.share-preview__wait {
+  width: 180px;
+  max-height: min(56vh, 520px);
+  aspect-ratio: 1080 / 1920;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  animation: share-wait 1.4s ease-in-out infinite;
+}
+@keyframes share-wait { 0%, 100% { opacity: 0.5 } 50% { opacity: 0.85 } }
+@media (prefers-reduced-motion: reduce) {
+  .share-preview__wait { animation: none }
+}

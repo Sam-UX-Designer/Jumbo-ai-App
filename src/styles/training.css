@@ -305,3 +305,10 @@
   font-style: normal; font-weight: 500;
   font-size: var(--t-micro); color: var(--ink-3); margin-left: 3px;
 }
+
+/* The share control on a session. Quiet until reached for. */
+.session-row__share {
+  width: 38px; height: 38px; flex: none;
+  color: var(--ink-3);
+}
+.session-row__share:hover, .session-row__share:focus-visible { color: var(--brand); }

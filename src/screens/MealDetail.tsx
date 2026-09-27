@@ -1,7 +1,10 @@
 import { Icon } from '../components/Icon'
 import { AssetImage } from '../components/Asset'
 import { Sheet } from '../components/UI'
+import { ShareSheet } from '../components/ShareSheet'
+import type { ShareCard } from '../lib/shareCard'
 import { useNavigate, type ChatFocus } from '../components/Nav'
+import { useState } from 'react'
 import { mealTotals } from '../data/foods'
 import type { MealEntry } from '../data/types'
 import { haptic } from '../lib/feedback'
@@ -61,6 +64,9 @@ export function MealDetail({
   meal, date, open, onClose,
 }: { meal: MealEntry | null; date: string; open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
+  // Before the early return: hook order cannot depend on whether a meal
+  // happens to be open.
+  const [card, setCard] = useState<ShareCard | null>(null)
   if (!meal) return null
 
   const totals = mealTotals(meal.items)
@@ -183,6 +189,30 @@ export function MealDetail({
               </li>
             ))}
           </ul>
+          {/* Only worth sharing once there is something on the plate. */}
+          {meal.items.length > 0 && (
+            <button
+              className="btn btn--secondary btn--block"
+              onClick={() => {
+                haptic('selection')
+                setCard({
+                  kind: 'meal',
+                  dish: meal.items.length === 1
+                    ? meal.items[0].name
+                    : `${meal.slot} · ${meal.items.length} items`,
+                  kcal: totals.kcal,
+                  protein: totals.protein,
+                  carbs: totals.carbs,
+                  fat: totals.fat,
+                  date,
+                  photo: meal.photo,
+                })
+              }}
+            >
+              <Icon name="external" size={16} /> Share this meal
+            </button>
+          )}
+
           <button className="askdock__field" onClick={() => ask()}>
             <Icon name="sparkles" size={18} style={{ color: 'var(--brand)', flex: 'none' }} />
             <span className="askdock__placeholder">Ask JUMBO about this meal…</span>
@@ -192,6 +222,7 @@ export function MealDetail({
           </button>
         </div>
       </div>
+      <ShareSheet card={card} open={card !== null} onClose={() => setCard(null)} />
     </Sheet>
   )
 }
