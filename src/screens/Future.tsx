@@ -260,7 +260,7 @@ export function Future() {
                 your own records is enough for the first projection.
               </p>
             </div>
-            <button className="btn btn--primary btn--block" onClick={() => { haptic('selection'); navigate('log') }}>
+            <button className="btn btn--primary btn--block" onClick={() => { haptic('selection'); navigate('capture') }}>
               Log something now
             </button>
           </div>

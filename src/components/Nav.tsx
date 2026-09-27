@@ -6,8 +6,8 @@ import { haptic } from '../lib/feedback'
 import { useGlassGroup } from '../lib/useGlass'
 
 export type Route =
-  | 'today' | 'log' | 'future' | 'explore' | 'you' | 'measurements'
-  | 'chat' | 'settings' | 'subscribe' | 'notifications' | 'training'
+  | 'today' | 'future' | 'capture' | 'explore' | 'you' | 'measurements' | 'chat'
+  | 'settings' | 'subscribe' | 'notifications' | 'training'
 
 /**
  * Navigation, available to anything on screen. The avatar sits in the top
@@ -45,36 +45,33 @@ export function NavProvider({ navigate, children }: { navigate: Navigate; childr
 interface NavItem { route: Route; label: string; icon: IconName }
 
 /**
- * Five destinations, and the add button floating clear of them.
- *
- * The centre of the bar used to be the + itself, which meant the day's
- * records had no tab: the only way to them was a quiet item at the bottom
- * of the add menu. The + came out of the row to fix that.
- *
- * For a day there was also a Capture tab — a grid of the same five kinds
- * the + already offers, one tap further away. Two doors to one room, and
- * it pushed Explore off the bar to make space. It is gone: adding is the
- * +, and Log keeps the few things the + cannot do.
+ * Four destinations around one action. Capture is the centre button rather
+ * than a fifth tab because adding something is the thing people come back to
+ * do, and it should be reachable without aiming.
  */
-const PRIMARY_TABS: NavItem[] = [
-  { route: 'today',   label: 'Home',      icon: 'today' },
-  { route: 'log',     label: 'Log',       icon: 'list' },
-  { route: 'future',  label: 'Lifestyle', icon: 'future' },
-  { route: 'explore', label: 'Explore',   icon: 'explore' },
-  { route: 'you',     label: 'Profile',   icon: 'profile' },
+const LEFT: NavItem[] = [
+  { route: 'today',  label: 'Today',     icon: 'today' },
+  { route: 'future', label: 'Lifestyle', icon: 'future' },
 ]
 
-export const PRIMARY: NavItem[] = PRIMARY_TABS
+const RIGHT: NavItem[] = [
+  { route: 'explore', label: 'Explore', icon: 'explore' },
+  { route: 'you',     label: 'You',     icon: 'profile' },
+]
+
+export const PRIMARY: NavItem[] = [
+  ...LEFT,
+  { route: 'capture', label: 'Capture', icon: 'capture' },
+  ...RIGHT,
+]
 
 const SIDEBAR: NavItem[] = [
-  { route: 'today',   label: 'Home',      icon: 'today' },
-  { route: 'log',     label: 'Log',       icon: 'list' },
-  { route: 'future',  label: 'Lifestyle', icon: 'future' },
-  { route: 'chat',    label: 'Ask Jumbo', icon: 'ai' },
-  { route: 'training', label: 'Training', icon: 'training' },
+  ...LEFT,
+  { route: 'chat',    label: 'Ask Jumbo',    icon: 'ai' },
+  { route: 'capture', label: 'Capture',      icon: 'capture' },
+  { route: 'training', label: 'Training',      icon: 'training' },
   { route: 'measurements', label: 'Measurements', icon: 'measure' },
-  { route: 'explore', label: 'Explore',   icon: 'explore' },
-  { route: 'you',     label: 'Profile',   icon: 'profile' },
+  ...RIGHT,
 ]
 
 /**
@@ -181,8 +178,7 @@ export function TabBar({
       // there, so Today stays lit rather than no tab at all.
       || (item.route === 'today' && route === 'notifications')
       // Training is opened from Capture and Back returns there.
-      // Training is reached from Log's row and from the +; Log stays lit.
-      || (item.route === 'log' && route === 'training')
+      || (item.route === 'capture' && route === 'training')
       || (route === 'chat' && item.route === origin)
 
     /**
@@ -209,15 +205,9 @@ export function TabBar({
   }
 
   return (
-    <>
-    {/* The bar holds destinations. The add button is an action and sits
-        outside it, so walking the navigation landmark does not turn up a
-        control that goes nowhere. */}
     <nav className="tabbar" aria-label="Primary" ref={bar}>
-      {PRIMARY_TABS.map(tab)}
-    </nav>
+      {LEFT.map(tab)}
 
-    <div className="addlayer">
       {adding && (
         <>
           <button
@@ -235,7 +225,7 @@ export function TabBar({
                     haptic('impactLight')
                     setAdding(false)
                     if (onQuickAdd) onQuickAdd(q.kind)
-                    else onNavigate('log')
+                    else onNavigate('capture')
                   }}
                 >
                   <span className="quickadd__icon"><Icon name={q.icon} size={20} /></span>
@@ -264,7 +254,7 @@ export function TabBar({
             <li role="none" style={{ '--i': QUICK_ADD.length + 1 } as React.CSSProperties}>
               <button
                 className="quickadd__item quickadd__item--quiet" role="menuitem"
-                onClick={() => { haptic('selection'); setAdding(false); onNavigate('log') }}
+                onClick={() => { haptic('selection'); setAdding(false); onNavigate('capture') }}
               >
                 <span className="quickadd__label">See today’s records</span>
               </button>
@@ -274,16 +264,18 @@ export function TabBar({
       )}
 
       <button
-        className={`tabbar__fab${adding ? ' is-open' : ''}`}
+        className={`tabbar__fab${route === 'capture' ? ' is-current' : ''}${adding ? ' is-open' : ''}`}
         aria-label={adding ? 'Close the add menu' : 'Add to today'}
         aria-expanded={adding}
         aria-haspopup="menu"
+        aria-current={route === 'capture' && !adding ? 'page' : undefined}
         onClick={() => { haptic('selection'); setAdding((v) => !v) }}
       >
         <Icon name="plus" size={26} strokeWidth={2.4} />
       </button>
-    </div>
-    </>
+
+      {RIGHT.map(tab)}
+    </nav>
   )
 }
 

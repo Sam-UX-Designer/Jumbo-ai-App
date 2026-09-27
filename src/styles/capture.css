@@ -1,6 +1,128 @@
 /* ============================================================
    Capture surfaces
    ============================================================ */
+/* ── What to add ──────────────────────────────────────────────────────
+   Four across, one line. These are the four things a wearable cannot
+   see, and putting them on one row says they are peers; a two-by-two
+   grid implied a ranking.
+
+   This is a selector now rather than four shortcuts: picking one reveals
+   its action directly below, so the answer to "what do I want to
+   capture" is one tap and the action is the next. */
+.cap-tiles {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+@media (min-width: 520px) { .cap-tiles { gap: var(--s-3); } }
+
+.cap-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 10px 6px 9px;
+  border-radius: var(--r-tile);
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background 180ms var(--ease), border-color 180ms var(--ease),
+              color 180ms var(--ease), transform var(--d-fast) var(--ease);
+}
+.cap-tile:hover  { border-color: var(--ink-4); }
+.cap-tile:active { transform: scale(0.97); }
+.cap-tile:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.cap-tile__icon {
+  width: 34px; height: 34px; border-radius: var(--r-chip);
+  display: grid; place-items: center;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  transition: background 180ms var(--ease), color 180ms var(--ease);
+}
+.cap-tile__title {
+  font-size: 12.5px; font-weight: 620; letter-spacing: -0.012em; line-height: 1.2;
+  white-space: nowrap;
+}
+@media (min-width: 520px) {
+  .cap-tile { padding: var(--s-3) var(--s-2); }
+  .cap-tile__icon { width: 40px; height: 40px; }
+  .cap-tile__title { font-size: var(--t-callout); }
+}
+
+/* Picked: the subject's own colour, on the tile and in its mark. Nothing
+   else on the row carries colour, so which one is picked is not a
+   judgement call. */
+.cap-tile.is-on {
+  color: var(--tint-ink);
+  border-color: color-mix(in srgb, var(--tint) 58%, transparent);
+  background: color-mix(in srgb, var(--tint) 13%, var(--surface));
+}
+.cap-tile.is-on .cap-tile__icon {
+  background: color-mix(in srgb, var(--tint) 22%, transparent);
+  color: var(--tint-ink);
+}
+
+/* ── The action for whatever is picked ────────────────────────────────
+   The dashed rim is the cue the photograph slot has always used: a space
+   waiting to be filled rather than a card already filled in. It takes the
+   picked subject's colour, so the card and the tile above it are visibly
+   the same idea. */
+.capact {
+  display: flex; align-items: center; gap: var(--s-4);
+  width: 100%; padding: var(--s-4);
+  border: 1px dashed color-mix(in srgb, var(--tint) 46%, transparent);
+  border-radius: var(--r-card);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--tint) 13%, transparent), transparent 62%),
+    var(--surface);
+  box-shadow: var(--card-lip);
+  color: var(--ink);
+  cursor: pointer; text-align: left;
+  transition: transform var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+  animation: capact-in var(--d-base) var(--ease) both;
+}
+@keyframes capact-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) { .capact { animation: none; } }
+.capact:hover  { border-color: var(--tint); }
+.capact:active { transform: scale(0.99); }
+.capact:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.capact__shot { width: 88px; height: 88px; flex: none; }
+.capact__shot--icon {
+  display: grid; place-items: center;
+  border-radius: var(--r-tile);
+  background: color-mix(in srgb, var(--tint) 14%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--tint) 26%, transparent);
+  color: var(--tint-ink);
+}
+@media (max-width: 379px) {
+  .capact { gap: var(--s-3); padding: var(--s-3); }
+  .capact__shot { width: 72px; height: 72px; }
+}
+
+.capact__body {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2);
+  flex: 1; min-width: 0;
+}
+.capact__title {
+  font-size: var(--t-title3); font-weight: 640; letter-spacing: -0.018em; line-height: 1.25;
+}
+.capact__blurb {
+  font-size: var(--t-caption); color: var(--ink-3); line-height: 1.4;
+}
+
+/* The one control on this card takes the subject's colour rather than the
+   app's green, so the card reads as one idea. */
+.capact__cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  align-self: flex-start; pointer-events: none;
+  min-height: 34px; padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--tint); color: var(--brand-ink);
+  font-size: var(--t-caption); font-weight: 660; letter-spacing: -0.01em;
+}
+
 /* ---------------------------------------------------------------- camera */
 .camera {
   position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: 58dvh;
@@ -239,29 +361,3 @@
   -webkit-backdrop-filter: none; backdrop-filter: none;
   box-shadow: none;
 }
-
-/*
- * The three things the + cannot do, on Log.
- *
- * Equal columns rather than a scrolling chip rail: a rail hides whatever is
- * last behind the screen edge, and last here was Training — the feature
- * once reported as "not showing on mobile" because it sat below the fold.
- * Dividing the width means all of them are always in view, on a 320px
- * phone as much as a 430px one, without breaking the one-row rule.
- */
-.logways {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-  gap: var(--s-2);
-}
-.logways__btn {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 6px; min-height: 72px; padding: var(--s-3) var(--s-2);
-  border-radius: var(--r-card); border: 1px solid var(--card-line);
-  background: var(--surface); color: var(--ink-2); cursor: pointer;
-  font-size: var(--t-caption); font-weight: 620; text-align: center;
-  transition: color var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
-}
-.logways__btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.logways__btn:hover, .logways__btn:focus-visible { color: var(--ink); border-color: var(--brand); }
-.logways__btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }

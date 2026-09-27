@@ -115,7 +115,7 @@ export function Today() {
             <button
               className="round-btn"
               aria-label="Add to today"
-              onClick={() => { haptic('selection'); navigate('log') }}
+              onClick={() => { haptic('selection'); navigate('capture') }}
             >
               <Icon name="plus" size={19} strokeWidth={2.2} />
             </button>
@@ -361,7 +361,7 @@ export function Today() {
       <section className="stack stack-3">
         <div className="sec-head">
           <h2 className="sec-head__title">{isToday ? 'Today’s focus' : 'That day’s focus'}</h2>
-          <button className="sec-head__link" onClick={() => navigate('log')}>
+          <button className="sec-head__link" onClick={() => navigate('capture')}>
             Add <Icon name="plus" size={14} />
           </button>
         </div>

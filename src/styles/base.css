@@ -126,10 +126,8 @@ a { color: var(--accent-text); }
    ============================================================ */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-  /* Five even tabs. `space-around` left the outer two hugging the edges
-     once the centre button came out of the row. */
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 var(--s-2) var(--safe-b);
+  display: flex; align-items: center; justify-content: space-around;
+  padding-bottom: var(--safe-b);
   /* The bar's material is drawn by the layer below so it can reach a few
      pixels past its own top edge. The bar itself stays a plain box. */
   background: none;
@@ -170,8 +168,7 @@ a { color: var(--accent-text); }
   .tabbar::before { display: none; }
 }
 .tabbar__item {
-  /* Five across a 320px phone is 60px each, still over the 44px target. */
-  flex: 1 1 0; min-width: 0; min-height: var(--tab-h);
+  flex: 1; min-height: var(--tab-h); min-width: 44px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   background: none; border: 0; cursor: pointer; color: var(--ink-3);
   padding: var(--s-2) 2px; transition: color var(--d-fast) var(--ease);
@@ -179,13 +176,7 @@ a { color: var(--accent-text); }
 /* --accent-text, not --brand: the vivid green measures 1.43:1 as a word on
    the light theme, which is a colour you can see and a label you cannot. */
 .tabbar__item[aria-current="page"] { color: var(--accent-text); }
-.tabbar__item span {
-  font-size: var(--t-micro); font-weight: 620; letter-spacing: 0.01em;
-  text-transform: none;
-  /* Five labels on a narrow phone: keep each on one line rather than
-     letting "Lifestyle" wrap and shove the row's baseline around. */
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.tabbar__item span { font-size: var(--t-micro); font-weight: 620; letter-spacing: 0.01em; text-transform: none; }
 
 /* The profile tab carries the photograph. The other four say "current"
    with colour and weight; a photograph cannot, so this one says it with
@@ -204,25 +195,10 @@ a { color: var(--accent-text); }
 
 /* The centre action. It lifts above the bar so adding something is the one
    control you can hit without looking. */
-/*
- * The add button, lifted out of the bar.
- *
- * It used to be the middle tab, which cost a destination: Capture had no
- * tab because the + was standing in its slot. Adding is an action, not a
- * place, so it floats above the bar in the bottom corner a thumb already
- * rests on and the five destinations get the row to themselves.
- */
 .tabbar__fab {
-  position: fixed;
-  right: var(--s-4);
-  /* Above the bar AND above the Ask Jumbo dock. --dock-h is published by
-     the dock and removed when it unmounts, so on the screens that have no
-     dock this falls back to 0 and the button drops to the bar. Sitting at
-     nav-h alone would have put it straight on top of the composer. */
-  bottom: calc(var(--nav-h) + var(--dock-h, 0px) + var(--s-3));
-  z-index: 61;
-  width: var(--fab); height: var(--fab);
+  flex: none; width: var(--fab); height: var(--fab);
   display: grid; place-items: center;
+  margin: 0 var(--s-2) calc(var(--s-2) + 2px);
   border: 0; border-radius: 50%; cursor: pointer;
   background: var(--brand); color: var(--brand-ink);
   box-shadow: 0 10px 26px -8px var(--brand-glow), var(--shadow-1);
@@ -257,17 +233,16 @@ a { color: var(--accent-text); }
 }
 
 .quickadd {
-  /* Anchored to the button's corner now that it floats, so the menu opens
-     up and to the left of it rather than off the side of the screen. */
-  position: fixed;
-  right: var(--s-4);
-  bottom: calc(var(--nav-h) + var(--dock-h, 0px) + var(--s-3) + var(--fab) + var(--s-3));
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - var(--s-2));
+  transform: translateX(-50%);
   z-index: 61;
   display: flex; flex-direction: column; align-items: stretch;
   gap: var(--s-2);
-  margin: 0; padding: 0;
+  margin: 0 0 var(--s-3); padding: 0;
   list-style: none;
-  width: max-content; min-width: 190px; max-width: calc(100vw - var(--s-4) * 2);
+  width: max-content; min-width: 190px;
 }
 
 .quickadd__item {
@@ -1032,8 +1007,3 @@ a { color: var(--accent-text); }
   border: 1px solid var(--card-line); cursor: pointer;
 }
 .share-opt input { margin-top: 3px; flex: none; accent-color: var(--brand); width: 20px; height: 20px; }
-
-/* Holds the floating add button and its menu. No box of its own: both
-   children are fixed, so this is purely a place to keep them out of the
-   navigation landmark. */
-.addlayer { display: contents; }

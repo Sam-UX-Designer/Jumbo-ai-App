@@ -16,9 +16,9 @@ const SECRETY = /API[_ ]?KEY|OPENROUTER|process\.env|Bearer |sk-[a-zA-Z0-9]|unde
 
 /** Capture → Training, the way a person gets there. */
 async function openTraining(page) {
-  await goTo(page, 'log')
+  await goTo(page, 'capture')
   await page.waitForTimeout(400)
-  await page.getByRole('button', { name: /^Training$/i }).click()
+  await page.getByRole('button', { name: /Workout suggestions and plans/i }).click()
   await page.waitForTimeout(700)
 }
 
@@ -303,14 +303,14 @@ export default async function training({ browser, origin, r }) {
     await page.waitForTimeout(800)
     r.check('and it opens the screen', await page.locator('.suggest').count() > 0)
 
-    // And on Log, near the top rather than below everything.
-    await goTo(page, 'log')
+    // And on Capture, near the top rather than below everything.
+    await goTo(page, 'capture')
     await page.waitForTimeout(600)
     const y = await page.evaluate(() => {
-      const el = [...document.querySelectorAll('button')].find((b) => /^Training$/i.test(b.innerText.trim()))
+      const el = [...document.querySelectorAll('button')].find((b) => /Workout suggestions/i.test(b.innerText))
       return el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null
     })
-    r.check('the Log entry is above one full scroll', y !== null && y < 844,
+    r.check('the Capture entry is above one full scroll', y !== null && y < 844,
       `sits at ${y}px on an 844px screen`)
     await ctx.close()
   })

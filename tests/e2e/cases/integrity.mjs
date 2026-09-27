@@ -9,7 +9,7 @@
  */
 import { openApp, screenText, goTo, account, aWorkout, aMeal, todayISO, saved, openAsk } from '../harness.mjs'
 
-const SCREENS = ['today', 'log', 'future', 'explore', 'profile']
+const SCREENS = ['today', 'future', 'capture', 'explore', 'profile']
 const LEAKS = /API[_ ]?KEY|OPENROUTER|process\.env|Bearer |sk-[a-zA-Z0-9]{8}|TODO|FIXME|lorem ipsum/i
 const BROKEN = /NaN|Infinity|undefined|\[object Object\]/
 
@@ -61,7 +61,7 @@ export default async function integrity({ browser, origin, r }) {
   await r.run('UC-42', 'Sample mode is labelled on every screen that shows it', async () => {
     const { ctx, page } = await openApp(browser, origin, account({ dataMode: 'demo' }))
     let labelled = 0
-    for (const screen of ['today', 'log', 'future', 'profile']) {
+    for (const screen of ['today', 'future', 'capture', 'profile']) {
       if (screen !== 'today') await goTo(page, screen)
       if (/sample data/i.test(await screenText(page))) labelled++
     }
@@ -99,7 +99,7 @@ export default async function integrity({ browser, origin, r }) {
       addedNotes: { [today]: 'A note.' },
     }))
     // Move around the app: every screen change writes state.
-    for (const s of ['future', 'log', 'explore', 'profile', 'today']) await goTo(page, s)
+    for (const s of ['future', 'capture', 'explore', 'profile', 'today']) await goTo(page, s)
     await page.reload({ waitUntil: 'networkidle' })
     await page.waitForTimeout(900)
     const s = await saved(page)
@@ -455,110 +455,6 @@ export default async function integrity({ browser, origin, r }) {
     await ctx.close()
   })
 
-
-  await r.run('UC-88', 'Every destination has a tab, and no two doors lead to the same room', async () => {
-    /*
-     * Two reports shaped this. First: "there is no option to enter the
-     * capture screen directly" — the + stood in the middle slot, so the
-     * day's records had no tab. Second, a day later: "where is Explore?" —
-     * a Capture tab had been added that did exactly what the + did, and it
-     * pushed Explore off the bar to make room. Two doors to one room.
-     *
-     * So: five destinations, the + floating on its own, and Log keeping
-     * only what the + cannot do.
-     */
-    const { ctx, page, errors } = await openApp(browser, origin, account({
-      addedMeals: { [todayISO()]: [aMeal()] },
-    }))
-
-    const tabs = await page.evaluate(() =>
-      [...document.querySelectorAll('.tabbar__item span')].map((s) => s.textContent.trim()))
-    r.check('the bar is Home, Log, Lifestyle, Explore, Profile',
-      tabs.join('|') === 'Home|Log|Lifestyle|Explore|Profile', tabs.join('|'))
-    r.check('there is no Capture tab doing the + button\u2019s job', !tabs.includes('Capture'))
-
-    await page.locator('.tabbar__item', { hasText: 'Log' }).first().click()
-    await page.waitForTimeout(700)
-    r.check('Log is its own screen', (await page.locator('h1').first().innerText()).trim() === 'Log')
-    const log = await screenText(page)
-    r.check('Log shows what was recorded', /Chicken salad|Lunch/i.test(log), log.slice(0, 120))
-    r.check('and keeps what the + cannot do',
-      /Type a meal/.test(log) && /Training/.test(log), log.slice(0, 200))
-    r.check('but not the grid of kinds the + already offers',
-      await page.locator('.cap-tile').count() === 0)
-
-    await page.locator('.tabbar__item', { hasText: 'Explore' }).first().click()
-    await page.waitForTimeout(700)
-    r.check('Explore is one tap from anywhere again', /explore/i.test(await screenText(page)))
-
-    /*
-     * The + floats over screens with the Ask Jumbo composer pinned to the
-     * bottom. Landing on it is UC-49's bug in a different coat, so it is
-     * measured rather than eyeballed.
-     */
-    await page.locator('.tabbar__item', { hasText: 'Home' }).first().click()
-    await page.waitForTimeout(700)
-    const clear = await page.evaluate(() => {
-      const fab = document.querySelector('.tabbar__fab')
-      const dock = document.querySelector('.askdock')
-      const bar = document.querySelector('.tabbar')
-      if (!fab || !bar) return null
-      const f = fab.getBoundingClientRect()
-      return {
-        inBar: bar.contains(fab),
-        overDock: dock ? Math.round(f.bottom - dock.getBoundingClientRect().top) : null,
-        aboveBar: Math.round(bar.getBoundingClientRect().top - f.bottom),
-        rightSide: f.left > window.innerWidth / 2,
-        size: Math.round(f.width),
-      }
-    })
-    r.check('the + is not one of the tabs', clear?.inBar === false)
-    r.check('it sits on the right, where a thumb is', clear?.rightSide === true)
-    r.check('it clears the tab bar', (clear?.aboveBar ?? -1) >= 0, `gap=${clear?.aboveBar}`)
-    r.check('and does not land on the Ask Jumbo composer',
-      clear?.overDock === null || clear.overDock <= 0, `overlap=${clear?.overDock}px`)
-    r.check('it is still a real target', (clear?.size ?? 0) >= 44, `${clear?.size}px`)
-
-    // The + menu's own way to the records has to land on Log, not nowhere.
-    await page.locator('.tabbar__fab').click()
-    await page.waitForTimeout(600)
-    await page.locator('.quickadd__item').filter({ hasText: /records/i }).click()
-    await page.waitForTimeout(700)
-    r.check('the + menu\u2019s records item lands on Log',
-      (await page.locator('h1').first().innerText()).trim() === 'Log')
-
-    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
-    await ctx.close()
-  })
-
-  /* A notification saved before the Capture tab went away still says
-     route 'capture'. Tapping it must land on Log, not a blank screen. */
-  await r.run('UC-89', 'An old link to Capture lands on Log, not on nothing', async () => {
-    const { ctx, page, errors } = await openApp(browser, origin, account({
-      events: [{
-        // Exactly the shape the store writes (src/data/notifications.ts),
-        // with the route an older build saved.
-        id: 'legacy-1', kind: 'meal', title: 'Log your lunch', body: 'From before the tabs changed',
-        route: 'capture', at: new Date().toISOString(),
-      }],
-    }))
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find((x) => /notification/i.test(x.getAttribute('aria-label') || ''))
-      b?.click()
-    })
-    await page.waitForTimeout(800)
-    const opened = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find((x) => /Log your lunch/.test(x.innerText || ''))
-      if (b) { b.click(); return true }
-      return false
-    })
-    await page.waitForTimeout(800)
-    const h1 = (await page.locator('h1').first().innerText().catch(() => '')).trim()
-    r.check('the old notification is there to tap', opened, 'no legacy notification rendered')
-    r.check('tapping it lands on Log', h1 === 'Log', `h1="${h1}"`)
-    r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
-    await ctx.close()
-  })
 
   await r.run('UC-54', 'The landing page offers a way in, and shows the app working', async () => {
     // Two complaints made this case. The first: the page had one button and

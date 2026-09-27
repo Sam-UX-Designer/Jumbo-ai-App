@@ -154,8 +154,6 @@ These sweep every screen, in both themes, in both data modes.
 | UC-51 | The glass on floating controls never costs legibility or a tap |
 | UC-52 | A browser that cannot refract loses nothing it needs |
 | UC-53 | The landing page stands up on its own, script or no script |
-| UC-88 | Every destination has a tab, and no two doors lead to the same room | First the + stood in the middle slot so the records had no tab; then a Capture tab duplicated the + and pushed Explore off the bar. Also measures that the floating + clears both the bar and the Ask Jumbo composer |
-| UC-89 | An old link to Capture lands on Log, not on nothing | Notifications saved before the change still carry `route: 'capture'`. Checked against a build without the mapping, where tapping one gave a blank screen |
 | UC-54 | The landing page offers a way in, and its + demo actually works |
 
 ---

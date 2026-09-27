@@ -284,18 +284,24 @@ export async function goTo(page, screen) {
   // A sheet left open puts a scrim over the tab bar, and the click then
   // waits thirty seconds for a target it will never reach.
   await dismissSheets(page)
-  /*
-   * The bar: Home, Log, Lifestyle, Explore, Profile. The + floats on its
-   * own. There is no Capture tab — adding is the +, and the few things the
-   * + cannot do (type a meal, voice, Training) are a row on Log.
-   */
-  const map = {
-    today: 'Home', log: 'Log', future: 'Lifestyle', explore: 'Explore', profile: 'Profile',
+  const map = { today: 'Today', future: 'Lifestyle', explore: 'Explore' }
+  // An unknown name used to fall through to `hasText: undefined`, which
+  // matches the first tab and lands on Today. A test then passes or fails
+  // for a reason that has nothing to do with the screen it named.
+  if (!map[screen] && screen !== 'capture' && screen !== 'profile') {
+    throw new Error(`goTo: no tab called "${screen}". Use ${Object.keys(map).concat('capture', 'profile').join(', ')}.`)
   }
-  if (!map[screen]) {
-    throw new Error(`goTo: no tab called "${screen}". Use ${Object.keys(map).join(', ')}.`)
+  if (screen === 'capture') {
+    // The centre button raises the quick-add menu rather than navigating;
+    // the records themselves are the last item in it.
+    await page.locator('.tabbar__fab').click()
+    await page.waitForTimeout(600)
+    await page.locator('.quickadd__item').filter({ hasText: /records/i }).click()
+  } else if (screen === 'profile') {
+    await page.locator('.tabbar__item').last().click()
+  } else {
+    await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
   }
-  await page.locator('.tabbar__item', { hasText: map[screen] }).first().click()
   await page.waitForTimeout(800)
 }
 
