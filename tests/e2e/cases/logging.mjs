@@ -241,6 +241,45 @@ export default async function logging({ browser, origin, r }) {
 
     r.check('no runtime errors', errors.length === 0, errors.slice(0, 2).join(' | '))
     await ctx.close()
+
+    /*
+     * And the photograph they logged is really on it.
+     *
+     * The card lists a meal the way the app does — plate, then what was in
+     * it — so a meal logged with a photo has to produce a different card
+     * from the same meal typed in. Comparing the drawn bytes is the only
+     * way to prove the picture reached the canvas rather than being
+     * dropped somewhere between the record and the drawing.
+     */
+    const plate = 'data:image/svg+xml;base64,' + Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300">'
+      + '<rect width="300" height="300" fill="#c9722e"/></svg>',
+    ).toString('base64')
+
+    const weigh = async (photo) => {
+      const seeded = await openApp(browser, origin, account({
+        addedMeals: { [today]: [aMeal(photo ? { photo } : {})] },
+      }))
+      await goTo(seeded.page, 'capture')
+      await seeded.page.waitForTimeout(500)
+      await clickClear(seeded.page, seeded.page.getByRole('button', { name: /share what you ate/i }).first())
+      await seeded.page.waitForSelector('.share-preview__img', { timeout: 8000 }).catch(() => null)
+      await seeded.page.waitForTimeout(600)
+      const bytes = await seeded.page.evaluate(async () => {
+        const img = document.querySelector('.share-preview__img')
+        if (!img) return 0
+        const r = await fetch(img.getAttribute('src'))
+        return (await r.arrayBuffer()).byteLength
+      })
+      await seeded.ctx.close()
+      return bytes
+    }
+
+    const withPhoto = await weigh(plate)
+    const without = await weigh(null)
+    r.check('a card drawn for a photographed meal differs from a typed one',
+      withPhoto > 0 && without > 0 && withPhoto !== without,
+      `with=${withPhoto} without=${without}`)
   })
 
 

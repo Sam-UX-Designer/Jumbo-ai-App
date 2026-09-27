@@ -42,8 +42,14 @@ export type ShareCard =
     }
   | {
       kind: 'meals'
-      /** What was eaten, newest first, with photographs where there are any. */
-      items: Array<{ name: string; photo?: string }>
+      /**
+       * The day's meals as they were logged — the photograph if one was
+       * taken, what was in it, and which meal it was. One entry per meal,
+       * not per food, so the card reads the way the app's own list does.
+       */
+      meals: Array<{ name: string; slot: string; photo?: string }>
+      /** How many separate foods, across all of them. */
+      items: number
       /**
        * The day's calories, or null when they chose not to put a number on
        * it. See the note on ShareOptions.calories.
@@ -91,9 +97,10 @@ const CARD_W = 860
 const PAD = 52
 const RADIUS = 52
 /** A plate in the food card's strip. */
-const PLATE = 168
-/** One line of the food list. */
-const LINE = 62
+const THUMB = 108
+/** One logged meal: its plate, what was in it, which meal it was. */
+const ROW = 132
+
 
 const INK = '#FFFFFF'
 const DIM = 'rgba(255,255,255,0.62)'
@@ -119,7 +126,9 @@ export async function drawShareCard(card: ShareCard, opts: ShareOptions = {}): P
   const cardH = height(body)
   // Plates have to be loaded before a single stroke is drawn, or the card
   // is handed over with holes in it.
-  const plates = body.photos?.length ? await Promise.all(body.photos.map(load)) : []
+  const plates = body.rows?.length
+    ? await Promise.all(body.rows.map((r) => (r.photo ? load(r.photo) : Promise.resolve(null))))
+    : []
 
   const c = document.createElement('canvas')
   const g = ctx(c, opts.stickerOnly ? CARD_W : W, opts.stickerOnly ? cardH : H)
@@ -163,8 +172,15 @@ interface Body {
   date: string
   /** Drawn beside the number, the way Apple's Activity widget does. */
   rings?: Ring[]
-  /** A strip of plates along the top, for a card about food. */
-  photos?: string[]
+  /**
+   * Meals as they were logged: the plate, what was in it, which meal.
+   *
+   * A strip of photographs above a list of names was the first attempt and
+   * it read as neither — you could not tell which plate went with which
+   * food. Together in a row is how the app shows them and how somebody
+   * looking at the card expects to read them.
+   */
+  rows?: Array<{ name: string; meta: string; photo?: string }>
   /**
    * Text where the big number would be.
    *
@@ -173,10 +189,11 @@ interface Body {
    * What the person actually wants to show is the food, so the food is
    * what gets the size.
    */
-  lines?: string[]
 }
 
 const RING_D = 236
+/** How many meals fit before the card gets too tall for a story. */
+const MAX_ROWS = 4
 
 function plan(card: ShareCard, opts: ShareOptions): Body {
   if (card.kind === 'session') {
@@ -226,7 +243,7 @@ function plan(card: ShareCard, opts: ShareOptions): Body {
   }
 
   if (card.kind === 'meals') {
-    const n = card.items.length
+    const n = card.items
     const stats: Stat[] = [
       { label: 'Logged', value: n + (n === 1 ? ' item' : ' items') },
     ]
@@ -238,13 +255,9 @@ function plan(card: ShareCard, opts: ShareOptions): Body {
       eyebrow: 'Today\u2019s food',
       hero: '',
       unit: '',
-      lines: card.items.map((i) => i.name),
       stats,
       date: card.date,
-      photos: card.items
-        .map((i) => i.photo)
-        .filter((p): p is string => Boolean(p))
-        .slice(0, 4),
+      rows: card.meals.map((m) => ({ name: m.name, meta: m.slot, photo: m.photo })),
     }
   }
 
@@ -266,11 +279,10 @@ function plan(card: ShareCard, opts: ShareOptions): Body {
 function height(b: Body): number {
   let h = PAD + 34            // header row
   h += 54                     // gap
-  if (b.photos?.length) h += PLATE + 36
+  if (b.rows?.length) h += ROW * Math.min(b.rows.length, MAX_ROWS) + 20
   if (b.title) h += 52
-  // Either a big number (possibly beside rings) or wrapped text.
-  if (b.lines?.length) h += LINE * Math.min(b.lines.length, 4)
-  else h += b.rings?.length ? Math.max(132, RING_D) : 132
+  // A big number (possibly beside rings), unless the meals took the space.
+  if (!b.rows?.length) h += b.rings?.length ? Math.max(132, RING_D) : 132
   if (b.stats.length) {
     h += 56                   // gap above the figures
     h += 86                   // the figures
@@ -323,21 +335,73 @@ function widget(
 
   cursor += 54
 
-  // The plates, for a card about food: the meal leads, not the figure.
-  if (b.photos?.length) {
-    const shown = plates.filter(Boolean) as HTMLImageElement[]
-    shown.forEach((img, i) => {
-      const px = left + i * (PLATE + 18)
+  /*
+   * The meals, drawn the way the app lists them: the plate, then what was
+   * in it, then which meal it was. A photograph and a name that are not on
+   * the same line are two facts nobody can join up.
+   */
+  if (b.rows?.length) {
+    const shown = b.rows.slice(0, MAX_ROWS)
+    shown.forEach((row, i) => {
+      const ry = cursor + i * ROW
+      const img = plates[i]
+
       g.save()
-      roundRect(g, px, cursor, PLATE, PLATE, 28)
-      g.clip()
-      const scale = Math.max(PLATE / img.width, PLATE / img.height)
-      const dw = img.width * scale
-      const dh = img.height * scale
-      g.drawImage(img, px + (PLATE - dw) / 2, cursor + (PLATE - dh) / 2, dw, dh)
+      roundRect(g, left, ry, THUMB, THUMB, 26)
+      if (img) {
+        g.clip()
+        const scale = Math.max(THUMB / img.width, THUMB / img.height)
+        const dw = img.width * scale
+        const dh = img.height * scale
+        g.drawImage(img, left + (THUMB - dw) / 2, ry + (THUMB - dh) / 2, dw, dh)
+      } else {
+        // Typed rather than photographed. A plain tile says so without
+        // leaving a hole where the others have a picture.
+        g.fillStyle = 'rgba(255,255,255,0.06)'
+        g.fill()
+        g.strokeStyle = 'rgba(255,255,255,0.10)'
+        g.lineWidth = 2
+        g.stroke()
+        g.beginPath()
+        g.arc(left + THUMB / 2, ry + THUMB / 2, 26, 0, Math.PI * 2)
+        g.strokeStyle = 'rgba(255,255,255,0.22)'
+        g.lineWidth = 3
+        g.stroke()
+      }
       g.restore()
+
+      const tx = left + THUMB + 26
+      g.textAlign = 'right'
+      g.font = face(26, 600)
+      g.fillStyle = FAINT
+      g.fillText(row.meta, right, ry + 50)
+      const metaW = g.measureText(row.meta).width
+
+      // A meal of two or three things has a long name. Drop a size before
+      // cutting it: "Rolled oats, Blueberries" told in full beats
+      // "Rolled oats, Blueberr…".
+      const room = right - tx - metaW - 30
+      g.textAlign = 'left'
+      g.fillStyle = INK
+      g.font = face(42, 700)
+      if (g.measureText(row.name).width > room) g.font = face(34, 700)
+      g.fillText(clip(g, row.name, room), tx, ry + 50)
+
+      if (row.photo === undefined) {
+        g.font = face(22, 500)
+        g.fillStyle = FAINT
+        g.fillText('Typed in', tx, ry + 88)
+      }
     })
-    cursor += PLATE + 36
+
+    // Say plainly when there were more than fit.
+    if (b.rows.length > shown.length) {
+      g.textAlign = 'left'
+      g.font = face(26, 500)
+      g.fillStyle = FAINT
+      g.fillText('+ ' + (b.rows.length - shown.length) + ' more', left, cursor + shown.length * ROW + 12)
+    }
+    cursor += ROW * shown.length + 20
   }
 
   // What it was.
@@ -349,21 +413,7 @@ function widget(
     cursor += 52
   }
 
-  // The food, where a card about food would have had a number.
-  if (b.lines?.length) {
-    const shown = b.lines.slice(0, 4)
-    g.textAlign = 'left'
-    g.font = face(50, 700)
-    g.fillStyle = INK
-    shown.forEach((line, i) => {
-      const last = i === shown.length - 1 && b.lines!.length > shown.length
-      const text = last ? line + ' \u2026' : line
-      g.fillText(clip(g, text, CARD_W - PAD * 2), left, cursor + 46 + i * LINE)
-    })
-    cursor += LINE * shown.length
-    if (b.stats.length) cursor += 56
-  } else {
-
+  if (!b.rows?.length) {
   // The number, and the rings beside it where there are rings.
   const block = b.rings?.length ? Math.max(132, RING_D) : 132
   const heroBase = cursor + (block - 132) / 2 + 104

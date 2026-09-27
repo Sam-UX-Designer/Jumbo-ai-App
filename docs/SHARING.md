@@ -51,7 +51,7 @@ described above.
 |---|---|---|
 | Session | Minutes | Movements done / total, effort |
 | Day | **The rings**, beside the score | Sleep, move, food, recovery |
-| Today's food | The food, by name | How many items. Calories only if asked for |
+| Today's food | Each meal as logged: plate, what was in it, which meal | How many items. Calories only if asked for |
 | Meal | Calories | Protein, carbs, fat |
 
 ### Why the day card has rings
@@ -77,6 +77,18 @@ it, and a number on it invites comparison from strangers.
 So the plate leads. The total is a checkbox in the share sheet, **off by
 default**, that a person turns on for their own post. UC-87 fails if that
 default ever flips.
+
+### The food card mirrors the app's own list
+
+One row per meal, not per food: the photograph, then what was in it, then
+which meal it was. A strip of photographs above a separate list of names
+was the first attempt and read as neither — you could not tell which plate
+went with which food.
+
+A meal that was typed rather than photographed gets a plain tile and the
+words "Typed in", so the row is honest about where it came from instead of
+leaving a hole where the others have a picture. Past four meals the card
+says "+ n more" rather than growing past the story frame.
 
 **Unmeasured is an em dash, never a zero.** A day card where nothing read
 your heart rate shows `—` under RECOVERY and a line saying what the dash

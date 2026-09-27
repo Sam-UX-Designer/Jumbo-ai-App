@@ -357,8 +357,14 @@ export function Capture({ reopenMeal, openKind, onOpened }: {
               haptic('selection')
               setShareCard({
                 kind: 'meals',
-                items: today.meals.flatMap((m) =>
-                  m.items.map((it) => ({ name: it.name, photo: m.photo }))),
+                // One entry per meal, named by what was in it, so the card
+                // reads the way the list on this screen does.
+                meals: today.meals.map((m) => ({
+                  name: m.items.map((it) => it.name).join(', ') || m.slot,
+                  slot: m.slot,
+                  photo: m.photo,
+                })),
+                items: today.meals.reduce((n, m) => n + m.items.length, 0),
                 kcal: today.meals.reduce(
                   (sum, m) => sum + m.items.reduce((a, it) => a + it.kcal, 0), 0),
                 date: today.date,
