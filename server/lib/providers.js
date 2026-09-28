@@ -24,17 +24,6 @@ export const PROVIDERS = {
     why: 'HealthKit is an iOS framework. Browsers have no API for it, so this connects only inside the Jumbo iOS app.',
     docs: 'https://developer.apple.com/documentation/healthkit',
   },
-  health_connect: {
-    id: 'health_connect',
-    name: 'Health Connect',
-    vendor: 'Android',
-    transport: 'native',
-    platform: 'android',
-    provides: ['sleep', 'steps', 'workouts', 'heart', 'body', 'nutrition'],
-    blurb: 'The shared health store on your Android phone.',
-    why: 'Health Connect uses the Android SDK. Browsers have no API for it, so this connects only inside the Jumbo Android app.',
-    docs: 'https://developer.android.com/health-and-fitness/guides/health-connect',
-  },
 
   /* -------------------------------------------------------- OAuth 2.0 */
   whoop: {

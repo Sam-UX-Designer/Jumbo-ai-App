@@ -29,7 +29,7 @@ const GOALS: Array<{ key: GoalKey; label: string }> = [
 ]
 
 const SOURCE_ICON: Record<string, IconName> = {
-  apple_health: 'phone', health_connect: 'phone',
+  apple_health: 'phone',
   whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
 }
 

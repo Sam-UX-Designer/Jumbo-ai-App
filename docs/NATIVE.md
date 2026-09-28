@@ -1,13 +1,18 @@
 # Native health integrations
 
-Apple Health and Android Health Connect are **platform SDKs, not web APIs**.
-A browser cannot read them, and no amount of front-end work changes that. So
-Jumbo does not offer a fake "one tap" web connection for them. Instead:
+Apple Health is a **platform SDK, not a web API**. A browser cannot read it,
+and no amount of front-end work changes that. So Jumbo does not offer a fake
+"one tap" web connection for it. Instead:
 
-- **In a browser** the two sources appear with a clear "Needs the Jumbo app"
-  state that explains why, and every other source stays available over OAuth.
-- **In the native shell** the same tiles connect for real through a bridge the
+- **In a browser** it appears with a clear "Needs the Jumbo app" state that
+  explains why, and every other source stays available over OAuth.
+- **In the iOS shell** the same tile connects for real through a bridge the
   shell injects on `window.JumboNative`.
+
+Jumbo does not offer Health Connect or Google Fit. Google closed the Google
+Fit APIs to new apps in May 2024 and is switching them off at the end of
+2026, so a Google Fit button could never work; Health Connect was removed
+with it.
 
 ## The bridge contract
 
@@ -20,7 +25,7 @@ interface JumboNativeBridge {
   platform: 'ios' | 'android'
 
   /** Which native store this shell can talk to. */
-  available(): Promise<{ healthkit: boolean; healthConnect: boolean }>
+  available(): Promise<{ healthkit: boolean }>
 
   /**
    * Triggers the real system permission sheet.
@@ -59,7 +64,7 @@ interface NativeDay {
   bodyFatPct?: number
   leanMassKg?: number
   workout?: { type: string; minutes: number; intensity?: 1 | 2 | 3 }
-  source: string          // e.g. "HealthKit" or "Health Connect"
+  source: string          // e.g. "HealthKit"
 }
 ```
 
@@ -74,15 +79,6 @@ interface NativeDay {
    Capacitor and register a plugin that resolves the same shape.
 
 Reference: https://developer.apple.com/documentation/healthkit
-
-## Android shell
-
-1. Add the Health Connect client dependency and declare the read permissions
-   you need in the manifest.
-2. Request them through the Health Connect permission contract.
-3. Bridge into the web view with `@JavascriptInterface`, or a Capacitor plugin.
-
-Reference: https://developer.android.com/health-and-fitness/guides/health-connect
 
 ## Rules the shell must respect
 

@@ -91,7 +91,6 @@ kept on that device — it is never uploaded and never sent to the AI.
 | File | Provider |
 |---|---|
 | `providers/apple-health.png` | Apple Health |
-| `providers/health-connect.png` | Health Connect |
 | `providers/whoop.png` | WHOOP |
 | `providers/oura.png` | Oura |
 | `providers/fitbit.png` | Fitbit |

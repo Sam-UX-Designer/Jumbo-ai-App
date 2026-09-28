@@ -28,7 +28,7 @@ export interface NativeDay {
 
 export interface JumboNativeBridge {
   platform: 'ios' | 'android'
-  available(): Promise<{ healthkit: boolean; healthConnect: boolean }>
+  available(): Promise<{ healthkit: boolean }>
   requestPermissions(types: HealthType[]): Promise<{ granted: HealthType[]; denied: HealthType[] }>
   read(request: { types: HealthType[]; from: string; to: string }): Promise<NativeDay[]>
   onUpdate?(cb: () => void): () => void

@@ -25,7 +25,7 @@ dishonest about.
 | **Pattern insights** | Real, two ways. With `OPENROUTER_API_KEY`, a statistical summary of your data is analysed by the model. Without one, Jumbo's own statistics run in the browser. The UI always says which. |
 | **Future scenarios** | Real. The projection model runs locally; the written scenario is generated through OpenRouter in scenario language, never as a prediction. Requires `OPENROUTER_API_KEY`. |
 | **WHOOP · Oura · Fitbit · Withings · Garmin** | Real OAuth 2.0, completed server-side with PKCE where the provider requires it, then real API reads and normalisation. Requires that provider's client ID and secret. |
-| **Apple Health · Health Connect** | **Cannot work in a browser.** They are platform SDKs with no web API. Jumbo shows exactly why and connects them through a native bridge in the app shell. See `docs/NATIVE.md`. |
+| **Apple Health** | **Cannot work in a browser.** HealthKit is a platform SDK with no web API. Jumbo shows exactly why and connects it through a native bridge in the iOS shell. See `docs/NATIVE.md`. |
 | **YouTube** | Real YouTube Data API v3 search, channels, durations and view counts, with an embedded player. Requires `YOUTUBE_API_KEY`. Jumbo never invents a creator or a video. |
 | **Reminders** | Real Notification API, scheduled in-page. A browser cannot fire a notification while it is closed, and Profile says so rather than promising otherwise. |
 | **Sample data** | A deterministic six-month history so the product is explorable immediately. **Always labelled "Sample data"** and never presented as a health record. |
@@ -125,7 +125,7 @@ server/                 Express API. Credentials live here and never reach the b
 src/
   components/Camera.tsx Real getUserMedia capture with every failure state handled
   lib/api.ts            One typed client; every call returns ok / setup / offline / error
-  lib/native.ts         The JumboNative bridge contract for HealthKit and Health Connect
+  lib/native.ts         The JumboNative bridge contract for HealthKit
   lib/trajectory.ts     The projection model and its stated assumptions
   lib/analytics.ts      Baseline, daily state, on-device pattern engine, AI summary
   lib/feedback.ts       Haptic patterns, synthesised sound, confetti

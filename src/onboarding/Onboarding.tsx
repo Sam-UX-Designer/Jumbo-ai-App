@@ -492,7 +492,7 @@ function GoalsStep({ onNext }: { onNext: () => void }) {
 
 /* --------------------------------------------------------------- connect */
 const SOURCE_ICON: Record<string, IconName> = {
-  apple_health: 'phone', health_connect: 'phone',
+  apple_health: 'phone',
   whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
 }
 
@@ -671,9 +671,8 @@ function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLat
           </ul>
           {connectable.length === 0 && (
             <p className="t-caption dim2">
-              Apple Health and Google Health connect from the Jumbo mobile app. On the web they
-              cannot be reached, which is why they show as unavailable above — it is not a problem
-              with your account.
+              Apple Health connects from the Jumbo iPhone app. On the web it cannot be reached,
+              which is why it shows as unavailable above — it is not a problem with your account.
             </p>
           )}
         </div>
