@@ -24,7 +24,7 @@ dishonest about.
 | **Voice log** | Real where the browser supports the Web Speech API, and hidden where it does not. Dictation is the browser's, not a Jumbo service. |
 | **Pattern insights** | Real, two ways. With `OPENROUTER_API_KEY`, a statistical summary of your data is analysed by the model. Without one, Jumbo's own statistics run in the browser. The UI always says which. |
 | **Future scenarios** | Real. The projection model runs locally; the written scenario is generated through OpenRouter in scenario language, never as a prediction. Requires `OPENROUTER_API_KEY`. |
-| **WHOOP · Oura · Fitbit · Withings · Garmin** | Real OAuth 2.0, completed server-side with PKCE where the provider requires it, then real API reads and normalisation. Requires that provider's client ID and secret. |
+| **WHOOP · Oura · Fitbit · Garmin** | Real OAuth 2.0, completed server-side with PKCE where the provider requires it, then real API reads and normalisation. Requires that provider's client ID and secret. |
 | **Apple Health** | **Cannot work in a browser.** HealthKit is a platform SDK with no web API. Jumbo shows exactly why and connects it through a native bridge in the iOS shell. See `docs/NATIVE.md`. |
 | **YouTube** | Real YouTube Data API v3 search, channels, durations and view counts, with an embedded player. Requires `YOUTUBE_API_KEY`. Jumbo never invents a creator or a video. |
 | **Reminders** | Real Notification API, scheduled in-page. A browser cannot fire a notification while it is closed, and Profile says so rather than promising otherwise. |

@@ -493,7 +493,7 @@ function GoalsStep({ onNext }: { onNext: () => void }) {
 /* --------------------------------------------------------------- connect */
 const SOURCE_ICON: Record<string, IconName> = {
   apple_health: 'phone',
-  whoop: 'watch', oura: 'ring', fitbit: 'watch', withings: 'scale', garmin: 'watch',
+  whoop: 'watch', oura: 'ring', fitbit: 'watch', garmin: 'watch',
 }
 
 function ConnectStep({ onNext, onLater, onSamples }: { onNext: () => void; onLater: () => void; onSamples: () => void }) {

@@ -94,7 +94,6 @@ kept on that device — it is never uploaded and never sent to the AI.
 | `providers/whoop.png` | WHOOP |
 | `providers/oura.png` | Oura |
 | `providers/fitbit.png` | Fitbit |
-| `providers/withings.png` | Withings |
 | `providers/garmin.png` | Garmin |
 
 These are the real logos: 384 × 384 PNG tiles with rounded corners. They

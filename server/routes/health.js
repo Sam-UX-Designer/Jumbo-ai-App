@@ -136,38 +136,6 @@ const ADAPTERS = {
     })
     return [...byDay.values()]
   },
-
-  async withings(token) {
-    const base = PROVIDERS.withings.apiBase
-    const body = new URLSearchParams({
-      action: 'getmeas',
-      meastypes: '1,6,5,8,88',
-      category: '1',
-      startdate: String(Math.floor((Date.now() - 180 * 86_400_000) / 1000)),
-      enddate: String(Math.floor(Date.now() / 1000)),
-    })
-    const r = await fetch(`${base}/measure`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    })
-    if (!r.ok) throw httpError('withings', r)
-    const json = await r.json()
-    if (json.status !== 0) throw new Error(`Withings returned status ${json.status}`)
-
-    const TYPE = { 1: 'weightKg', 6: 'bodyFatPct', 5: 'leanMassKg', 8: 'fatMassKg', 88: 'boneMassKg' }
-    const byDay = new Map()
-    ;(json.body?.measuregrps ?? []).forEach((g) => {
-      const day = iso(g.date * 1000)
-      if (!byDay.has(day)) byDay.set(day, { date: day, sources: ['withings'] })
-      const rec = byDay.get(day)
-      g.measures.forEach((m) => {
-        const key = TYPE[m.type]
-        if (key) rec[key] = round(m.value * 10 ** m.unit, 2)
-      })
-    })
-    return [...byDay.values()]
-  },
 }
 
 const round = (v, dp) => Number(v.toFixed(dp))
@@ -176,7 +144,8 @@ const httpError = (id, res) => Object.assign(new Error(`${id} responded ${res.st
 /* ------------------------------------------------------------------ sync */
 health.post('/sync', async (req, res) => {
   const s = await sessionFrom(req, res)
-  const connected = Object.keys(s.providers ?? {})
+  // A source Jumbo no longer offers is left out, even if tokens remain for it.
+  const connected = Object.keys(s.providers ?? {}).filter((id) => id in PROVIDERS)
   if (!connected.length) {
     return res.json({ connected: [], days: [], errors: [], syncedAt: Date.now() })
   }

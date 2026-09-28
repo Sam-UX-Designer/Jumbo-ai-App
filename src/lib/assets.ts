@@ -111,7 +111,6 @@ export const ASSETS = {
   'provider:whoop':          { file: 'providers/whoop.png',          alt: 'WHOOP', ratio: 1 },
   'provider:oura':           { file: 'providers/oura.png',           alt: 'Oura', ratio: 1 },
   'provider:fitbit':         { file: 'providers/fitbit.png',         alt: 'Fitbit', ratio: 1 },
-  'provider:withings':       { file: 'providers/withings.png',       alt: 'Withings', ratio: 1 },
   'provider:garmin':         { file: 'providers/garmin.png',         alt: 'Garmin', ratio: 1 },
 } satisfies Record<string, AssetDef>
 

@@ -55,10 +55,6 @@ export const env = {
       clientId: process.env.FITBIT_CLIENT_ID || '',
       clientSecret: process.env.FITBIT_CLIENT_SECRET || '',
     },
-    withings: {
-      clientId: process.env.WITHINGS_CLIENT_ID || '',
-      clientSecret: process.env.WITHINGS_CLIENT_SECRET || '',
-    },
     garmin: {
       clientId: process.env.GARMIN_CLIENT_ID || '',
       clientSecret: process.env.GARMIN_CLIENT_SECRET || '',

@@ -139,14 +139,9 @@ oauth.get('/callback/:id', async (req, res) => {
   })
   if (provider.usesPkce && pending.verifier) body.set('code_verifier', pending.verifier)
 
-  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
-  // Withings takes the secret in the body; the others use HTTP Basic.
-  if (id === 'withings') {
-    body.set('action', 'requesttoken')
-    body.set('client_secret', creds.clientSecret)
-  } else {
-    headers.Authorization =
-      'Basic ' + Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64')
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: 'Basic ' + Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64'),
   }
 
   try {
@@ -157,8 +152,7 @@ oauth.get('/callback/:id', async (req, res) => {
       return fail(`token_exchange_${r.status}`)
     }
 
-    // Withings wraps its payload; everyone else returns it flat.
-    const t = id === 'withings' ? (json.body ?? {}) : json
+    const t = json
     if (!t.access_token) return fail('no_access_token')
 
     const nextPending = { ...(s.pending ?? {}) }
@@ -201,19 +195,15 @@ export async function accessTokenFor(sid, id) {
     refresh_token: rec.refreshToken,
     client_id: creds.clientId,
   })
-  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
-  if (id === 'withings') {
-    body.set('action', 'requesttoken')
-    body.set('client_secret', creds.clientSecret)
-  } else {
-    headers.Authorization =
-      'Basic ' + Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64')
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: 'Basic ' + Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64'),
   }
 
   try {
     const r = await fetch(provider.tokenUrl, { method: 'POST', headers, body })
     const json = await r.json().catch(() => ({}))
-    const t = id === 'withings' ? (json.body ?? {}) : json
+    const t = json
     if (!r.ok || !t.access_token) return null
     await setProviderTokens(sid, id, {
       accessToken: t.access_token,

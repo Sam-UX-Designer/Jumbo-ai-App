@@ -49,7 +49,7 @@ export const SOURCES: SourceDef[] = [
   {
     id: 'scale',
     name: 'Smart Scale',
-    vendor: 'Withings-style scale',
+    vendor: 'Connected scale',
     kind: 'scale',
     provides: ['body'],
     blurb: 'Weight and body composition trends over time.',
