@@ -104,9 +104,9 @@ export const ASSETS = {
   },
 
   /* ── Health source logos ───────────────────────────────────────────
-     Placeholders only. Each provider's real mark must come from that
-     company's own brand assets and follow their usage rules — see
-     docs/ASSETS.md. Keys match the provider ids the server returns. */
+     Each provider's real logo, as a 384px rounded tile. They must come
+     from that company's own brand assets and follow their usage rules —
+     see docs/ASSETS.md. Keys match the provider ids the server returns. */
   'provider:apple_health':   { file: 'providers/apple-health.png',   alt: 'Apple Health', ratio: 1 },
   'provider:health_connect': { file: 'providers/health-connect.png', alt: 'Health Connect', ratio: 1 },
   'provider:whoop':          { file: 'providers/whoop.png',          alt: 'WHOOP', ratio: 1 },

@@ -1,7 +1,7 @@
 # Artwork
 
 Every image in Jumbo — the mascot, profile photos, illustrations, the brand
-mark and the health-source logos — is a **placeholder** today. Each one is a
+mark — is a **placeholder** today (the health-source logos are real; see below). Each one is a
 real file in `public/assets/`, sized and positioned exactly where the finished
 artwork will sit, and marked so nobody mistakes it for final work.
 
@@ -90,20 +90,21 @@ kept on that device — it is never uploaded and never sent to the AI.
 
 | File | Provider |
 |---|---|
-| `providers/apple-health.svg` | Apple Health |
-| `providers/health-connect.svg` | Health Connect |
-| `providers/whoop.svg` | WHOOP |
-| `providers/oura.svg` | Oura |
-| `providers/fitbit.svg` | Fitbit |
-| `providers/withings.svg` | Withings |
-| `providers/garmin.svg` | Garmin |
+| `providers/apple-health.png` | Apple Health |
+| `providers/health-connect.png` | Health Connect |
+| `providers/whoop.png` | WHOOP |
+| `providers/oura.png` | Oura |
+| `providers/fitbit.png` | Fitbit |
+| `providers/withings.png` | Withings |
+| `providers/garmin.png` | Garmin |
 
-Export at 128 × 128, transparent, drawn inside the square with a little
-padding. They appear at 38–44 px in onboarding and on the You screen.
+These are the real logos: 384 × 384 PNG tiles with rounded corners. They
+appear at 38–44 px in onboarding and on the You screen. To swap one, save the
+new tile over the file with the same name.
 
 > **These must come from each company's own brand assets** and follow that
-> company's usage rules. The placeholders are deliberately generic initials —
-> Jumbo never draws an approximation of somebody else's mark. Filenames are
+> company's usage rules. Jumbo never draws an approximation of somebody
+> else's mark. Filenames are
 > keyed to the provider ids the server returns, so a new provider needs a new
 > row in `src/lib/assets.ts` as well as a file here.
 
